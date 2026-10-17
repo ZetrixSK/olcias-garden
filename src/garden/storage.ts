@@ -56,6 +56,15 @@ export async function loadGarden(now = Date.now()): Promise<GardenState> {
   }
 }
 
+/** Asks the browser not to clear the garden when the phone runs low on space. Harmless if refused. */
+export async function persistStorage(): Promise<void> {
+  try {
+    if (navigator.storage?.persist && !(await navigator.storage.persisted())) await navigator.storage.persist();
+  } catch {
+    // not supported: the garden still saves, just without the extra promise
+  }
+}
+
 export async function saveGarden(state: GardenState): Promise<void> {
   try {
     await run('readwrite', (s) => s.put(state, KEY));

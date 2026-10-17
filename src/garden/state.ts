@@ -28,6 +28,8 @@ export type Plant = {
 };
 
 export type View = 'room' | 'shelves';
+/** The letter: waiting to be read, kept after reading, or thrown away for good. */
+export type LetterState = 'unread' | 'kept' | 'deleted';
 /** 'clock' follows local time only; 'live' uses Open-Meteo; 'manual' shows the weather she picked. */
 export type WeatherMode = 'clock' | 'live' | 'manual';
 
@@ -39,6 +41,7 @@ export type Settings = {
   location: { lat: number; lon: number } | null;
   /** Whether plants may outgrow their pots. Off hides the vines too; they come back when it's on. */
   vines: boolean;
+  letter: LetterState;
 };
 
 export const SAVE_VERSION = 4;
@@ -49,6 +52,8 @@ export type GardenState = {
   settings: Settings;
   /** The last 3:00 whose nightly vine check has been done. */
   vinesCheckedAt: number;
+  /** When the garden was last open on screen, so the next visit can show what happened since. */
+  lastSeen: number;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -58,6 +63,7 @@ export const DEFAULT_SETTINGS: Settings = {
   manual: { sky: 'clear', night: false },
   location: null,
   vines: true,
+  letter: 'unread',
 };
 
 export function newId(): string {
@@ -91,6 +97,7 @@ export function starterGarden(now: number): GardenState {
     ],
     settings: { ...DEFAULT_SETTINGS },
     vinesCheckedAt: lastNight(now),
+    lastSeen: now,
   };
 }
 
@@ -220,6 +227,7 @@ function parseSettings(v: unknown): Settings {
     location:
       isObj(loc) && typeof loc.lat === 'number' && typeof loc.lon === 'number' ? { lat: loc.lat, lon: loc.lon } : null,
     vines: s.vines !== false,
+    letter: s.letter === 'kept' || s.letter === 'deleted' ? s.letter : 'unread',
   };
 }
 
@@ -283,5 +291,6 @@ export function parseSave(input: unknown, now = Date.now()): GardenState | null 
     }
   }
   const checked = isTime(raw.vinesCheckedAt) && raw.vinesCheckedAt <= now ? raw.vinesCheckedAt : lastNight(now);
-  return { version: SAVE_VERSION, plants, settings: parseSettings(raw.settings), vinesCheckedAt: checked };
+  const lastSeen = isTime(raw.lastSeen) && raw.lastSeen <= now ? raw.lastSeen : now;
+  return { version: SAVE_VERSION, plants, settings: parseSettings(raw.settings), vinesCheckedAt: checked, lastSeen };
 }

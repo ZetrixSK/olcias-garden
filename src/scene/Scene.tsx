@@ -9,7 +9,7 @@ import { FLOOR_Y, SILL_Y, VIEW_H, VIEW_W, WINDOW_OPENING } from './geometry';
 import { Landscape, Rain } from './Outside';
 import { Curtains, Floor, Shelf, Sign, Sill, Wall, WindowFrame } from './Room';
 import { Sky, SkyLights } from './Sky';
-import { leanFor, runnerStart, VINE_PHASE, VineRunner, Vines, type PlacedVine, type VineSpec } from './Vines';
+import { leanFor, runnerStart, VINE_PHASE, VineRunner, Vines, type PlacedVine, type Snip, type VineSpec } from './Vines';
 
 /** Where each window spot stands: x, the surface it stands on, the drawing scale and the tap area's width. */
 const SPOT_POS: Record<WindowSpot, { x: number; base: number; scale: number; w: number; h: number }> = {
@@ -121,18 +121,19 @@ function layoutFor(viewH: number) {
   return { dy, minY, wallMid, pictureScale };
 }
 
-export function Scene({ theme, weather, viewH, vines, hideCurtains = false, ...rest }: {
+export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains = false, ...rest }: {
   theme: Theme;
   weather: Weather;
   viewH: number;
   vines: VineSpec[];
+  snip?: Snip | null;
   /** Dev only: shows the bare window, to judge the vines without the curtains over them. */
   hideCurtains?: boolean;
 } & Omit<SpotProps, 'placed'>) {
   const placed = placeVines(vines, rest.garden);
   const spots = { ...rest, placed };
   const { dy, minY, wallMid, pictureScale } = layoutFor(viewH);
-  const tint = roomTint(weather);
+  const tint = roomTint(weather, theme);
   const candleLit = isCandleLit(weather);
   const [fx, fy] = CANDLE_FLAME[theme];
   return (
@@ -158,7 +159,7 @@ export function Scene({ theme, weather, viewH, vines, hideCurtains = false, ...r
       <WindowFrame />
 
       {/* vines climb behind the shelf board, like the ropes, and behind the pots on the sill */}
-      <Vines placed={placed} />
+      <Vines placed={placed} snip={snip} />
       <Shelf />
       <WindowRow row="shelf" {...spots} />
       <ShelfTrinket theme={theme} />

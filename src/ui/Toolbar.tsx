@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { Settings, View } from '../garden/state';
 import { SKY_KINDS, type SkyKind, type Weather } from '../theme/palettes';
 import type { WeatherStatus } from '../weather/useWeather';
+import { CLOCK_ICON } from './Clock';
+import { ENVELOPE_ICON } from './Letter';
 
 const SUN = (
   <g>
@@ -53,13 +55,15 @@ const STATUS_TEXT: Record<WeatherStatus, string> = {
   manual: 'Chosen by you',
 };
 
-export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating }: {
+export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onClock }: {
   settings: Settings;
   weather: Weather;
   status: WeatherStatus;
   onSettings: (patch: Partial<Settings>) => void;
   onLiveWeather: () => void;
   locating: boolean;
+  onLetter: () => void;
+  onClock: () => void;
 }) {
   const [menu, setMenu] = useState(false);
   const other: View = settings.view === 'room' ? 'shelves' : 'room';
@@ -74,6 +78,18 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
         onClick={() => onSettings({ view: other })}
       >
         <Icon>{VIEW_ICON[other]}</Icon>
+      </button>
+      {settings.letter !== 'deleted' && (
+        <button
+          className={settings.letter === 'unread' ? 'fab left second letter-fab unread' : 'fab left second letter-fab'}
+          aria-label="A letter"
+          onClick={onLetter}
+        >
+          <Icon>{ENVELOPE_ICON}</Icon>
+        </button>
+      )}
+      <button className="fab right second" aria-label="While you were away" onClick={onClock}>
+        <Icon>{CLOCK_ICON}</Icon>
       </button>
       <button className="fab right" aria-label="Weather and room" aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
         <Icon>{weatherIcon(weather)}</Icon>

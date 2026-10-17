@@ -18,13 +18,16 @@ import {
   type SlotId,
   type WindowSpot,
 } from './garden/state';
-import { loadGarden, saveGarden } from './garden/storage';
+import { loadGarden, persistStorage, saveGarden } from './garden/storage';
+import { buildTimelapse, gardenAt, LAPSE_MIN_GAP, type Timelapse } from './garden/timelapse';
 import { isVineSpecies, isVineSpot } from './garden/vines';
 import type { SpeciesId } from './garden/species';
 import { grainDataUrl } from './grain';
 import { Scene } from './scene/Scene';
 import { ShelfView } from './scene/ShelfView';
-import type { VineSpec } from './scene/Vines';
+import type { Snip, VineSpec } from './scene/Vines';
+import { ease, lapseDuration, LapseClock } from './ui/Clock';
+import { Letter } from './ui/Letter';
 import { paletteVars } from './theme/palettes';
 import { MoveBanner, PlantCard, PlantPicker, WindowChooser } from './ui/Sheets';
 import { Toolbar } from './ui/Toolbar';
@@ -86,6 +89,11 @@ function devVines(): VineSpec[] {
   });
 }
 
+const prefersStill = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+
+/** A replay in progress: how far along it is, and whether it is fading out. */
+type Lapse = { tl: Timelapse; p: number; fading: boolean; skipped: boolean };
+
 type Mode =
   | { kind: 'idle' }
   /** shelves: choosing a species for an empty slot */
@@ -108,26 +116,104 @@ export function App() {
   const grain = useMemo(() => grainDataUrl(), []);
   const devVineList = useMemo(() => (import.meta.env.DEV ? devVines() : []), []);
   const loaded = useRef(false);
+  const gardenRef = useRef<GardenState | null>(null);
+  gardenRef.current = garden;
+  const [lapse, setLapse] = useState<Lapse | null>(null);
+  const lastLapse = useRef<Timelapse | null>(null);
+  const opened = useRef<{ at: number; garden: GardenState } | null>(null);
+  const [letterOpen, setLetterOpen] = useState(false);
+  const [snip, setSnip] = useState<Snip | null>(null);
+
+  /** Replays what happened between two moments. With reduced motion it only plays when asked. */
+  const playLapse = useCallback((tl: Timelapse, auto: boolean) => {
+    lastLapse.current = tl;
+    if (auto && prefersStill()) return;
+    setLapse({ tl, p: 0, fading: false, skipped: false });
+  }, []);
 
   useEffect(() => {
     loadGarden().then((g) => {
       loaded.current = true;
-      const caughtUp = catchUpNights(g, Date.now());
+      const t = Date.now();
+      opened.current = { at: t, garden: g };
+      const caughtUp = catchUpNights(g, t);
       setGarden(import.meta.env.DEV ? devOverrides(caughtUp) : caughtUp);
+      if (t - g.lastSeen >= LAPSE_MIN_GAP) playLapse(buildTimelapse(g, g.lastSeen, t), true);
+      void persistStorage();
     });
-  }, []);
+  }, [playLapse]);
 
-  // save shortly after every change
+  // save shortly after every change, noting the time so the next visit knows how long she was away
   useEffect(() => {
     if (!garden || !loaded.current) return;
-    const t = window.setTimeout(() => void saveGarden(garden), 250);
+    const t = window.setTimeout(() => void saveGarden({ ...garden, lastSeen: Date.now() }), 250);
     return () => window.clearTimeout(t);
   }, [garden]);
 
-  // the nightly 3:00 check, also when the app stays open across it
+  // the nightly 3:00 check, also when the app stays open across it; and a fresh "last seen" each minute
   useEffect(() => {
     setGarden((g) => (g ? catchUpNights(g, now) : g));
+    if (gardenRef.current && loaded.current) void saveGarden({ ...gardenRef.current, lastSeen: now });
   }, [now]);
+
+  // leaving and coming back: on return after a while, replay what happened in between
+  useEffect(() => {
+    let hiddenAt: number | null = null;
+    const onVisibility = () => {
+      const g = gardenRef.current;
+      if (!g || !loaded.current) return;
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now();
+        void saveGarden({ ...g, lastSeen: hiddenAt });
+      } else if (hiddenAt !== null) {
+        const t = Date.now();
+        if (t - hiddenAt >= LAPSE_MIN_GAP) playLapse(buildTimelapse(g, hiddenAt, t), true);
+        hiddenAt = null;
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [playLapse]);
+
+  // drive the replay: sweep, hold a moment on the result, then fade the clock away
+  const lapseTl = lapse?.tl;
+  useEffect(() => {
+    if (!lapseTl) return;
+    const duration = prefersStill() ? 0 : lapseDuration(lapseTl);
+    const start = performance.now();
+    const timers: number[] = [];
+    let raf = 0;
+    const mine = (fn: (l: Lapse) => Lapse | null) => setLapse((l) => (l && l.tl === lapseTl ? fn(l) : l));
+    const finish = () => {
+      timers.push(window.setTimeout(() => mine((l) => ({ ...l, fading: true })), 1300));
+      timers.push(window.setTimeout(() => mine(() => null), 2300));
+    };
+    const frame = (t: number) => {
+      const p = duration ? Math.min(1, (t - start) / duration) : 1;
+      mine((l) => (l.skipped ? l : { ...l, p }));
+      if (p < 1) raf = requestAnimationFrame(frame);
+      else finish();
+    };
+    raf = requestAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(raf);
+      timers.forEach((id) => window.clearTimeout(id));
+    };
+  }, [lapseTl]);
+
+  const skipLapse = () => {
+    setLapse((l) => (l ? { ...l, p: 1, fading: true, skipped: true } : l));
+    window.setTimeout(() => setLapse((l) => (l?.skipped ? null : l)), 900);
+  };
+
+  // the letter opens by itself the first time, once any replay has finished
+  const letterUnread = garden?.settings.letter === 'unread';
+  const replaying = lapse !== null;
+  useEffect(() => {
+    if (!letterUnread || replaying) return;
+    const t = window.setTimeout(() => setLetterOpen(true), 700);
+    return () => window.clearTimeout(t);
+  }, [letterUnread, replaying]);
 
   const update = useCallback((fn: (g: GardenState) => GardenState) => setGarden((g) => (g ? fn(g) : g)), []);
   const settings = garden?.settings;
@@ -194,11 +280,15 @@ export function App() {
     window.setTimeout(() => setWateringId((w) => (w === id ? null : w)), 1900);
   };
 
+  // during a replay the garden is drawn as it was at that moment
+  const shownNow = lapse ? lapse.tl.from + (lapse.tl.to - lapse.tl.from) * ease(lapse.p) : now;
+  const shown = lapse ? { ...garden, plants: gardenAt(lapse.tl, shownNow).plants } : garden;
+
   // vines show while they're switched on and their plant stands on the sill
   const vines: VineSpec[] = devVineList.length
     ? devVineList
     : settings.vines
-      ? garden.plants.flatMap((p) =>
+      ? shown.plants.flatMap((p) =>
           p.vine && isVineSpot(p.display) && isVineSpecies(p.species)
             ? [{ id: p.id, species: p.species, from: p.display, length: p.vine.length, ...(p.vine.dir ? { dir: p.vine.dir } : {}) }]
             : [],
@@ -208,7 +298,7 @@ export function App() {
   const cardPlant = mode.kind === 'card' ? garden.plants.find((p) => p.id === mode.id) : undefined;
 
   return (
-    <div className="garden" style={paletteVars(theme, weather)}>
+    <div className={weather.night ? 'garden night' : 'garden'} style={paletteVars(theme, weather)}>
       <div className="view" key={settings.view}>
         {settings.view === 'room' ? (
           <Scene
@@ -216,9 +306,10 @@ export function App() {
             weather={weather}
             viewH={viewH}
             vines={vines}
+            snip={snip}
             hideCurtains={import.meta.env.DEV && window.location.search.includes('nocurtains')}
-            garden={garden}
-            now={now}
+            garden={shown}
+            now={shownNow}
             selectedId={cardPlant?.id ?? null}
             placingId={mode.kind === 'place' ? mode.id : null}
             wateringId={wateringId}
@@ -229,8 +320,8 @@ export function App() {
             theme={theme}
             weather={weather}
             viewH={viewH}
-            garden={garden}
-            now={now}
+            garden={shown}
+            now={shownNow}
             selectedId={cardPlant?.id ?? null}
             movingId={mode.kind === 'move' ? mode.id : null}
             wateringId={wateringId}
@@ -246,6 +337,12 @@ export function App() {
         onSettings={setSettings}
         onLiveWeather={liveWeather}
         locating={locating}
+        onLetter={() => setLetterOpen(true)}
+        onClock={() => {
+          const o = opened.current;
+          const tl = lastLapse.current ?? (o ? buildTimelapse(o.garden, o.at, Date.now()) : null);
+          if (tl) playLapse(tl, false);
+        }}
       />
       {mode.kind === 'pick' && <PlantPicker onPick={plantSpecies} onClose={() => setMode({ kind: 'idle' })} />}
       {mode.kind === 'choose' && (
@@ -278,7 +375,14 @@ export function App() {
             }
           }}
           onPot={() => update((g) => cyclePot(g, cardPlant.id))}
-          onTrim={settings.vines && cardPlant.vine ? () => update((g) => trimVine(g, cardPlant.id)) : null}
+          onTrim={
+            settings.vines && cardPlant.vine
+              ? () => {
+                  update((g) => trimVine(g, cardPlant.id));
+                  setSnip((s) => ({ id: cardPlant.id, n: (s?.n ?? 0) + 1 }));
+                }
+              : null
+          }
           onRemove={() => {
             update((g) => removePlant(g, cardPlant.id));
             setMode({ kind: 'idle' });
@@ -288,6 +392,19 @@ export function App() {
       )}
       {mode.kind === 'move' && <MoveBanner text="Tap where it should go" onCancel={() => setMode({ kind: 'idle' })} />}
       {mode.kind === 'place' && <MoveBanner text="Tap a place in the window" onCancel={() => setMode({ kind: 'idle' })} />}
+      {lapse && <LapseClock lapse={lapse.tl} p={lapse.p} fading={lapse.fading} onSkip={skipLapse} />}
+      {letterOpen && !lapse && (
+        <Letter
+          onKeep={() => {
+            setLetterOpen(false);
+            if (settings.letter === 'unread') setSettings({ letter: 'kept' });
+          }}
+          onThrowAway={() => {
+            setLetterOpen(false);
+            setSettings({ letter: 'deleted' });
+          }}
+        />
+      )}
     </div>
   );
 }

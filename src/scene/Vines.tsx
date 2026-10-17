@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { WindowSpot } from '../garden/state';
 import type { MiddleDir, RouteKind } from '../garden/vines';
 import { Stem } from '../plants/common';
@@ -358,14 +358,69 @@ export function VineRunner({ placed }: { placed: PlacedVine }) {
   return v ? <Piece v={v} from={0} to={v.runnerEnd} /> : null;
 }
 
+/** Tells the vines a snip just happened to this plant, so the cut-off part can fall. */
+export type Snip = { id: string; n: number };
+
+type Falling = { key: string; x: number; y: number; rose: boolean; dx: number; rot: number; delay: number };
+
+/** Leaves from the cut-off end drift down and fade. */
+function FallingLeaves({ bits }: { bits: Falling[] }) {
+  return (
+    <g pointerEvents="none">
+      {bits.map((b) => (
+        <g key={b.key} transform={`translate(${b.x.toFixed(1)} ${b.y.toFixed(1)})`}>
+          <g
+            className="snip-leaf"
+            style={{ '--dx': `${b.dx}px`, '--rot': `${b.rot}deg`, animationDelay: `${b.delay}s` } as CSSProperties}
+          >
+            {b.rose ? (
+              <LeafCluster x={0} y={0} rot={b.rot / 3} len={9} />
+            ) : (
+              <g transform="scale(0.5)">
+                <PansyLeaf rot={b.rot / 3} len={4} />
+              </g>
+            )}
+          </g>
+        </g>
+      ))}
+    </g>
+  );
+}
+
 /** Everything past the runner: on the window frame, behind the hanging shelf and the curtains. */
-export function Vines({ placed }: { placed: PlacedVine[] }) {
+export function Vines({ placed, snip = null }: { placed: PlacedVine[]; snip?: Snip | null }) {
+  const shaped = placed.map((p) => ({ id: p.vine.id, v: shape(p.vine, p.kind, p.start, p.phase) }));
+  // the shapes as last drawn, so a snip knows where the part that was cut off used to be
+  const lastShapes = useRef(new Map<string, Shaped>());
+  const [falling, setFalling] = useState<Falling[]>([]);
+
+  useEffect(() => {
+    if (!snip) return;
+    const before = lastShapes.current.get(snip.id);
+    if (!before) return;
+    const after = shaped.find((s) => s.id === snip.id)?.v?.length ?? 0;
+    const cut = before.pts.filter((p) => p.s > after);
+    const count = Math.min(6, Math.max(3, Math.round(cut.length / 10)));
+    const bits = Array.from({ length: count }, (_, i) => {
+      const p = cut[Math.floor(((i + 0.5) / count) * cut.length)];
+      return p
+        ? { key: `${snip.n}-${i}`, x: p.x, y: p.y, rose: before.rose, dx: (i % 2 ? 1 : -1) * (6 + i * 3), rot: (i % 2 ? 1 : -1) * (120 + i * 40), delay: i * 0.07 }
+        : null;
+    }).filter((b): b is Falling => b !== null);
+    setFalling(bits);
+    const t = window.setTimeout(() => setFalling([]), 1900);
+    return () => window.clearTimeout(t);
+    // only a new snip should start leaves falling
+  }, [snip?.n]);
+
+  useEffect(() => {
+    lastShapes.current = new Map(shaped.flatMap((s) => (s.v ? [[s.id, s.v] as const] : [])));
+  });
+
   return (
     <g className="vines">
-      {placed.map((p) => {
-        const v = shape(p.vine, p.kind, p.start, p.phase);
-        return v ? <Piece key={p.vine.id} v={v} from={v.runnerEnd} to={Infinity} /> : null;
-      })}
+      {shaped.map(({ id, v }) => (v ? <Piece key={id} v={v} from={v.runnerEnd} to={Infinity} /> : null))}
+      <FallingLeaves bits={falling} />
     </g>
   );
 }

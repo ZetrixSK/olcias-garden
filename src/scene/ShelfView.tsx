@@ -5,7 +5,8 @@ import { CANDLE_FLAME, Flame, SillCandle } from './Decor';
 import { PeekingDogs } from './Dogs';
 import { EmptySlot, GardenPlanter } from './GardenPlanter';
 import { fv, sv } from './geometry';
-import { WallMotifs } from './Room';
+import { Sign, WallMotifs } from './Room';
+import { Bunting, SillEnds } from './ShelfDecor';
 import { Landscape, Rain } from './Outside';
 import { Sky, SkyLights } from './Sky';
 
@@ -101,7 +102,7 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
   const h = Math.max(viewH, CORE_H);
   const minY = (CORE_H - h) / 2;
   const bottom = minY + h;
-  const tint = roomTint(weather);
+  const tint = roomTint(weather, theme);
   const candleLit = isCandleLit(weather);
   const [fx, fy] = CANDLE_FLAME[theme];
   const candleShift = { x: 200 - 335, y: 277 - 517 };
@@ -132,6 +133,8 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
       <path fillRule="evenodd" style={fv('wall')} d={`M-400,-400 H800 V1200 H-400 Z ${OUTER}`} />
       <path fillRule="evenodd" fill={`url(#motif-${theme})`} d={`M-400,-400 H800 V1200 H-400 Z ${OUTER}`} />
       <ShelfWindow />
+      <Bunting theme={theme} />
+      <SillEnds theme={theme} />
 
       <Board x0={10} x1={390} y={446} />
       <Board x0={10} x1={390} y={618} />
@@ -174,6 +177,11 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
           </g>
         );
       })}
+
+      {/* the name, hung from the underside of the bottom shelf, between the dogs */}
+      <g transform={`translate(200 ${Math.min(695, bottom - 88).toFixed(1)}) scale(0.85) translate(-200 -606)`}>
+        <Sign theme={theme} />
+      </g>
 
       <PeekingDogs bottom={bottom} />
 

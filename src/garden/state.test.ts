@@ -73,6 +73,7 @@ describe('garden state', () => {
       manual: { sky: 'clear', night: false },
       location: null,
       vines: true,
+      letter: 'unread',
     });
   });
 

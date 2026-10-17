@@ -172,7 +172,9 @@ const skyPalettes: Record<SkyKey, Palette> = {
 };
 
 /** How the indoor light shifts with the weather: a multiply tint over the whole scene. */
-export function roomTint(w: Weather): { color: string; opacity: number } | null {
+export function roomTint(w: Weather, theme: Theme = 'witchy'): { color: string; opacity: number } | null {
+  // the cozy room's pale walls need a deeper, warmer dusk than the already-dark witchy room
+  if (w.night && theme === 'cozy') return w.sky === 'rain' ? { color: '#262447', opacity: 0.8 } : { color: '#2b2350', opacity: 0.78 };
   if (w.night) return w.sky === 'rain' ? { color: '#1f2444', opacity: 0.68 } : { color: '#24224f', opacity: 0.64 };
   if (w.sky === 'cloudy') return { color: '#77748a', opacity: 0.16 };
   if (w.sky === 'rain') return { color: '#4a5572', opacity: 0.3 };
