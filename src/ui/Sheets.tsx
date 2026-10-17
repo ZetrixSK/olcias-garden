@@ -78,7 +78,7 @@ export function WindowChooser({ plants, now, onPick, onShelves, onClose }: {
   );
 }
 
-export function PlantCard({ plant, now, inWindowView, onWater, onMove, onWindow, onPot, onRemove, onClose }: {
+export function PlantCard({ plant, now, inWindowView, onWater, onMove, onWindow, onPot, onTrim, onRemove, onClose }: {
   plant: Plant;
   now: number;
   /** In the window view the card offers taking the plant down; on the shelves, putting it up or removing it. */
@@ -87,6 +87,8 @@ export function PlantCard({ plant, now, inWindowView, onWater, onMove, onWindow,
   onMove: () => void;
   onWindow: () => void;
   onPot: () => void;
+  /** Present when the plant has a vine that can be cut back. */
+  onTrim: (() => void) | null;
   onRemove: () => void;
   onClose: () => void;
 }) {
@@ -104,8 +106,9 @@ export function PlantCard({ plant, now, inWindowView, onWater, onMove, onWindow,
       <p className="meta">
         {STAGE_LABEL[stage]} · {plantedText(plant, now)}
         {!inWindowView && plant.display && ' · in the window'}
+        {plant.vine && ' · climbing'}
       </p>
-      <div className={inWindowView ? 'actions' : 'actions five'}>
+      <div className={!inWindowView || (inWindowView && onTrim) ? 'actions five' : 'actions'}>
         <button onClick={onWater}>
           <svg viewBox="-14 -14 28 28" aria-hidden="true">
             <path d="M-2,8 L-1,-3 C-1,-5 9,-5 9,-3 L10,8 Z M-1,0 L-11,-8 M-13,-10 L-9,-6 M9,-2 C14,-3 14,5 9.6,5" />
@@ -122,6 +125,14 @@ export function PlantCard({ plant, now, inWindowView, onWater, onMove, onWindow,
           <button onClick={onWindow}>
             <svg viewBox="-14 -14 28 28" aria-hidden="true">{WINDOW_ICON}</svg>
             {plant.display ? 'Take down' : 'Window'}
+          </button>
+        )}
+        {inWindowView && onTrim && (
+          <button onClick={onTrim}>
+            <svg viewBox="-14 -14 28 28" aria-hidden="true">
+              <path d="M-8,-9 L5,5 M8,-9 L-5,5 M-5,5 A3.4,3.4 0 1 0 -5.01,5 M5,5 A3.4,3.4 0 1 0 5.01,5" />
+            </svg>
+            Trim
           </button>
         )}
         <button onClick={onPot}>

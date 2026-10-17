@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   addPlant,
+  catchUpNights,
   DEFAULT_SETTINGS,
   cyclePot,
   movePlant,
@@ -8,6 +9,7 @@ import {
   plantAt,
   removePlant,
   takeDown,
+  trimVine,
   updateSettings,
   waterPlant,
   windowPlantAt,
@@ -17,10 +19,12 @@ import {
   type WindowSpot,
 } from './garden/state';
 import { loadGarden, saveGarden } from './garden/storage';
+import { isVineSpecies, isVineSpot } from './garden/vines';
 import type { SpeciesId } from './garden/species';
 import { grainDataUrl } from './grain';
 import { Scene } from './scene/Scene';
 import { ShelfView } from './scene/ShelfView';
+import type { VineSpec } from './scene/Vines';
 import { paletteVars } from './theme/palettes';
 import { MoveBanner, PlantCard, PlantPicker, WindowChooser } from './ui/Sheets';
 import { Toolbar } from './ui/Toolbar';
@@ -70,6 +74,18 @@ function devOverrides(g: GardenState): GardenState {
   return updateSettings(g, patch);
 }
 
+/** Dev only: ?vines=pansy@sill-1:0.6,rose@sill-3:1,pansy@sill-2:1:left draws vines for the art prototype. */
+function devVines(): VineSpec[] {
+  const q = new URLSearchParams(window.location.search).get('vines');
+  if (!q) return [];
+  return q.split(',').flatMap((part, i) => {
+    const m = /^(pansy|rose)@(sill-[123]):([\d.]+)(?::(left|right))?$/.exec(part);
+    if (!m) return [];
+    const vine: VineSpec = { id: `dev-${i}-${m[1]}`, species: m[1] as VineSpec['species'], from: m[2] as VineSpec['from'], length: Number(m[3]) };
+    return [m[4] ? { ...vine, dir: m[4] as 'left' | 'right' } : vine];
+  });
+}
+
 type Mode =
   | { kind: 'idle' }
   /** shelves: choosing a species for an empty slot */
@@ -90,12 +106,14 @@ export function App() {
   const [now, setNow] = useNow();
   const viewH = useViewHeight();
   const grain = useMemo(() => grainDataUrl(), []);
+  const devVineList = useMemo(() => (import.meta.env.DEV ? devVines() : []), []);
   const loaded = useRef(false);
 
   useEffect(() => {
     loadGarden().then((g) => {
       loaded.current = true;
-      setGarden(import.meta.env.DEV ? devOverrides(g) : g);
+      const caughtUp = catchUpNights(g, Date.now());
+      setGarden(import.meta.env.DEV ? devOverrides(caughtUp) : caughtUp);
     });
   }, []);
 
@@ -105,6 +123,11 @@ export function App() {
     const t = window.setTimeout(() => void saveGarden(garden), 250);
     return () => window.clearTimeout(t);
   }, [garden]);
+
+  // the nightly 3:00 check, also when the app stays open across it
+  useEffect(() => {
+    setGarden((g) => (g ? catchUpNights(g, now) : g));
+  }, [now]);
 
   const update = useCallback((fn: (g: GardenState) => GardenState) => setGarden((g) => (g ? fn(g) : g)), []);
   const settings = garden?.settings;
@@ -171,6 +194,17 @@ export function App() {
     window.setTimeout(() => setWateringId((w) => (w === id ? null : w)), 1900);
   };
 
+  // vines show while they're switched on and their plant stands on the sill
+  const vines: VineSpec[] = devVineList.length
+    ? devVineList
+    : settings.vines
+      ? garden.plants.flatMap((p) =>
+          p.vine && isVineSpot(p.display) && isVineSpecies(p.species)
+            ? [{ id: p.id, species: p.species, from: p.display, length: p.vine.length, ...(p.vine.dir ? { dir: p.vine.dir } : {}) }]
+            : [],
+        )
+      : [];
+
   const cardPlant = mode.kind === 'card' ? garden.plants.find((p) => p.id === mode.id) : undefined;
 
   return (
@@ -181,6 +215,8 @@ export function App() {
             theme={theme}
             weather={weather}
             viewH={viewH}
+            vines={vines}
+            hideCurtains={import.meta.env.DEV && window.location.search.includes('nocurtains')}
             garden={garden}
             now={now}
             selectedId={cardPlant?.id ?? null}
@@ -242,6 +278,7 @@ export function App() {
             }
           }}
           onPot={() => update((g) => cyclePot(g, cardPlant.id))}
+          onTrim={settings.vines && cardPlant.vine ? () => update((g) => trimVine(g, cardPlant.id)) : null}
           onRemove={() => {
             update((g) => removePlant(g, cardPlant.id));
             setMode({ kind: 'idle' });

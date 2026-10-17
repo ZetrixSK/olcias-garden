@@ -113,6 +113,15 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
                 <Icon>{MOON}</Icon>
               </button>
             </div>
+            <p className="hint">Climbing vines</p>
+            <div className="row two">
+              <button aria-pressed={settings.vines} onClick={() => onSettings({ vines: true })}>
+                On
+              </button>
+              <button aria-pressed={!settings.vines} onClick={() => onSettings({ vines: false })}>
+                Off
+              </button>
+            </div>
             <p className="hint">Room</p>
             <div className="row two">
               <button aria-pressed={settings.theme === 'cozy'} onClick={() => onSettings({ theme: 'cozy' })}>

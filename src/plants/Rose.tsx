@@ -4,7 +4,7 @@ import { SeedMarker, Stem } from './common';
 const R = { petal: '#f3baa3', shade: '#df9583', deep: '#bd6b68', hi: '#fcdccb' };
 const RL = { base: '#5c8553', shade: '#466b40', vein: '#3b5935', young: '#8e6352' };
 
-function RoseBloom({ x, y, rot = 0, s = 1 }: { x: number; y: number; rot?: number; s?: number }) {
+export function RoseBloom({ x, y, rot = 0, s = 1 }: { x: number; y: number; rot?: number; s?: number }) {
   return (
     <g transform={`translate(${x} ${y}) rotate(${rot}) scale(${s})`}>
       <path
@@ -28,7 +28,7 @@ function RoseBloom({ x, y, rot = 0, s = 1 }: { x: number; y: number; rot?: numbe
   );
 }
 
-function RoseHalf({ x, y, rot }: { x: number; y: number; rot: number }) {
+export function RoseHalf({ x, y, rot }: { x: number; y: number; rot: number }) {
   return (
     <g transform={`translate(${x} ${y}) rotate(${rot})`}>
       <path className="ink-thin" fill={RL.base} d="M-1,0 C-6,1 -11,4 -14,9 C-9,6 -5,4 -1,3 Z M1,0 C6,1 11,4 13,9 C9,6 5,4 1,3 Z" />
@@ -41,7 +41,7 @@ function RoseHalf({ x, y, rot }: { x: number; y: number; rot: number }) {
   );
 }
 
-function RoseBud({ x, y, rot }: { x: number; y: number; rot: number }) {
+export function RoseBud({ x, y, rot }: { x: number; y: number; rot: number }) {
   return (
     <g transform={`translate(${x} ${y}) rotate(${rot})`}>
       <path className="ink" fill="#d98a86" d="M-5,0 C-7,-6 -4,-13 0,-16 C4,-13 7,-6 5,0 Z" />
@@ -56,7 +56,7 @@ function RoseBud({ x, y, rot }: { x: number; y: number; rot: number }) {
 const LEAFLET =
   'M0,0 C-3,-1 -5,-4 -5,-7 L-5.8,-7.6 L-4.6,-8.4 C-4,-10.5 -2,-12.5 0,-14 C2,-12.5 4,-10.5 4.6,-8.4 L5.8,-7.6 L5,-7 C5,-4 3,-1 0,0 Z';
 
-function LeafCluster({ x, y, rot, len, young }: { x: number; y: number; rot: number; len: number; young?: boolean }) {
+export function LeafCluster({ x, y, rot, len, young }: { x: number; y: number; rot: number; len: number; young?: boolean }) {
   const fill = young ? RL.young : RL.base;
   const leaflet = (lx: number, ly: number, r: number, s: number) => (
     <g transform={`translate(${lx} ${ly}) rotate(${r}) scale(${s})`}>
@@ -77,7 +77,7 @@ function LeafCluster({ x, y, rot, len, young }: { x: number; y: number; rot: num
   );
 }
 
-function Thorns({ pts }: { pts: Array<[number, number, number]> }) {
+export function Thorns({ pts }: { pts: Array<[number, number, number]> }) {
   return (
     <g>
       {pts.map(([x, y, r], i) => (

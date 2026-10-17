@@ -72,6 +72,7 @@ describe('garden state', () => {
       weatherMode: 'clock',
       manual: { sky: 'clear', night: false },
       location: null,
+      vines: true,
     });
   });
 
@@ -84,7 +85,7 @@ describe('garden state', () => {
       ],
       settings: { theme: 'cozy', view: 'shelves', weatherMode: 'night' },
     });
-    expect(parsed?.version).toBe(3);
+    expect(parsed?.version).toBe(4);
     expect(parsed?.plants.map((p) => [p.id, p.slot])).toEqual([['side', 'sill-l'], ['sill', 'hang-l']]);
     expect(parsed?.settings.weatherMode).toBe('manual');
     expect(parsed?.settings.manual).toEqual({ sky: 'clear', night: true });
@@ -97,7 +98,7 @@ describe('garden state', () => {
       plants: [plant('d', 'row3-a'), plant('a', 'sill-l'), plant('c', 'row2-a'), plant('b', 'hang-r')],
       settings: {},
     });
-    expect(parsed?.version).toBe(3);
+    expect(parsed?.version).toBe(4);
     expect(parsed?.plants.map((p) => [p.id, p.display])).toEqual([
       ['d', null],
       ['a', 'sill-2'],

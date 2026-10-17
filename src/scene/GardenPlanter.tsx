@@ -1,10 +1,11 @@
+import type { ReactNode } from 'react';
 import { isSoilWet, stageAt } from '../garden/growth';
 import type { Plant } from '../garden/state';
 import { PlantArt } from '../plants/PlantArt';
 import { POT_HEIGHT, Potted, RIM } from '../plants/Pots';
 
 /** One of her plants in its pot, as drawn in either view. Rooted at the rim; the pot hangs below. */
-export function GardenPlanter({ plant, now, selected, moving, watering, ribbon = false }: {
+export function GardenPlanter({ plant, now, selected, moving, watering, ribbon = false, lean = 0, runner }: {
   plant: Plant;
   now: number;
   selected: boolean;
@@ -12,6 +13,10 @@ export function GardenPlanter({ plant, now, selected, moving, watering, ribbon =
   watering: boolean;
   /** A little bow on the pot: on the shelves it marks the plants that are also in the window. */
   ribbon?: boolean;
+  /** Degrees the plant leans, towards the frame it is climbing. */
+  lean?: number;
+  /** A vine's runner, drawn over the plant but behind the pot front so it comes out of the soil. */
+  runner?: ReactNode;
 }) {
   const stage = stageAt(plant.species, plant, now);
   const wet = isSoilWet(plant, now);
@@ -20,11 +25,14 @@ export function GardenPlanter({ plant, now, selected, moving, watering, ribbon =
   return (
     <g className={moving ? 'moving' : undefined}>
       <Potted kind={plant.pot} wet={wet}>
-        <g className="sway" style={{ animationDuration: `${7 + (plant.id.charCodeAt(0) % 5)}s` }}>
-          <g key={last ?? 0} className={last ? 'wobble' : undefined}>
-            <PlantArt species={plant.species} stage={stage} />
+        <g transform={lean ? `rotate(${lean})` : undefined}>
+          <g className="sway" style={{ animationDuration: `${7 + (plant.id.charCodeAt(0) % 5)}s` }}>
+            <g key={last ?? 0} className={last ? 'wobble' : undefined}>
+              <PlantArt species={plant.species} stage={stage} />
+            </g>
           </g>
         </g>
+        {runner}
       </Potted>
       {ribbon && <Ribbon x={RIM[plant.pot][0] * 0.62} />}
       {selected && <ellipse cx="0" cy={POT_HEIGHT[plant.pot] + 4} rx="40" ry="6" fill="none" className="ink selected-ring" strokeDasharray="4 5" />}

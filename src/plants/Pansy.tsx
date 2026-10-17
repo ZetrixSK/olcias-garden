@@ -118,7 +118,7 @@ export function PansyLeaf({ x = 0, y = 0, rot, len, s = 1 }: { x?: number; y?: n
 }
 
 /** A nodding bud: pansy buds hang their heads before they open. */
-function PansyBud({ x, y, rot, c }: { x: number; y: number; rot: number; c: PansyColors }) {
+export function PansyBud({ x, y, rot, c }: { x: number; y: number; rot: number; c: PansyColors }) {
   return (
     <g transform={`translate(${x} ${y}) rotate(${rot})`}>
       <path className="ink" fill={c.top} d="M0,0 C-5,2 -7,9 -3,14 C-1,16.5 2,16 3.5,13.5 C6.5,9 5.5,2 0,0 Z" />

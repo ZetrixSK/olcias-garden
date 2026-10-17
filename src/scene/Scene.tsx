@@ -1,4 +1,5 @@
 import { WINDOW_SPOTS, type GardenState, type WindowSpot } from '../garden/state';
+import { chooseRoutes, type VineSpot } from '../garden/vines';
 import { POT_HEIGHT } from '../plants/Pots';
 import { candleLit as isCandleLit, roomTint, type Theme, type Weather } from '../theme/palettes';
 import { Ball, CANDLE_FLAME, CornerPiece, Flame, ShelfTrinket, SillCandle, WallDecor } from './Decor';
@@ -8,6 +9,7 @@ import { FLOOR_Y, SILL_Y, VIEW_H, VIEW_W, WINDOW_OPENING } from './geometry';
 import { Landscape, Rain } from './Outside';
 import { Curtains, Floor, Shelf, Sign, Sill, Wall, WindowFrame } from './Room';
 import { Sky, SkyLights } from './Sky';
+import { leanFor, runnerStart, VINE_PHASE, VineRunner, Vines, type PlacedVine, type VineSpec } from './Vines';
 
 /** Where each window spot stands: x, the surface it stands on, the drawing scale and the tap area's width. */
 const SPOT_POS: Record<WindowSpot, { x: number; base: number; scale: number; w: number; h: number }> = {
@@ -26,10 +28,29 @@ type SpotProps = {
   placingId: string | null;
   wateringId: string | null;
   onSpot: (spot: WindowSpot) => void;
+  placed: PlacedVine[];
 };
 
+/** Where each vine starts: in the soil of the plant standing in its spot. At most one per pot. */
+function placeVines(vines: VineSpec[], garden: GardenState): PlacedVine[] {
+  const bySpot = new Map<WindowSpot, VineSpec>();
+  for (const v of vines) {
+    if (!bySpot.has(v.from) && garden.plants.some((p) => p.display === v.from)) bySpot.set(v.from, v);
+  }
+  const middle = bySpot.get('sill-2');
+  const routes = chooseRoutes(bySpot.has('sill-1'), bySpot.has('sill-3'), middle ? (middle.dir ?? 'right') : null);
+  return [...bySpot].flatMap(([spot, vine]) => {
+    const kind = routes[spot as VineSpot];
+    const plant = garden.plants.find((p) => p.display === spot);
+    if (!kind || !plant) return [];
+    const pos = SPOT_POS[spot];
+    const rimY = pos.base - POT_HEIGHT[plant.pot] * pos.scale;
+    return [{ vine, kind, start: runnerStart(kind, pos.x, rimY), phase: VINE_PHASE[spot] ?? 0 }];
+  });
+}
+
 /** Her plants in one row of the window (shelf or sill), with invisible tap areas over each spot. */
-function WindowRow({ row, garden, now, selectedId, placingId, wateringId, onSpot }: SpotProps & { row: 'shelf' | 'sill' }) {
+function WindowRow({ row, garden, now, selectedId, placingId, wateringId, onSpot, placed }: SpotProps & { row: 'shelf' | 'sill' }) {
   const spots = WINDOW_SPOTS.filter((s) => s.startsWith(row));
   return (
     <g>
@@ -37,6 +58,7 @@ function WindowRow({ row, garden, now, selectedId, placingId, wateringId, onSpot
         const pos = SPOT_POS[spot];
         const plant = garden.plants.find((p) => p.display === spot);
         const rimY = pos.base - (plant ? POT_HEIGHT[plant.pot] * pos.scale : 0);
+        const climbing = placed.filter((v) => v.vine.from === spot);
         return (
           <g key={spot} transform={`translate(${pos.x} ${rimY.toFixed(1)}) scale(${pos.scale})`}>
             {plant ? (
@@ -46,6 +68,16 @@ function WindowRow({ row, garden, now, selectedId, placingId, wateringId, onSpot
                 selected={plant.id === selectedId}
                 moving={plant.id === placingId}
                 watering={plant.id === wateringId}
+                lean={climbing[0] ? leanFor(climbing[0].kind) : 0}
+                runner={
+                  climbing.length > 0 && (
+                    <g transform={`translate(${-pos.x} ${(-rimY).toFixed(1)})`}>
+                      {climbing.map((v) => (
+                        <VineRunner key={v.vine.id} placed={v} />
+                      ))}
+                    </g>
+                  )
+                }
               />
             ) : (
               <g transform={`scale(${1 / pos.scale}) translate(0 -3)`}>
@@ -89,7 +121,16 @@ function layoutFor(viewH: number) {
   return { dy, minY, wallMid, pictureScale };
 }
 
-export function Scene({ theme, weather, viewH, ...spots }: { theme: Theme; weather: Weather; viewH: number } & SpotProps) {
+export function Scene({ theme, weather, viewH, vines, hideCurtains = false, ...rest }: {
+  theme: Theme;
+  weather: Weather;
+  viewH: number;
+  vines: VineSpec[];
+  /** Dev only: shows the bare window, to judge the vines without the curtains over them. */
+  hideCurtains?: boolean;
+} & Omit<SpotProps, 'placed'>) {
+  const placed = placeVines(vines, rest.garden);
+  const spots = { ...rest, placed };
   const { dy, minY, wallMid, pictureScale } = layoutFor(viewH);
   const tint = roomTint(weather);
   const candleLit = isCandleLit(weather);
@@ -116,6 +157,8 @@ export function Scene({ theme, weather, viewH, ...spots }: { theme: Theme; weath
       <Wall theme={theme} />
       <WindowFrame />
 
+      {/* vines climb behind the shelf board, like the ropes, and behind the pots on the sill */}
+      <Vines placed={placed} />
       <Shelf />
       <WindowRow row="shelf" {...spots} />
       <ShelfTrinket theme={theme} />
@@ -124,7 +167,7 @@ export function Scene({ theme, weather, viewH, ...spots }: { theme: Theme; weath
       <WindowRow row="sill" {...spots} />
       <SillCandle theme={theme} />
 
-      <Curtains theme={theme} />
+      {!hideCurtains && <Curtains theme={theme} />}
       <WallDecor theme={theme} cy={wallMid} scale={pictureScale} />
       <g transform={`translate(0 ${(wallMid - 606).toFixed(1)})`}>
         <Sign theme={theme} />

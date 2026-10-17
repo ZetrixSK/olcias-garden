@@ -1,5 +1,6 @@
 import { SKY_KINDS, type Theme, type Weather } from '../theme/palettes';
 import { plantedAtForStage } from './growth';
+import { lastNight, runNights, settleMiddleDir, trimmed, type Vine } from './vines';
 import { POT_KINDS, SPECIES, SPECIES_IDS, type GardenPot, type SpeciesId, type Stage } from './species';
 
 export const SLOT_IDS = [
@@ -22,6 +23,8 @@ export type Plant = {
   waterings: number[];
   /** Where it is shown in the window, if anywhere. It stays on its shelf as well. */
   display: WindowSpot | null;
+  /** Grown out of its pot and around the window; only pansies and roses ever do. */
+  vine: Vine | null;
 };
 
 export type View = 'room' | 'shelves';
@@ -34,14 +37,18 @@ export type Settings = {
   weatherMode: WeatherMode;
   manual: Weather;
   location: { lat: number; lon: number } | null;
+  /** Whether plants may outgrow their pots. Off hides the vines too; they come back when it's on. */
+  vines: boolean;
 };
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 export type GardenState = {
   version: typeof SAVE_VERSION;
   plants: Plant[];
   settings: Settings;
+  /** The last 3:00 whose nightly vine check has been done. */
+  vinesCheckedAt: number;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -50,6 +57,7 @@ export const DEFAULT_SETTINGS: Settings = {
   weatherMode: 'clock',
   manual: { sky: 'clear', night: false },
   location: null,
+  vines: true,
 };
 
 export function newId(): string {
@@ -68,6 +76,7 @@ export function starterGarden(now: number): GardenState {
     plantedAt: plantedAtForStage(species, stage, now),
     waterings: [],
     display,
+    vine: null,
   });
   return {
     version: SAVE_VERSION,
@@ -81,6 +90,7 @@ export function starterGarden(now: number): GardenState {
       p('pansy', 'row2-d', 'seed', 'shelf-1'),
     ],
     settings: { ...DEFAULT_SETTINGS },
+    vinesCheckedAt: lastNight(now),
   };
 }
 
@@ -90,7 +100,7 @@ export function plantAt(state: GardenState, slot: SlotId): Plant | undefined {
 
 export function addPlant(state: GardenState, slot: SlotId, species: SpeciesId, now: number, id = newId()): GardenState {
   if (plantAt(state, slot)) return state;
-  const plant: Plant = { id, species, slot, pot: SPECIES[species].pot, plantedAt: now, waterings: [], display: null };
+  const plant: Plant = { id, species, slot, pot: SPECIES[species].pot, plantedAt: now, waterings: [], display: null, vine: null };
   return { ...state, plants: [...state.plants, plant] };
 }
 
@@ -124,10 +134,20 @@ export function placeInWindow(state: GardenState, id: string, spot: WindowSpot):
   const plant = state.plants.find((p) => p.id === id);
   if (!plant || plant.display === spot) return state;
   const from = plant.display;
-  return {
-    ...state,
-    plants: state.plants.map((p) => (p.id === id ? { ...p, display: spot } : p.display === spot ? { ...p, display: from } : p)),
-  };
+  const plants = state.plants.map((p) => (p.id === id ? { ...p, display: spot } : p.display === spot ? { ...p, display: from } : p));
+  return { ...state, plants: settleMiddleDir(plants) };
+}
+
+/** Cuts a vine back one step. */
+export function trimVine(state: GardenState, id: string): GardenState {
+  return { ...state, plants: state.plants.map((p) => (p.id === id ? { ...p, vine: trimmed(p.vine) } : p)) };
+}
+
+/** Catches up on every 3:00 since the last visit. Returns the same object when nothing is due. */
+export function catchUpNights(state: GardenState, now: number): GardenState {
+  const { plants, checkedAt } = runNights(state.plants, state.vinesCheckedAt, now, state.settings.vines);
+  if (checkedAt === state.vinesCheckedAt) return state;
+  return { ...state, plants, vinesCheckedAt: checkedAt };
 }
 
 export function takeDown(state: GardenState, id: string): GardenState {
@@ -156,7 +176,7 @@ const isTime = (v: unknown): v is number => typeof v === 'number' && Number.isFi
 
 function parsePlant(v: unknown): Plant | null {
   if (!isObj(v)) return null;
-  const { id, species, slot, pot, plantedAt, waterings, display } = v;
+  const { id, species, slot, pot, plantedAt, waterings, display, vine } = v;
   if (typeof id !== 'string' || !SPECIES_IDS.includes(species as SpeciesId)) return null;
   if (!SLOT_IDS.includes(slot as SlotId) || !isTime(plantedAt)) return null;
   return {
@@ -167,7 +187,17 @@ function parsePlant(v: unknown): Plant | null {
     plantedAt,
     waterings: Array.isArray(waterings) ? waterings.filter(isTime) : [],
     display: WINDOW_SPOTS.includes(display as WindowSpot) ? (display as WindowSpot) : null,
+    vine: parseVine(vine, species as SpeciesId),
   };
+}
+
+function parseVine(v: unknown, species: SpeciesId): Vine | null {
+  if (!isObj(v) || (species !== 'pansy' && species !== 'rose')) return null;
+  const { length, dir } = v;
+  if (typeof length !== 'number' || !Number.isFinite(length) || length <= 0) return null;
+  const vine: Vine = { length: Math.min(1, length) };
+  if (dir === 'left' || dir === 'right') vine.dir = dir;
+  return vine;
 }
 
 function parseWeather(v: unknown): Weather {
@@ -189,6 +219,7 @@ function parseSettings(v: unknown): Settings {
     manual: parseWeather(s.manual),
     location:
       isObj(loc) && typeof loc.lat === 'number' && typeof loc.lon === 'number' ? { lat: loc.lat, lon: loc.lon } : null,
+    vines: s.vines !== false,
   };
 }
 
@@ -231,11 +262,13 @@ function migrateV2(raw: Record<string, unknown>): Record<string, unknown> {
  * Reads a saved garden defensively. Older versions are migrated; broken entries are dropped one by
  * one rather than throwing the whole garden away. Returns null only when the save is unusable.
  */
-export function parseSave(input: unknown): GardenState | null {
+export function parseSave(input: unknown, now = Date.now()): GardenState | null {
   if (!isObj(input) || !Array.isArray(input.plants)) return null;
   let raw = input;
   if (raw.version === 1) raw = migrateV1(raw);
   if (raw.version === 2) raw = migrateV2(raw);
+  // version 3 had no vines: nothing has outgrown yet, and the nightly checks start from now
+  if (raw.version === 3) raw = { ...raw, version: 4, vinesCheckedAt: lastNight(now) };
   if (raw.version !== SAVE_VERSION) return null;
   const taken = new Set<SlotId>();
   const shown = new Set<WindowSpot>();
@@ -249,5 +282,6 @@ export function parseSave(input: unknown): GardenState | null {
       plants.push(plant);
     }
   }
-  return { version: SAVE_VERSION, plants, settings: parseSettings(raw.settings) };
+  const checked = isTime(raw.vinesCheckedAt) && raw.vinesCheckedAt <= now ? raw.vinesCheckedAt : lastNight(now);
+  return { version: SAVE_VERSION, plants, settings: parseSettings(raw.settings), vinesCheckedAt: checked };
 }
