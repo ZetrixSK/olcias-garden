@@ -143,7 +143,7 @@ function Front({ kind }: { kind: PotKind }) {
   }
 }
 
-const RIM: Record<PotKind, [number, string]> = {
+export const RIM: Record<PotKind, [number, string]> = {
   slim: [24, '#b5623f'],
   wide: [46, '#2b2229'],
   round: [30, '#e2d7c3'],

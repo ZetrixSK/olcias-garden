@@ -1,10 +1,9 @@
-import { isSoilWet, stageAt } from '../garden/growth';
-import { SLOT_IDS, type GardenState, type Plant, type SlotId } from '../garden/state';
-import { PlantArt } from '../plants/PlantArt';
-import { POT_HEIGHT, Potted } from '../plants/Pots';
+import { SLOT_IDS, type GardenState, type SlotId } from '../garden/state';
+import { POT_HEIGHT } from '../plants/Pots';
 import { candleLit as isCandleLit, roomTint, type Theme, type Weather } from '../theme/palettes';
 import { CANDLE_FLAME, Flame, SillCandle } from './Decor';
 import { PeekingDogs } from './Dogs';
+import { EmptySlot, GardenPlanter } from './GardenPlanter';
 import { fv, sv } from './geometry';
 import { WallMotifs } from './Room';
 import { Landscape, Rain } from './Outside';
@@ -87,63 +86,6 @@ function Hanger({ x, rimY }: { x: number; rimY: number }) {
   );
 }
 
-function Planter({ plant, now, selected, moving, watering }: {
-  plant: Plant; now: number; selected: boolean; moving: boolean; watering: boolean;
-}) {
-  const stage = stageAt(plant.species, plant, now);
-  const wet = isSoilWet(plant, now);
-  // remount the inner group on each watering so the wobble replays
-  const wobbleKey = plant.waterings.length;
-  return (
-    <g className={moving ? 'moving' : undefined}>
-      <Potted kind={plant.pot} wet={wet}>
-        <g className="sway" style={{ animationDuration: `${7 + (plant.id.charCodeAt(0) % 5)}s` }}>
-          <g key={wobbleKey} className={plant.waterings.length ? 'wobble' : undefined}>
-            <PlantArt species={plant.species} stage={stage} />
-          </g>
-        </g>
-      </Potted>
-      {selected && <ellipse cx="0" cy={POT_HEIGHT[plant.pot] + 4} rx="40" ry="6" fill="none" className="ink selected-ring" strokeDasharray="4 5" />}
-      {watering && <WateringCan />}
-    </g>
-  );
-}
-
-/** A little can tips over the pot and pours; shown for a moment after tapping Water. */
-function WateringCan() {
-  return (
-    <g className="pour" transform="translate(0 -46) scale(1.35)">
-      <g className="can">
-        <path className="ink" fill="#8fa596" d="M14,-74 L16,-52 C16,-49 40,-49 40,-52 L42,-74 Z" />
-        <path className="ink" fill="#8fa596" d="M16,-62 L-6,-78 L-8,-75 L14,-58 Z" />
-        <path className="ink" fill="#a8bcae" d="M-10,-82 L-3,-76 L-7,-71 L-13,-77 Z" />
-        <path className="ink" fill="none" strokeWidth="2.2" d="M42,-70 C54,-72 54,-56 42,-56" />
-        <path d="M17,-66 L41,-66" stroke="#e69bb2" strokeWidth="2.4" />
-      </g>
-      {[-14, -8, -2, 4].map((dx, i) => (
-        <path
-          key={dx}
-          className="drop-fall"
-          style={{ animationDelay: `${0.35 + i * 0.12}s` }}
-          d={`M${dx},-64 C${dx + 1.4},-61 ${dx + 1.6},-59.4 ${dx},-58 C${dx - 1.6},-59.4 ${dx - 1.4},-61 ${dx},-64 Z`}
-          fill="#bcd8e8"
-          stroke="#3d5568"
-          strokeWidth="0.6"
-        />
-      ))}
-    </g>
-  );
-}
-
-function EmptySlot({ hang, highlight }: { hang?: boolean; highlight: boolean }) {
-  return (
-    <g className={highlight ? 'slot-target' : 'slot-empty'}>
-      <ellipse cx="0" cy={hang ? 30 : 0} rx="26" ry="5" fill="none" className="ink" strokeDasharray="3 5" />
-      <path d={`M0,${hang ? 24 : -6} L0,${hang ? 12 : -18} M-6,${hang ? 18 : -12} L6,${hang ? 18 : -12}`} className="ink" fill="none" strokeWidth="2" />
-    </g>
-  );
-}
-
 export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movingId, wateringId, onSlot }: {
   theme: Theme;
   weather: Weather;
@@ -208,8 +150,9 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
             {pos.hang && <Hanger x={pos.x} rimY={plant ? rimY : pos.y - 26} />}
             <g transform={`translate(${pos.x} ${plant ? rimY : pos.y}) scale(${plant ? PLANT_SCALE : 1})`}>
               {plant ? (
-                <Planter
+                <GardenPlanter
                   plant={plant}
+                  ribbon={plant.display !== null}
                   now={now}
                   selected={plant.id === selectedId}
                   moving={plant.id === movingId}

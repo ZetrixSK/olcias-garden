@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
-import { addPlant } from './state';
+import { addPlant, SAVE_VERSION } from './state';
 import { loadGarden, saveGarden } from './storage';
 
 const NOW = Date.UTC(2026, 9, 14);
@@ -44,7 +44,7 @@ describe('storage', () => {
   it('sets a corrupted save aside and starts fresh', async () => {
     await saveGarden({ nonsense: true } as never);
     const g = await loadGarden(NOW);
-    expect(g.version).toBe(2);
+    expect(g.version).toBe(SAVE_VERSION);
     expect((await savedKeys()).some((k) => String(k).startsWith('corrupt-'))).toBe(true);
   });
 });

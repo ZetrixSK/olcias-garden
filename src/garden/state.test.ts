@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { addPlant, cyclePot, movePlant, parseSave, removePlant, starterGarden, waterPlant } from './state';
+import {
+  addPlant,
+  cyclePot,
+  movePlant,
+  parseSave,
+  placeInWindow,
+  removePlant,
+  starterGarden,
+  takeDown,
+  waterPlant,
+  windowPlantAt,
+} from './state';
 
 const NOW = Date.UTC(2026, 9, 14);
 
@@ -73,9 +84,62 @@ describe('garden state', () => {
       ],
       settings: { theme: 'cozy', view: 'shelves', weatherMode: 'night' },
     });
-    expect(parsed?.version).toBe(2);
+    expect(parsed?.version).toBe(3);
     expect(parsed?.plants.map((p) => [p.id, p.slot])).toEqual([['side', 'sill-l'], ['sill', 'hang-l']]);
     expect(parsed?.settings.weatherMode).toBe('manual');
     expect(parsed?.settings.manual).toEqual({ sky: 'clear', night: true });
+  });
+
+  it('migrates a version 2 save, putting the first shelf plants on the sill', () => {
+    const plant = (id: string, slot: string) => ({ id, species: 'pansy', slot, pot: 'wide', plantedAt: NOW, waterings: [] });
+    const parsed = parseSave({
+      version: 2,
+      plants: [plant('d', 'row3-a'), plant('a', 'sill-l'), plant('c', 'row2-a'), plant('b', 'hang-r')],
+      settings: {},
+    });
+    expect(parsed?.version).toBe(3);
+    expect(parsed?.plants.map((p) => [p.id, p.display])).toEqual([
+      ['d', null],
+      ['a', 'sill-2'],
+      ['c', 'sill-3'],
+      ['b', 'sill-1'],
+    ]);
+  });
+
+  it('keeps only one plant per window spot in a damaged save', () => {
+    const plant = (id: string, slot: string) => ({ id, species: 'rose', slot, pot: 'round', plantedAt: NOW, waterings: [], display: 'sill-1' });
+    const parsed = parseSave({ version: 3, plants: [plant('a', 'row2-a'), plant('b', 'row2-b')], settings: {} });
+    expect(parsed?.plants.map((p) => p.display)).toEqual(['sill-1', null]);
+  });
+});
+
+describe('the window display', () => {
+  const garden = () => addPlant(addPlant({ ...starterGarden(NOW), plants: [] }, 'row3-a', 'rose', NOW, 'a'), 'row3-b', 'tulip', NOW, 'b');
+
+  it('pins a shelf plant into the window without moving it off its shelf', () => {
+    const g = placeInWindow(garden(), 'a', 'sill-1');
+    expect(windowPlantAt(g, 'sill-1')?.id).toBe('a');
+    expect(g.plants.find((p) => p.id === 'a')?.slot).toBe('row3-a');
+  });
+
+  it('replaces whatever was in the spot when a new plant arrives from the shelves', () => {
+    const g = placeInWindow(placeInWindow(garden(), 'a', 'sill-1'), 'b', 'sill-1');
+    expect(windowPlantAt(g, 'sill-1')?.id).toBe('b');
+    expect(g.plants.find((p) => p.id === 'a')?.display).toBeNull();
+  });
+
+  it('swaps two plants that are both in the window', () => {
+    let g = placeInWindow(placeInWindow(garden(), 'a', 'sill-1'), 'b', 'shelf-2');
+    g = placeInWindow(g, 'a', 'shelf-2');
+    expect(windowPlantAt(g, 'shelf-2')?.id).toBe('a');
+    expect(windowPlantAt(g, 'sill-1')?.id).toBe('b');
+  });
+
+  it('takes a plant down, and removing a plant takes it out of the window too', () => {
+    let g = placeInWindow(placeInWindow(garden(), 'a', 'sill-1'), 'b', 'sill-2');
+    g = takeDown(g, 'a');
+    expect(windowPlantAt(g, 'sill-1')).toBeUndefined();
+    g = removePlant(g, 'b');
+    expect(windowPlantAt(g, 'sill-2')).toBeUndefined();
   });
 });

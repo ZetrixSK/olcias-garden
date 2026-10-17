@@ -1,30 +1,75 @@
-import { useState, type ReactNode } from 'react';
+import { WINDOW_SPOTS, type GardenState, type WindowSpot } from '../garden/state';
+import { POT_HEIGHT } from '../plants/Pots';
 import { candleLit as isCandleLit, roomTint, type Theme, type Weather } from '../theme/palettes';
-import { PansyPlant } from '../plants/Pansy';
-import { Potted, type PotKind } from '../plants/Pots';
-import { RosePlant } from '../plants/Rose';
-import { TulipPlant } from '../plants/Tulip';
 import { Ball, CANDLE_FLAME, CornerPiece, Flame, ShelfTrinket, SillCandle, WallDecor } from './Decor';
 import { DogBed, Dogs } from './Dogs';
-import { FLOOR_Y, VIEW_H, VIEW_W, WINDOW_OPENING } from './geometry';
+import { EmptySlot, GardenPlanter } from './GardenPlanter';
+import { FLOOR_Y, SILL_Y, VIEW_H, VIEW_W, WINDOW_OPENING } from './geometry';
 import { Landscape, Rain } from './Outside';
 import { Curtains, Floor, Shelf, Sign, Sill, Wall, WindowFrame } from './Room';
 import { Sky, SkyLights } from './Sky';
 
-/** A potted plant that sways on its own and wobbles when tapped. */
-function Planter({ id, x, y, pot, sway, children }: {
-  id: string; x: number; y: number; pot: PotKind; sway: number; children: ReactNode;
-}) {
-  const [tap, setTap] = useState(0);
+/** Where each window spot stands: x, the surface it stands on, the drawing scale and the tap area's width. */
+const SPOT_POS: Record<WindowSpot, { x: number; base: number; scale: number; w: number; h: number }> = {
+  'shelf-1': { x: 118, base: 322, scale: 0.6, w: 56, h: 96 },
+  'shelf-2': { x: 176, base: 322, scale: 0.6, w: 56, h: 96 },
+  'shelf-3': { x: 236, base: 322, scale: 0.6, w: 56, h: 96 },
+  'sill-1': { x: 94, base: SILL_Y + 1, scale: 1, w: 92, h: 168 },
+  'sill-2': { x: 190, base: SILL_Y + 1, scale: 1, w: 92, h: 168 },
+  'sill-3': { x: 280, base: SILL_Y + 1, scale: 1, w: 86, h: 168 },
+};
+
+type SpotProps = {
+  garden: GardenState;
+  now: number;
+  selectedId: string | null;
+  placingId: string | null;
+  wateringId: string | null;
+  onSpot: (spot: WindowSpot) => void;
+};
+
+/** Her plants in one row of the window (shelf or sill), with invisible tap areas over each spot. */
+function WindowRow({ row, garden, now, selectedId, placingId, wateringId, onSpot }: SpotProps & { row: 'shelf' | 'sill' }) {
+  const spots = WINDOW_SPOTS.filter((s) => s.startsWith(row));
   return (
-    <g transform={`translate(${x} ${y})`} className="tappable" onClick={() => setTap((t) => t + 1)}>
-      <Potted kind={pot}>
-        <g className="sway" style={{ animationDuration: `${sway}s`, animationDelay: `${-sway * 0.37}s` }}>
-          <g key={`${id}-${tap}`} className={tap ? 'wobble' : undefined}>
-            {children}
+    <g>
+      {spots.map((spot) => {
+        const pos = SPOT_POS[spot];
+        const plant = garden.plants.find((p) => p.display === spot);
+        const rimY = pos.base - (plant ? POT_HEIGHT[plant.pot] * pos.scale : 0);
+        return (
+          <g key={spot} transform={`translate(${pos.x} ${rimY.toFixed(1)}) scale(${pos.scale})`}>
+            {plant ? (
+              <GardenPlanter
+                plant={plant}
+                now={now}
+                selected={plant.id === selectedId}
+                moving={plant.id === placingId}
+                watering={plant.id === wateringId}
+              />
+            ) : (
+              <g transform={`scale(${1 / pos.scale}) translate(0 -3)`}>
+                <EmptySlot highlight={placingId !== null} />
+              </g>
+            )}
           </g>
-        </g>
-      </Potted>
+        );
+      })}
+      {spots.map((spot) => {
+        const pos = SPOT_POS[spot];
+        return (
+          <rect
+            key={spot}
+            x={pos.x - pos.w / 2}
+            y={pos.base - pos.h}
+            width={pos.w}
+            height={pos.h + 4}
+            fill="transparent"
+            className="tappable"
+            onClick={() => onSpot(spot)}
+          />
+        );
+      })}
     </g>
   );
 }
@@ -44,7 +89,7 @@ function layoutFor(viewH: number) {
   return { dy, minY, wallMid, pictureScale };
 }
 
-export function Scene({ theme, weather, viewH }: { theme: Theme; weather: Weather; viewH: number }) {
+export function Scene({ theme, weather, viewH, ...spots }: { theme: Theme; weather: Weather; viewH: number } & SpotProps) {
   const { dy, minY, wallMid, pictureScale } = layoutFor(viewH);
   const tint = roomTint(weather);
   const candleLit = isCandleLit(weather);
@@ -72,27 +117,11 @@ export function Scene({ theme, weather, viewH }: { theme: Theme; weather: Weathe
       <WindowFrame />
 
       <Shelf />
-      <Planter id="seed" x={118} y={298} pot="tiny-clay" sway={9}>
-        <PansyPlant stage="seed" />
-      </Planter>
-      <Planter id="seedling" x={176} y={298} pot="tiny-speckle" sway={6}>
-        <PansyPlant stage="seedling" />
-      </Planter>
-      <Planter id="bud" x={238} y={298} pot="tiny-pink" sway={7.5}>
-        <PansyPlant stage="bud" />
-      </Planter>
+      <WindowRow row="shelf" {...spots} />
       <ShelfTrinket theme={theme} />
 
       <Sill />
-      <Planter id="tulip" x={92} y={468} pot="slim" sway={8.5}>
-        <TulipPlant />
-      </Planter>
-      <Planter id="rose" x={274} y={473} pot="round" sway={10}>
-        <RosePlant />
-      </Planter>
-      <Planter id="pansy" x={190} y={476} pot="wide" sway={7}>
-        <PansyPlant stage="bloom" />
-      </Planter>
+      <WindowRow row="sill" {...spots} />
       <SillCandle theme={theme} />
 
       <Curtains theme={theme} />

@@ -4,13 +4,17 @@ import {
   DEFAULT_SETTINGS,
   cyclePot,
   movePlant,
+  placeInWindow,
   plantAt,
   removePlant,
+  takeDown,
   updateSettings,
   waterPlant,
+  windowPlantAt,
   type GardenState,
   type Settings,
   type SlotId,
+  type WindowSpot,
 } from './garden/state';
 import { loadGarden, saveGarden } from './garden/storage';
 import type { SpeciesId } from './garden/species';
@@ -18,7 +22,7 @@ import { grainDataUrl } from './grain';
 import { Scene } from './scene/Scene';
 import { ShelfView } from './scene/ShelfView';
 import { paletteVars } from './theme/palettes';
-import { MoveBanner, PlantCard, PlantPicker } from './ui/Sheets';
+import { MoveBanner, PlantCard, PlantPicker, WindowChooser } from './ui/Sheets';
 import { Toolbar } from './ui/Toolbar';
 import { useWeather } from './weather/useWeather';
 import { requestLocation } from './weather/weather';
@@ -66,7 +70,17 @@ function devOverrides(g: GardenState): GardenState {
   return updateSettings(g, patch);
 }
 
-type Mode = { kind: 'idle' } | { kind: 'pick'; slot: SlotId } | { kind: 'card'; id: string } | { kind: 'move'; id: string };
+type Mode =
+  | { kind: 'idle' }
+  /** shelves: choosing a species for an empty slot */
+  | { kind: 'pick'; slot: SlotId }
+  | { kind: 'card'; id: string }
+  /** shelves: moving a plant to another slot */
+  | { kind: 'move'; id: string }
+  /** window: choosing where a plant should stand */
+  | { kind: 'place'; id: string }
+  /** window: choosing which plant goes into an empty spot */
+  | { kind: 'choose'; spot: WindowSpot };
 
 export function App() {
   const [garden, setGarden] = useState<GardenState | null>(null);
@@ -129,6 +143,18 @@ export function App() {
     }
   };
 
+  const onSpot = (spot: WindowSpot) => {
+    const here = windowPlantAt(garden, spot);
+    if (mode.kind === 'place') {
+      update((g) => placeInWindow(g, mode.id, spot));
+      setMode({ kind: 'idle' });
+    } else if (here) {
+      setMode(mode.kind === 'card' && mode.id === here.id ? { kind: 'idle' } : { kind: 'card', id: here.id });
+    } else {
+      setMode({ kind: 'choose', spot });
+    }
+  };
+
   const plantSpecies = (species: SpeciesId) => {
     if (mode.kind !== 'pick') return;
     const t = Date.now();
@@ -151,7 +177,17 @@ export function App() {
     <div className="garden" style={paletteVars(theme, weather)}>
       <div className="view" key={settings.view}>
         {settings.view === 'room' ? (
-          <Scene theme={theme} weather={weather} viewH={viewH} />
+          <Scene
+            theme={theme}
+            weather={weather}
+            viewH={viewH}
+            garden={garden}
+            now={now}
+            selectedId={cardPlant?.id ?? null}
+            placingId={mode.kind === 'place' ? mode.id : null}
+            wateringId={wateringId}
+            onSpot={onSpot}
+          />
         ) : (
           <ShelfView
             theme={theme}
@@ -176,13 +212,35 @@ export function App() {
         locating={locating}
       />
       {mode.kind === 'pick' && <PlantPicker onPick={plantSpecies} onClose={() => setMode({ kind: 'idle' })} />}
+      {mode.kind === 'choose' && (
+        <WindowChooser
+          plants={garden.plants.filter((p) => p.display === null)}
+          now={now}
+          onPick={(id) => {
+            update((g) => placeInWindow(g, id, mode.spot));
+            setMode({ kind: 'idle' });
+          }}
+          onShelves={() => setSettings({ view: 'shelves' })}
+          onClose={() => setMode({ kind: 'idle' })}
+        />
+      )}
       {cardPlant && (
         <PlantCard
           key={cardPlant.id}
           plant={cardPlant}
           now={now}
+          inWindowView={settings.view === 'room'}
           onWater={() => water(cardPlant.id)}
-          onMove={() => setMode({ kind: 'move', id: cardPlant.id })}
+          onMove={() => setMode(settings.view === 'room' ? { kind: 'place', id: cardPlant.id } : { kind: 'move', id: cardPlant.id })}
+          onWindow={() => {
+            if (cardPlant.display) {
+              update((g) => takeDown(g, cardPlant.id));
+              setMode({ kind: 'idle' });
+            } else {
+              setSettings({ view: 'room' });
+              setMode({ kind: 'place', id: cardPlant.id });
+            }
+          }}
           onPot={() => update((g) => cyclePot(g, cardPlant.id))}
           onRemove={() => {
             update((g) => removePlant(g, cardPlant.id));
@@ -191,7 +249,8 @@ export function App() {
           onClose={() => setMode({ kind: 'idle' })}
         />
       )}
-      {mode.kind === 'move' && <MoveBanner onCancel={() => setMode({ kind: 'idle' })} />}
+      {mode.kind === 'move' && <MoveBanner text="Tap where it should go" onCancel={() => setMode({ kind: 'idle' })} />}
+      {mode.kind === 'place' && <MoveBanner text="Tap a place in the window" onCancel={() => setMode({ kind: 'idle' })} />}
     </div>
   );
 }
