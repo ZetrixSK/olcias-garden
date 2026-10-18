@@ -10,7 +10,7 @@ const LONG_AGO = at(1, 12);
 const design: PansyDesign = { id: 'f1', name: 'Słoneczko', top: '#f3d36b', low: '#6b3fa0', face: 'whiskers', faceColor: '#241326', edge: null };
 
 function plant(id: string, extra: Partial<Plant> = {}): Plant {
-  return { id, species: 'pansy', slot: 'row3-a', pot: 'wide', variety: null, plantedAt: LONG_AGO, waterings: [], display: null, vine: null, ...extra };
+  return { id, species: 'pansy', slot: 'row3-a', pot: 'wide', variety: null, plantedAt: LONG_AGO, waterings: [], display: null, vine: null, name: null, ...extra };
 }
 const garden = (plants: Plant[]): GardenState => ({ ...starterGarden(at(1, 12)), plants });
 

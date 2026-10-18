@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
-import { stageAt } from '../garden/growth';
+import { isSoilWet, nextStage, stageAt, waterWouldHelp } from '../garden/growth';
+import { MAX_NAME } from '../garden/pressed';
 import {
   designRef,
   PANSY_PRESET_NAMES,
@@ -203,6 +204,89 @@ export function PlantPicker({ onPick, onDrawing, busy, error, onClose }: {
   );
 }
 
+const NEXT_VERB: Record<Stage, string> = { seed: '', seedling: 'Sprouts', bud: 'Buds', bloom: 'Blooms' };
+const HOUR = 3_600_000;
+
+/**
+ * Roughly when something will happen, in words rather than a countdown: "any moment now",
+ * "in a couple of hours", "tomorrow morning", "in about 3 days".
+ */
+export function whenText(inMs: number, now: number): string {
+  const min = inMs / 60_000;
+  if (min <= 2) return 'any moment now';
+  if (min < 15) return 'in a few minutes';
+  if (min < 50) return 'within the hour';
+  if (inMs < 2.5 * HOUR) return 'in a couple of hours';
+  if (inMs < 6 * HOUR) return 'in a few hours';
+  const at = new Date(now + inMs);
+  const today = new Date(now);
+  const days = Math.round((new Date(at).setHours(0, 0, 0, 0) - new Date(today).setHours(0, 0, 0, 0)) / 86_400_000);
+  const h = at.getHours();
+  const part = h < 5 ? 'night' : h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
+  if (days === 0) return part === 'evening' ? 'this evening' : 'later today';
+  if (days === 1) return part === 'night' ? 'overnight' : `tomorrow ${part}`;
+  return `in about ${days} days`;
+}
+
+/** The line on a plant's card that says roughly when it grows next. */
+export function growthText(plant: Plant, now: number): string {
+  const next = nextStage(plant.species, plant, now);
+  if (!next) return 'In full bloom';
+  const sooner = waterWouldHelp(plant, now) && next.inMs > 30 * 60_000 ? ' · sooner with water' : '';
+  return `${NEXT_VERB[next.stage]} ${whenText(next.inMs, now)}${sooner}`;
+}
+
+/** The plant's name in its card's title, editable in place. */
+function PlantTitle({ plant, onName }: { plant: Plant; onName: (name: string) => void }) {
+  const info = SPECIES[plant.species];
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(plant.name ?? '');
+  const save = () => {
+    onName(draft);
+    setEditing(false);
+  };
+  if (editing) {
+    return (
+      <form
+        className="name-edit"
+        onSubmit={(e) => {
+          e.preventDefault();
+          save();
+        }}
+      >
+        <input
+          autoFocus
+          value={draft}
+          maxLength={MAX_NAME}
+          placeholder={`Name this ${info.polish}`}
+          aria-label="Name"
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={save}
+        />
+        <button type="submit">Done</button>
+      </form>
+    );
+  }
+  return (
+    <h2>
+      {plant.name ? (
+        <>
+          {plant.name} <small>{info.polish}</small>
+        </>
+      ) : (
+        <>
+          {info.polish} <small>{info.name}</small>
+        </>
+      )}
+      <button className="name-pencil" aria-label={plant.name ? 'Rename' : 'Give it a name'} onClick={() => setEditing(true)}>
+        <svg viewBox="-14 -14 28 28" aria-hidden="true">
+          <path d="M-7,7 L-6,2 L5,-9 L9,-5 L-2,6 Z M2,-6 L6,-2" />
+        </svg>
+      </button>
+    </h2>
+  );
+}
+
 function plantedText(plant: Plant, now: number): string {
   const days = Math.floor((now - plant.plantedAt) / 86_400_000);
   if (days <= 0) return 'Planted today';
@@ -252,7 +336,7 @@ const PRESS_ICON = (
   </g>
 );
 
-export function PlantCard({ plant, now, inWindowView, onWater, onMove, onWindow, onStyle, onTrim, onPress, pressedToday, onBook, onRemove, onClose }: {
+export function PlantCard({ plant, now, inWindowView, onWater, onMove, onWindow, onStyle, onTrim, onPress, pressedToday, onBook, onName, onRemove, onClose }: {
   plant: Plant;
   now: number;
   /** In the window view the card offers taking the plant down; on the shelves, putting it up or removing it. */
@@ -267,6 +351,7 @@ export function PlantCard({ plant, now, inWindowView, onWater, onMove, onWindow,
   onPress: (() => void) | null;
   pressedToday: boolean;
   onBook: () => void;
+  onName: (name: string) => void;
   onRemove: () => void;
   onClose: () => void;
 }) {
@@ -276,15 +361,17 @@ export function PlantCard({ plant, now, inWindowView, onWater, onMove, onWindow,
   return (
     <div className="sheet" role="dialog" aria-label={info.name}>
       <div className="sheet-head">
-        <h2>
-          {info.polish} <small>{info.name}</small>
-        </h2>
+        <PlantTitle plant={plant} onName={onName} />
         <button className="close" aria-label="Close" onClick={onClose}>×</button>
       </div>
       <p className="meta">
         {STAGE_LABEL[stage]} · {plantedText(plant, now)}
         {!inWindowView && plant.display && ' · in the window'}
         {plant.vine && ' · climbing'}
+      </p>
+      <p className="meta growth-line">
+        <span className={isSoilWet(plant, now) ? 'tag wet' : 'tag dry'}>{isSoilWet(plant, now) ? 'Watered' : 'Not watered yet'}</span>
+        <span>{growthText(plant, now)}</span>
       </p>
       <div className={!inWindowView || (inWindowView && onTrim) ? 'actions five' : 'actions'}>
         <button onClick={onWater}>

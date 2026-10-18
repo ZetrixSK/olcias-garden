@@ -74,6 +74,8 @@ describe('garden state', () => {
       location: null,
       vines: true,
       letter: 'unread',
+      own: null,
+      useOwn: false,
     });
   });
 

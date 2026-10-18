@@ -52,11 +52,11 @@ export function PressedGallery() {
   const own = { id: 'f1', name: 'Słoneczko', top: '#f3d36b', low: '#6b3fa0', face: 'whiskers' as const, faceColor: '#241326', edge: '#fbf6ee' };
   const pressed: Pressing[] = [
     ...SPECIES_IDS.flatMap((species, i) => [0, 1].map((k) => ({
-      id: `${species}-${k}`, plantId: species, species, at: day + (i * 2 + k) * 86_400_000, variety: null, design: null,
+      id: `${species}-${k}`, plantId: species, species, at: day + (i * 2 + k) * 86_400_000, variety: null, design: null, name: null, note: '',
     }))),
-    { id: 'own', plantId: 'own', species: 'pansy', at: day + 12 * 86_400_000, variety: null, design: own },
-    { id: 'velvet', plantId: 'v', species: 'pansy', at: day + 13 * 86_400_000, variety: 'velvet', design: null },
+    { id: 'own', plantId: 'own', species: 'pansy', at: day + 12 * 86_400_000, variety: null, design: own, name: 'Moje słoneczko', note: 'The first one I designed myself, pressed on a rainy day.' },
+    { id: 'velvet', plantId: 'v', species: 'pansy', at: day + 13 * 86_400_000, variety: 'velvet', design: null, name: null, note: '' },
   ];
   const page = Number(new URLSearchParams(location.search).get('page') ?? 0);
-  return <PressedBook key={page} pressed={pressed.slice(page * 4, page * 4 + 4)} onRemove={() => {}} onClose={() => {}} />;
+  return <PressedBook key={page} pressed={pressed.slice(page * 4, page * 4 + 4)} onNote={() => {}} onRemove={() => {}} onClose={() => {}} />;
 }

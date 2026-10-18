@@ -1,7 +1,8 @@
 import { SKY_KINDS, type Theme, type Weather } from '../theme/palettes';
 import { plantedAtForStage, stageAt } from './growth';
 import { MAX_DRAWINGS, NO_DECOR, parseDecor, type Decor, type Drawing, type Photo, type Wallpaper } from './decor';
-import { MAX_PRESSED, parsePressed, pressedToday, pressingOf, type Pressing } from './pressed';
+import { MAX_NAME, MAX_NOTE, MAX_PRESSED, parsePressed, pressedToday, pressingOf, type Pressing } from './pressed';
+import { parseOwnRoom, type OwnRoom } from '../theme/ownRoom';
 import { designId, NO_DESIGNS, PANSY_PRESETS, parseDesigns, upsert, type Designs, type PansyDesign, type PotDesign, type PotRef } from './designs';
 import { lastNight, runNights, settleMiddleDir, trimmed, type Vine } from './vines';
 import { POT_KINDS, SPECIES, SPECIES_IDS, type GardenPot, type SpeciesId, type Stage } from './species';
@@ -33,6 +34,8 @@ export type Plant = {
   display: WindowSpot | null;
   /** Grown out of its pot and around the window; only pansies and roses ever do. */
   vine: Vine | null;
+  /** A name she gave it, if any. */
+  name: string | null;
 };
 
 export type View = 'room' | 'shelves';
@@ -50,6 +53,10 @@ export type Settings = {
   /** Whether plants may outgrow their pots. Off hides the vines too; they come back when it's on. */
   vines: boolean;
   letter: LetterState;
+  /** Her own room colours, kept even while one of the ready-made rooms is showing. */
+  own: OwnRoom | null;
+  /** Whether her own room is the one showing. */
+  useOwn: boolean;
 };
 
 export const SAVE_VERSION = 4;
@@ -78,6 +85,8 @@ export const DEFAULT_SETTINGS: Settings = {
   location: null,
   vines: true,
   letter: 'unread',
+  own: null,
+  useOwn: false,
 };
 
 export function newId(): string {
@@ -98,6 +107,7 @@ export function starterGarden(now: number): GardenState {
     waterings: [],
     display,
     vine: null,
+    name: null,
   });
   return {
     version: SAVE_VERSION,
@@ -131,7 +141,7 @@ export function addPlant(state: GardenState, slot: SlotId, species: SpeciesId, n
   if (plantAt(state, slot) || drawingAt(state, slot)) return state;
   const plant: Plant = {
     id, species, slot, pot: SPECIES[species].pot, variety: species === 'pansy' ? variety : null,
-    plantedAt: now, waterings: [], display: null, vine: null,
+    plantedAt: now, waterings: [], display: null, vine: null, name: null,
   };
   return { ...state, plants: [...state.plants, plant] };
 }
@@ -236,6 +246,17 @@ export function pressFlower(state: GardenState, id: string, now: number, pressId
   return { ...state, pressed: [...state.pressed, pressingOf(plant, state.designs, now, pressId)] };
 }
 
+/** Names a plant; an empty name takes the name away. */
+export function setPlantName(state: GardenState, id: string, name: string): GardenState {
+  const clean = name.trim().slice(0, MAX_NAME);
+  return { ...state, plants: state.plants.map((p) => (p.id === id ? { ...p, name: clean || null } : p)) };
+}
+
+/** What she wrote beside a pressed flower. */
+export function setPressNote(state: GardenState, pressId: string, note: string): GardenState {
+  return { ...state, pressed: state.pressed.map((p) => (p.id === pressId ? { ...p, note: note.slice(0, MAX_NOTE) } : p)) };
+}
+
 /** Takes a flower back out of the book. */
 export function unpress(state: GardenState, pressId: string): GardenState {
   return { ...state, pressed: state.pressed.filter((p) => p.id !== pressId) };
@@ -312,7 +333,7 @@ function parseVariety(v: unknown, species: SpeciesId, designs: Designs): string 
 
 function parsePlant(v: unknown, designs: Designs): Plant | null {
   if (!isObj(v)) return null;
-  const { id, species, slot, pot, variety, plantedAt, waterings, display, vine } = v;
+  const { id, species, slot, pot, variety, plantedAt, waterings, display, vine, name } = v;
   if (typeof id !== 'string' || !SPECIES_IDS.includes(species as SpeciesId)) return null;
   if (!SLOT_IDS.includes(slot as SlotId) || !isTime(plantedAt)) return null;
   return {
@@ -325,6 +346,7 @@ function parsePlant(v: unknown, designs: Designs): Plant | null {
     waterings: Array.isArray(waterings) ? waterings.filter(isTime) : [],
     display: WINDOW_SPOTS.includes(display as WindowSpot) ? (display as WindowSpot) : null,
     vine: parseVine(vine, species as SpeciesId),
+    name: typeof name === 'string' && name.trim() ? name.trim().slice(0, MAX_NAME) : null,
   };
 }
 
@@ -358,6 +380,8 @@ function parseSettings(v: unknown): Settings {
       isObj(loc) && typeof loc.lat === 'number' && typeof loc.lon === 'number' ? { lat: loc.lat, lon: loc.lon } : null,
     vines: s.vines !== false,
     letter: s.letter === 'kept' || s.letter === 'deleted' ? s.letter : 'unread',
+    own: parseOwnRoom(s.own),
+    useOwn: s.useOwn === true && parseOwnRoom(s.own) !== null,
   };
 }
 

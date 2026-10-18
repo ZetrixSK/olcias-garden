@@ -1,4 +1,5 @@
 import { seasonVars, type Season } from './seasons';
+import { ownRoomVars, type OwnRoom } from './ownRoom';
 
 export type SkyKind = 'clear' | 'cloudy' | 'rain';
 /** What the window shows: the sky's condition, by day or by night. */
@@ -210,11 +211,11 @@ export function roomTint(w: Weather, theme: Theme = 'witchy'): { color: string; 
 /** Candles are lit whenever the room is dim. */
 export const candleLit = (w: Weather) => w.night || w.sky === 'rain';
 
-export function paletteVars(theme: Theme, weather: Weather, season: Season = 'summer'): Record<string, string> {
+export function paletteVars(theme: Theme, weather: Weather, season: Season = 'summer', own: OwnRoom | null = null): Record<string, string> {
   const vars: Record<string, string> = {};
   const sky = skyPalettes[skyKey(weather)];
   for (const [k, v] of Object.entries({ ...roomPalettes[theme], ...sky })) {
     vars[`--${k}`] = v;
   }
-  return { ...vars, ...seasonVars(season, weather, sky) };
+  return { ...vars, ...(own ? ownRoomVars(own) : {}), ...seasonVars(season, weather, sky) };
 }

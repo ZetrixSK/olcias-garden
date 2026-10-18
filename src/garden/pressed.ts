@@ -12,7 +12,14 @@ export type Pressing = {
   variety: string | null;
   /** A copy of her own bratek design, so the page stays as it was even if the design changes or is thrown away. */
   design: PansyDesign | null;
+  /** The name she gave the plant, as it was on the day. */
+  name: string | null;
+  /** What she wrote beside it. */
+  note: string;
 };
+
+export const MAX_NOTE = 400;
+export const MAX_NAME = 24;
 
 /** Far more than years of pressing; past this the book simply stops taking new ones rather than losing old ones. */
 export const MAX_PRESSED = 1000;
@@ -24,7 +31,7 @@ export function pressedToday(pressed: Pressing[], plantId: string, now: number):
 }
 
 export function pressingOf(
-  plant: { id: string; species: SpeciesId; variety: string | null },
+  plant: { id: string; species: SpeciesId; variety: string | null; name?: string | null },
   designs: Designs,
   now: number,
   id: string,
@@ -38,6 +45,8 @@ export function pressingOf(
     at: now,
     variety: own !== null ? null : plant.variety,
     design: design ? { ...design } : null,
+    name: plant.name ?? null,
+    note: '',
   };
 }
 
@@ -45,7 +54,7 @@ const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object
 
 function parseOne(v: unknown): Pressing | null {
   if (!isObj(v)) return null;
-  const { id, plantId, species, at, variety, design } = v;
+  const { id, plantId, species, at, variety, design, name, note } = v;
   if (typeof id !== 'string' || typeof plantId !== 'string') return null;
   if (!SPECIES_IDS.includes(species as SpeciesId)) return null;
   if (typeof at !== 'number' || !Number.isFinite(at) || at <= 0) return null;
@@ -57,6 +66,8 @@ function parseOne(v: unknown): Pressing | null {
     at,
     variety: pansy && (PANSY_PRESETS as readonly unknown[]).includes(variety) ? (variety as string) : null,
     design: pansy ? parsePansy(design) : null,
+    name: typeof name === 'string' && name.trim() ? name.trim().slice(0, MAX_NAME) : null,
+    note: typeof note === 'string' ? note.slice(0, MAX_NOTE) : '',
   };
 }
 

@@ -1,4 +1,4 @@
-import { memo, type ReactNode } from 'react';
+import { memo, useEffect, useRef, useState, type ReactNode } from 'react';
 import { isSoilWet, stageAt } from '../garden/growth';
 import type { Designs } from '../garden/designs';
 import type { GardenPot, Stage } from '../garden/species';
@@ -52,13 +52,23 @@ type PlanterProps = {
 const PlanterArt = memo(function PlanterArt({ plant, stage, wet, shape, potDesign, palette, label, selected, moving, watering, ribbon = false, lean = 0, runner }: PlanterProps) {
   // remount the inner group on each watering so the wobble replays
   const last = plant.waterings[plant.waterings.length - 1];
+  // when it reaches a new stage while she's looking, it grows into it gently instead of switching
+  const shownStage = useRef(stage);
+  const [grew, setGrew] = useState(0);
+  useEffect(() => {
+    if (shownStage.current === stage) return;
+    shownStage.current = stage;
+    setGrew((n) => n + 1);
+  }, [stage]);
   return (
     <g className={moving ? 'moving' : undefined}>
       <Potted kind={shape} design={potDesign} wet={wet}>
         <g transform={lean ? `rotate(${lean})` : undefined}>
           <g className="sway" style={{ animationDuration: `${7 + (plant.id.charCodeAt(0) % 5)}s` }}>
-            <g key={last ?? 0} className={last ? 'wobble' : undefined}>
-              <PlantArt species={plant.species} stage={stage} palette={palette} label={label} />
+            <g key={`grew-${grew}`} className={grew ? (stage === 'bloom' ? 'unfold bloom-in' : 'unfold') : undefined}>
+              <g key={last ?? 0} className={last ? 'wobble' : undefined}>
+                <PlantArt species={plant.species} stage={stage} palette={palette} label={label} />
+              </g>
             </g>
           </g>
         </g>

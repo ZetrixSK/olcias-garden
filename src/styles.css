@@ -109,6 +109,31 @@ body {
   100% { transform: rotate(0); }
 }
 
+/* a plant growing into its next stage while she watches; a bloom opens more slowly */
+.unfold {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: unfold 1.8s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.unfold.bloom-in {
+  animation: bloom-in 2.8s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+@keyframes unfold {
+  0% { transform: scale(0.86, 0.78); opacity: 0.55; }
+  55% { transform: scale(1.03, 1.05); opacity: 1; }
+  100% { transform: none; }
+}
+@keyframes bloom-in {
+  0% { transform: scale(0.8, 0.7) rotate(-2deg); opacity: 0.4; }
+  35% { transform: scale(0.95, 1.02) rotate(1.5deg); opacity: 1; }
+  65% { transform: scale(1.04, 1.03) rotate(-0.8deg); }
+  100% { transform: none; }
+}
+/* during the clock's replay plants change too quickly to unfold each time */
+.garden.replaying .unfold {
+  animation: none;
+}
+
 /* a dog's name, shown for a moment when petted */
 .name-tag {
   animation: name-tag 1.4s ease-out both;
@@ -299,12 +324,12 @@ body {
  * a plum panel edged in gold, with a faint starry shimmer. --ink and --wall are redefined only for
  * the interface; drawings inside a sheet get the room's own dark ink back so they keep their lines.
  */
-.theme-witchy :is(.fab, .weather-menu, .sheet, .banner) {
+.ui-dark :is(.fab, .weather-menu, .sheet, .banner) {
   --ink: #f4e9f1;
   --wall: #34263a;
   --gold: #d9b46a;
 }
-.theme-witchy :is(.weather-menu, .sheet, .banner) {
+.ui-dark :is(.weather-menu, .sheet, .banner) {
   background:
     radial-gradient(circle at 12% 18%, rgba(242, 212, 142, 0.16) 0 1.2px, transparent 2px) 0 0 / 46px 52px,
     radial-gradient(circle at 70% 64%, rgba(242, 212, 142, 0.12) 0 1px, transparent 1.8px) 0 0 / 38px 34px,
@@ -312,38 +337,38 @@ body {
   border-color: var(--gold);
   box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(217, 180, 106, 0.25), 0 0 22px rgba(217, 180, 106, 0.18);
 }
-.theme-witchy .fab {
+.ui-dark .fab {
   background: rgba(52, 38, 58, 0.88);
   border-color: var(--gold);
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3), 0 0 12px rgba(217, 180, 106, 0.22);
 }
-.theme-witchy :is(.weather-menu, .sheet, .banner) button {
+.ui-dark :is(.weather-menu, .sheet, .banner) button {
   border-color: rgba(217, 180, 106, 0.42);
 }
-.theme-witchy :is(.weather-menu, .sheet) button[aria-pressed='true'] {
+.ui-dark :is(.weather-menu, .sheet) button[aria-pressed='true'] {
   background: rgba(217, 180, 106, 0.2);
   border-color: var(--gold);
 }
-.theme-witchy :is(.weather-menu, .sheet) .hint,
-.theme-witchy .sheet h3 {
+.ui-dark :is(.weather-menu, .sheet) .hint,
+.ui-dark .sheet h3 {
   color: #e8cf98;
   opacity: 1;
 }
 /* drawings inside the sheets keep their dark outlines, on a soft parchment ground */
-.theme-witchy .sheet :is(svg:not(.actions svg):not(.press-row svg), .studio-preview) {
+.ui-dark .sheet :is(svg:not(.actions svg):not(.press-row svg), .studio-preview) {
   --ink: #1c1219;
 }
-.theme-witchy .sheet :is(.picker button, .tile > button:first-child, .options button) {
+.ui-dark .sheet :is(.picker button, .tile > button:first-child, .options button) {
   background: rgba(244, 233, 241, 0.1);
 }
-.theme-witchy .studio-preview {
+.ui-dark .studio-preview {
   background: #efe4d6;
 }
-.theme-witchy .studio-name {
+.ui-dark .studio-name {
   background: rgba(244, 233, 241, 0.1);
   border-color: rgba(217, 180, 106, 0.5);
 }
-.theme-witchy .studio-name::placeholder {
+.ui-dark .studio-name::placeholder {
   color: rgba(244, 233, 241, 0.55);
 }
 
@@ -803,6 +828,69 @@ body {
   font-size: 13px;
   opacity: 0.7;
 }
+.specimen-note {
+  margin-top: 2px;
+  font-size: 13px;
+  line-height: 1.3;
+  font-style: italic;
+  opacity: 0.75;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.journal-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.journal-art {
+  position: relative;
+  width: 70%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.journal-art .specimen-art {
+  height: min(220px, 30vh);
+}
+.journal-art .tape {
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  width: 44px;
+  height: 13px;
+  transform: translateX(-50%) rotate(-6deg);
+  background: rgba(231, 214, 178, 0.82);
+}
+.journal-page .specimen-name {
+  margin: 12px 0 0;
+  font-size: 20px;
+}
+.journal-page .specimen-date {
+  margin: 0 0 10px;
+}
+.journal-note {
+  width: 100%;
+  flex: 1;
+  min-height: 130px;
+  resize: none;
+  font: inherit;
+  font-size: 18px;
+  line-height: 30px;
+  color: #3d2633;
+  padding: 0 4px;
+  border: 0;
+  outline: none;
+  background-color: transparent;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 29px, rgba(138, 53, 80, 0.16) 29px 30px);
+  background-attachment: local;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.journal-note::placeholder {
+  color: rgba(61, 38, 51, 0.45);
+}
 .book-actions .book-folio {
   min-width: 46px;
   text-align: center;
@@ -953,6 +1041,72 @@ body {
   grid-template-columns: 1fr 1fr;
 }
 
+/* a plant's card: its name, and when it grows next */
+.sheet h2 .name-pencil {
+  min-height: 0;
+  width: 34px;
+  height: 34px;
+  margin-left: 4px;
+  padding: 0;
+  border: 0;
+  vertical-align: middle;
+  opacity: 0.7;
+}
+.name-pencil svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+.name-edit {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  margin-right: 8px;
+}
+.name-edit input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 20px;
+  color: inherit;
+  padding: 4px 12px;
+  border-radius: 12px;
+  border: 1.5px solid color-mix(in srgb, var(--ink) 40%, transparent);
+  background: color-mix(in srgb, var(--wall) 60%, white);
+  -webkit-user-select: text;
+  user-select: text;
+}
+.ui-dark .name-edit input {
+  background: rgba(244, 233, 241, 0.1);
+}
+.name-edit button {
+  padding: 0 14px;
+}
+.growth-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-top: -6px !important;
+}
+.tag {
+  display: inline-block;
+  padding: 1px 10px;
+  border-radius: 10px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.tag.wet {
+  background: rgba(111, 160, 196, 0.25);
+  border: 1.5px solid rgba(111, 160, 196, 0.7);
+}
+.tag.dry {
+  border: 1.5px dashed color-mix(in srgb, var(--ink) 40%, transparent);
+}
+
 .letter-scrim {
   background: rgba(30, 18, 26, 0.45);
   animation: fade-in 0.4s ease-out;
@@ -1098,6 +1252,10 @@ body {
   flex-direction: column;
   max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 24px);
   padding-bottom: 10px;
+}
+/* the room painter keeps to the lower half, so the room above shows every change */
+.sheet.studio.compact {
+  max-height: min(52dvh, 460px);
 }
 .studio-preview {
   flex: 0 0 auto;

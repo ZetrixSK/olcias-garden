@@ -34,6 +34,29 @@ export function stageAt(species: SpeciesId, plant: Growing, now: number): Stage 
   return 'seed';
 }
 
+const NEXT: Record<Stage, Stage | null> = { seed: 'seedling', seedling: 'bud', bud: 'bloom', bloom: null };
+
+/**
+ * The next stage and roughly how long until it, if she doesn't water again. Null once in bloom.
+ */
+export function nextStage(species: SpeciesId, plant: Growing, now: number): { stage: Stage; inMs: number } | null {
+  const stage = NEXT[stageAt(species, plant, now)];
+  if (!stage) return null;
+  const [seedling, bud, bloom] = SPECIES[species].hours;
+  const at = { seedling, bud, bloom, seed: 0 }[stage];
+  return { stage, inMs: Math.max(0, (at - growthHours(plant, now)) * HOUR) };
+}
+
+/** Whether watering now would count: the last watering that helped was long enough ago. */
+export function waterWouldHelp(plant: Growing, now: number): boolean {
+  let lastCounted = -Infinity;
+  for (const t of [...plant.waterings].sort((a, b) => a - b)) {
+    if (t < plant.plantedAt || t > now) continue;
+    if (t - lastCounted >= WATER_COOLDOWN_HOURS * HOUR) lastCounted = t;
+  }
+  return now - lastCounted >= WATER_COOLDOWN_HOURS * HOUR;
+}
+
 export function isSoilWet(plant: Growing, now: number): boolean {
   const past = plant.waterings.filter((t) => t <= now);
   if (past.length === 0) return false;

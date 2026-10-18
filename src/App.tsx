@@ -12,6 +12,8 @@ import {
   newId,
   removeDrawing,
   setPhoto,
+  setPlantName,
+  setPressNote,
   setWallpaper,
   savePansyDesign,
   savePotDesign,
@@ -53,8 +55,9 @@ import { PressedBook } from './ui/PressedBook';
 import { pressedToday } from './garden/pressed';
 import { paletteVars } from './theme/palettes';
 import { seasonShown } from './theme/seasons';
+import { isDarkRoom, startingRoom, type OwnRoom } from './theme/ownRoom';
 import { MoveBanner, PlantCard, PlantPicker, StyleSheet, VarietyPicker, WindowChooser } from './ui/Sheets';
-import { NEW_PANSY, NEW_POT, PansyStudio, PotStudio } from './ui/Studio';
+import { NEW_PANSY, NEW_POT, PansyStudio, PotStudio, RoomStudio } from './ui/Studio';
 import { designRef } from './garden/designs';
 import { PlantArt } from './plants/PlantArt';
 import { pansyPalette as paletteOf } from './plants/looks';
@@ -150,7 +153,9 @@ type Mode =
   /** her wallpaper, photo and drawings */
   | { kind: 'decorate' }
   /** one of her drawings on the shelves */
-  | { kind: 'drawing'; id: string };
+  | { kind: 'drawing'; id: string }
+  /** painting her own room; `draft` shows in the room until she saves or closes */
+  | { kind: 'roomStudio'; draft: OwnRoom; editing: boolean };
 
 /** Her pictures, as addresses the drawing can use, keyed by the image's name in storage. */
 type Pictures = Record<string, string>;
@@ -302,11 +307,16 @@ export function App() {
   );
   const settings = garden?.settings;
   const { weather, status } = useWeather(settings ?? DEFAULT_SETTINGS, now);
-  const theme = settings?.theme ?? 'cozy';
+  // her own room shows its colours over the furniture of the room she based it on; while she's
+  // painting it, the draft shows instead
+  const own = mode.kind === 'roomStudio' ? mode.draft : settings?.useOwn ? settings.own : null;
+  const theme = own ? own.base : (settings?.theme ?? 'cozy');
+  const uiDark = own ? isDarkRoom(own) : theme === 'witchy';
+  const barColor = own ? own.wall : theme === 'cozy' ? '#ecdfc9' : '#2a1d2b';
 
   useEffect(() => {
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'cozy' ? '#ecdfc9' : '#2a1d2b');
-  }, [theme]);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', barColor);
+  }, [barColor]);
 
   if (!garden || !settings) return <div className="garden" style={paletteVars('cozy', weather)} />;
 
@@ -464,7 +474,10 @@ export function App() {
   const studioPlant = mode.kind === 'potStudio' && mode.forPlant ? garden.plants.find((p) => p.id === mode.forPlant) : undefined;
 
   return (
-    <div className={`garden theme-${theme}${weather.night ? ' night' : ''}${lapse ? ' replaying' : ''}`} style={paletteVars(theme, weather, seasonShown(now))}>
+    <div
+      className={`garden theme-${theme}${uiDark ? ' ui-dark' : ''}${weather.night ? ' night' : ''}${lapse ? ' replaying' : ''}`}
+      style={paletteVars(theme, weather, seasonShown(now), own)}
+    >
       <div className="view" key={settings.view}>
         {settings.view === 'room' ? (
           <Scene
@@ -513,6 +526,10 @@ export function App() {
         onLetter={() => setLetterOpen(true)}
         onBook={openBook}
         onDecorate={openDecorate}
+        onOwnRoom={(edit) => {
+          if (settings.own && !edit) setSettings({ useOwn: true });
+          else setMode({ kind: 'roomStudio', draft: settings.own ?? startingRoom(settings.theme), editing: !!settings.own });
+        }}
         onStudio={(what) =>
           setMode(
             what === 'pot'
@@ -561,6 +578,18 @@ export function App() {
             setPictureError(null);
             setMode({ kind: 'idle' });
           }}
+        />
+      )}
+      {mode.kind === 'roomStudio' && (
+        <RoomStudio
+          room={mode.draft}
+          editing={mode.editing}
+          onChange={(draft) => setMode({ ...mode, draft })}
+          onSave={() => {
+            setSettings({ own: mode.draft, useOwn: true });
+            setMode({ kind: 'idle' });
+          }}
+          onClose={() => setMode({ kind: 'idle' })}
         />
       )}
       {mode.kind === 'drawing' && (
@@ -628,6 +657,7 @@ export function App() {
           }
           pressedToday={pressedToday(garden.pressed, cardPlant.id, now)}
           onBook={openBook}
+          onName={(name) => update((g) => setPlantName(g, cardPlant.id, name))}
           onRemove={() => {
             update((g) => removePlant(g, cardPlant.id));
             setMode({ kind: 'idle' });
@@ -710,7 +740,12 @@ export function App() {
       {mode.kind === 'place' && <MoveBanner text="Tap a place in the window" onCancel={() => setMode({ kind: 'idle' })} />}
       {lapse && <LapseClock lapse={lapse.tl} p={lapse.p} fading={lapse.fading} onSkip={skipLapse} />}
       {bookOpen && (
-        <PressedBook pressed={garden.pressed} onRemove={(id) => update((g) => unpress(g, id))} onClose={() => setBookOpen(false)} />
+        <PressedBook
+          pressed={garden.pressed}
+          onNote={(id, note) => update((g) => setPressNote(g, id, note))}
+          onRemove={(id) => update((g) => unpress(g, id))}
+          onClose={() => setBookOpen(false)}
+        />
       )}
       {letterOpen && !lapse && (
         <Letter

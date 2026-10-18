@@ -8,7 +8,7 @@ const at = (day: number, hour: number) => new Date(2026, 9, day, hour).getTime()
 function garden(): GardenState {
   const waterings = Array.from({ length: 30 }, (_, i) => at(1 + i, 15));
   const p = (id: string, display: Plant['display']): Plant => ({
-    id, species: 'pansy', slot: 'row3-a', pot: 'wide', variety: null, plantedAt: at(1, 9), waterings, display, vine: null,
+    id, species: 'pansy', slot: 'row3-a', pot: 'wide', variety: null, plantedAt: at(1, 9), waterings, display, vine: null, name: null,
   });
   return { ...starterGarden(at(10, 12)), plants: [p('a', 'sill-1'), p('b', 'sill-3')], vinesCheckedAt: at(10, 3), lastSeen: at(10, 20) };
 }

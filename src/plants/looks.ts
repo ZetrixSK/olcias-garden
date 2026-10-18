@@ -61,12 +61,13 @@ export function potDesignFor(pot: PotRef, designs: Designs): PotDesign | undefin
 /** Everything needed to draw a plant the way she has styled it. */
 export type PlantLook = { shape: GardenPot; pot: PotDesign | undefined; palette: PansyColors[]; label: string | undefined };
 
-export function plantLook(plant: { species: SpeciesId; pot: PotRef; variety: string | null }, designs: Designs): PlantLook {
+export function plantLook(plant: { species: SpeciesId; pot: PotRef; variety: string | null; name?: string | null }, designs: Designs): PlantLook {
   return {
     shape: potShape(plant.pot, designs, SPECIES[plant.species].pot),
     pot: potDesignFor(plant.pot, designs),
     palette: plant.species === 'pansy' ? pansyPalette(plant.variety, designs) : PANSY_MIX,
     // a bratek of her own design carries its name on the seed marker
-    label: plant.species === 'pansy' ? designs.pansies.find((d) => `d:${d.id}` === plant.variety)?.name || undefined : undefined,
+    // her name for the plant first, then her bratek variety's name
+    label: plant.name || (plant.species === 'pansy' ? designs.pansies.find((d) => `d:${d.id}` === plant.variety)?.name || undefined : undefined),
   };
 }

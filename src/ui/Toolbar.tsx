@@ -56,7 +56,7 @@ const STATUS_TEXT: Record<WeatherStatus, string> = {
   manual: 'Chosen by you',
 };
 
-export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onBook, onDecorate, onClock, onStudio }: {
+export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onBook, onDecorate, onClock, onStudio, onOwnRoom }: {
   settings: Settings;
   weather: Weather;
   status: WeatherStatus;
@@ -66,6 +66,8 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
   onLetter: () => void;
   onBook: () => void;
   onDecorate: () => void;
+  /** Shows her own room, opening the room painter first if she hasn't made one yet (or to change it). */
+  onOwnRoom: (edit: boolean) => void;
   onClock: () => void;
   onStudio: (what: 'pot' | 'pansy') => void;
 }) {
@@ -181,14 +183,34 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
               </button>
             </div>
             <p className="hint">Room</p>
-            <div className="row two">
-              <button aria-pressed={settings.theme === 'cozy'} onClick={() => onSettings({ theme: 'cozy' })}>
+            <div className="row three">
+              <button aria-pressed={!settings.useOwn && settings.theme === 'cozy'} onClick={() => onSettings({ theme: 'cozy', useOwn: false })}>
                 Cozy
               </button>
-              <button aria-pressed={settings.theme === 'witchy'} onClick={() => onSettings({ theme: 'witchy' })}>
+              <button aria-pressed={!settings.useOwn && settings.theme === 'witchy'} onClick={() => onSettings({ theme: 'witchy', useOwn: false })}>
                 Witchy
               </button>
+              <button
+                aria-pressed={settings.useOwn}
+                onClick={() => {
+                  if (!settings.own) setMenu(false);
+                  onOwnRoom(false);
+                }}
+              >
+                Mine
+              </button>
             </div>
+            {settings.useOwn && (
+              <button
+                className="wide"
+                onClick={() => {
+                  setMenu(false);
+                  onOwnRoom(true);
+                }}
+              >
+                Change my room's colours
+              </button>
+            )}
           </div>
         </>
       )}

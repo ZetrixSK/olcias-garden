@@ -16,8 +16,16 @@ import { designColors } from '../plants/looks';
 import { PansyFlower, PansyPlant } from '../plants/Pansy';
 import { PaintedFront } from '../plants/PaintedPot';
 import { Potted } from '../plants/Pots';
+import { FLOOR_SWATCHES, ROOM_SWATCH_NAMES, ROOM_SWATCHES, type OwnRoom, type RoomPart } from '../theme/ownRoom';
+import type { Theme } from '../theme/palettes';
 
-function Swatches({ colors, value, onPick, none }: { colors: readonly string[]; value: string | null; onPick: (c: string | null) => void; none?: boolean }) {
+function Swatches({ colors, value, onPick, none, names = SWATCH_NAMES }: {
+  colors: readonly string[];
+  value: string | null;
+  onPick: (c: string | null) => void;
+  none?: boolean;
+  names?: Record<string, string>;
+}) {
   return (
     <div className="swatches">
       {none && (
@@ -28,7 +36,7 @@ function Swatches({ colors, value, onPick, none }: { colors: readonly string[]; 
         </button>
       )}
       {colors.map((c) => (
-        <button key={c} className="swatch" aria-label={SWATCH_NAMES[c] ?? c} aria-pressed={value === c} style={{ background: c }} onClick={() => onPick(c)} />
+        <button key={c} className="swatch" aria-label={names[c] ?? c} aria-pressed={value === c} style={{ background: c }} onClick={() => onPick(c)} />
       ))}
     </div>
   );
@@ -43,9 +51,11 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-function StudioFrame({ title, preview, children, editing, onSave, onDelete, onClose }: {
+function StudioFrame({ title, preview, children, editing, onSave, onDelete, onClose, compact = false }: {
   title: string;
-  preview: ReactNode;
+  /** Left out when the room itself shows the result, above the sheet. */
+  preview?: ReactNode;
+  compact?: boolean;
   children: ReactNode;
   editing: boolean;
   onSave: () => void;
@@ -54,12 +64,12 @@ function StudioFrame({ title, preview, children, editing, onSave, onDelete, onCl
 }) {
   const [confirm, setConfirm] = useState(false);
   return (
-    <div className="sheet studio" role="dialog" aria-label={title}>
+    <div className={compact ? 'sheet studio compact' : 'sheet studio'} role="dialog" aria-label={title}>
       <div className="sheet-head">
         <h2>{title}</h2>
         <button className="close" aria-label="Close" onClick={onClose}>×</button>
       </div>
-      <div className="studio-preview">{preview}</div>
+      {preview && <div className="studio-preview">{preview}</div>}
       <div className="studio-body">{children}</div>
       <div className="studio-actions">
         {editing &&
@@ -227,6 +237,54 @@ export function PansyStudio({ initial, editing, onSave, onDelete, onClose }: {
       <Section title="Petal edge">
         <Swatches colors={PANSY_SWATCHES} value={d.edge} onPick={(edge) => set({ edge })} none />
       </Section>
+    </StudioFrame>
+  );
+}
+
+// ---- her room ----
+
+const ROOM_SECTIONS: Array<[RoomPart, string]> = [
+  ['wall', 'Walls'],
+  ['motif', 'Wallpaper pattern'],
+  ['curtain', 'Curtains'],
+  ['frame', 'Window frame'],
+  ['floor', 'Floor'],
+  ['bed', 'Dog bed'],
+];
+
+/**
+ * Painting her own room. The room itself is the preview: every tap shows straight away above the
+ * sheet, and nothing is kept until she saves.
+ */
+export function RoomStudio({ room, editing, onChange, onSave, onClose }: {
+  room: OwnRoom;
+  editing: boolean;
+  onChange: (room: OwnRoom) => void;
+  onSave: () => void;
+  onClose: () => void;
+}) {
+  const set = (patch: Partial<OwnRoom>) => onChange({ ...room, ...patch });
+  return (
+    <StudioFrame compact title={editing ? 'My room' : 'Paint my room'} editing={false} onSave={onSave} onDelete={() => {}} onClose={onClose}>
+      <Section title="Furniture and decorations">
+        <div className="decor-choice two">
+          {(['cozy', 'witchy'] as Theme[]).map((base) => (
+            <button key={base} aria-pressed={room.base === base} onClick={() => set({ base })}>
+              {base === 'cozy' ? 'Cozy' : 'Witchy'}
+            </button>
+          ))}
+        </div>
+      </Section>
+      {ROOM_SECTIONS.map(([part, title]) => (
+        <Section key={part} title={title}>
+          <Swatches
+            colors={part === 'floor' ? FLOOR_SWATCHES : ROOM_SWATCHES}
+            names={ROOM_SWATCH_NAMES}
+            value={room[part]}
+            onPick={(c) => c && set({ [part]: c } as Partial<OwnRoom>)}
+          />
+        </Section>
+      ))}
     </StudioFrame>
   );
 }

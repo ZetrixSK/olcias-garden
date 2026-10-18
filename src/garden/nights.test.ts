@@ -8,7 +8,7 @@ const at = (day: number, hour: number) => new Date(2026, 9, day, hour).getTime()
 const LONG_AGO = at(1, 12);
 
 function plant(id: string, species: SpeciesId, display: WindowSpot | null, extra: Partial<Plant> = {}): Plant {
-  return { id, species, slot: 'row3-a', pot: 'wide', variety: null, plantedAt: LONG_AGO, waterings: [], display, vine: null, ...extra };
+  return { id, species, slot: 'row3-a', pot: 'wide', variety: null, plantedAt: LONG_AGO, waterings: [], display, vine: null, name: null, ...extra };
 }
 
 /** Watered every afternoon from day `from` to day `to`. */
