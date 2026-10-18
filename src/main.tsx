@@ -9,7 +9,8 @@ import '@fontsource/grenze-gotisch/latin-600.css';
 import '@fontsource/grenze-gotisch/latin-ext-600.css';
 import './styles.css';
 import { App } from './App';
-import { Gallery, IconArt } from './Gallery';
+import { ErrorBoundary } from './ui/ErrorBoundary';
+import { Gallery, IconArt, PressedGallery } from './Gallery';
 import { paletteVars } from './theme/palettes';
 
 if (import.meta.env.PROD) {
@@ -23,12 +24,18 @@ createRoot(document.getElementById('root')!).render(
       <div className="garden" style={paletteVars('cozy', { sky: 'clear', night: false })}>
         <IconArt pad={Number(new URLSearchParams(location.search).get('pad') ?? 0.14)} />
       </div>
+    ) : import.meta.env.DEV && location.search.includes('pressed') ? (
+      <div className="garden" style={paletteVars('cozy', { sky: 'clear', night: false })}>
+        <PressedGallery />
+      </div>
     ) : import.meta.env.DEV && location.search.includes('gallery') ? (
       <div className="garden" style={paletteVars('cozy', { sky: 'clear', night: false })}>
         <Gallery />
       </div>
     ) : (
-      <App />
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     )}
   </StrictMode>,
 );

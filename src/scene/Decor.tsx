@@ -1,5 +1,6 @@
 import type { Theme } from '../theme/palettes';
 import { PansyFlower, PANSY_OLCIA } from '../plants/Pansy';
+import { moonPath } from '../weather/moon';
 import { fv } from './geometry';
 
 export const CANDLE_FLAME: Record<Theme, [number, number]> = {
@@ -84,11 +85,19 @@ export function ShelfTrinket({ theme }: { theme: Theme }) {
   );
 }
 
-/** Framed picture on the left wall: a pressed pansy, or moon phases for the witchy room. */
-export function WallPicture({ theme }: { theme: Theme }) {
+/** The witchy print, top to bottom: waxing crescent, first quarter, full, last quarter, waning crescent. */
+const PRINT_PHASES = [0.15, 0.25, 0.5, 0.75, 0.85];
+function nearestPhase(phase: number): number {
+  const gap = (p: number) => Math.min(Math.abs(p - phase), 1 - Math.abs(p - phase));
+  return PRINT_PHASES.reduce((best, p, i) => (gap(p) < gap(PRINT_PHASES[best]!) ? i : best), 0);
+}
+
+/** Framed picture on the left wall: a pressed pansy, or moon phases for the witchy room with tonight's ringed in gold. */
+export function WallPicture({ theme, phase, onBook }: { theme: Theme; phase: number; onBook?: () => void }) {
+  const tonight = nearestPhase(phase);
   if (theme === 'cozy') {
     return (
-      <g transform="translate(62 652) rotate(-3)">
+      <g transform="translate(62 652) rotate(-3)" className={onBook ? 'tappable' : undefined} onClick={onBook}>
         <path d="M0,-50 L0,-40" className="ink-thin" />
         <ellipse className="ink" cx="0" cy="0" rx="30" ry="38" fill="#c39a5a" />
         <ellipse className="ink-thin" cx="0" cy="0" rx="24" ry="32" fill="#f5ecda" />
@@ -102,13 +111,14 @@ export function WallPicture({ theme }: { theme: Theme }) {
     <g transform="translate(62 652) rotate(-2)">
       <rect className="ink" x="-30" y="-40" width="60" height="78" fill="#1a141c" />
       <rect x="-25" y="-35" width="50" height="68" fill="#2c2846" />
-      {[-24, -12, 0, 12, 24].map((dy, i) => {
-        const r = 4.4;
-        const k = [r, r * 0.5, 0, -r * 0.5, -r][i]!;
+      {PRINT_PHASES.map((p, i) => {
+        const d = moonPath(4.4, p);
+        const dy = -24 + i * 12;
         return (
-          <g key={dy} transform={`translate(0 ${dy})`}>
-            <circle r={r} fill="#4a466a" />
-            <path d={`M0,${-r} A${r},${r} 0 0 1 0,${r} A${Math.abs(k)},${r} 0 0 ${k > 0 ? 0 : 1} 0,${-r} Z`} fill="#ece2c4" />
+          <g key={p} transform={`translate(0 ${dy})`}>
+            <circle r={4.4} fill="#4a466a" />
+            {d && <path d={d} fill="#ece2c4" />}
+            {i === tonight && <circle r={6.4} fill="none" stroke="#c9a45c" strokeWidth="1" />}
           </g>
         );
       })}
@@ -161,11 +171,11 @@ export function Ball() {
 }
 
 /** Wall pieces between sill and floor, centred in whatever wall height the screen leaves. */
-export function WallDecor({ theme, cy, scale }: { theme: Theme; cy: number; scale: number }) {
+export function WallDecor({ theme, cy, scale, phase, onBook }: { theme: Theme; cy: number; scale: number; phase: number; onBook?: () => void }) {
   return (
     <g>
       <g transform={`translate(62 ${cy + 6}) scale(${scale}) translate(-62 -652)`}>
-        <WallPicture theme={theme} />
+        <WallPicture theme={theme} phase={phase} onBook={onBook} />
       </g>
       {theme === 'witchy' && (
         <g transform={`translate(318 ${cy - 30}) scale(${scale})`}>

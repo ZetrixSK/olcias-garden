@@ -4,6 +4,7 @@ import { SKY_KINDS, type SkyKind, type Weather } from '../theme/palettes';
 import type { WeatherStatus } from '../weather/useWeather';
 import { CLOCK_ICON } from './Clock';
 import { ENVELOPE_ICON } from './Letter';
+import { BOOK_ICON } from './PressedBook';
 
 const SUN = (
   <g>
@@ -55,7 +56,7 @@ const STATUS_TEXT: Record<WeatherStatus, string> = {
   manual: 'Chosen by you',
 };
 
-export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onClock }: {
+export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onBook, onClock, onStudio }: {
   settings: Settings;
   weather: Weather;
   status: WeatherStatus;
@@ -63,7 +64,9 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
   onLiveWeather: () => void;
   locating: boolean;
   onLetter: () => void;
+  onBook: () => void;
   onClock: () => void;
+  onStudio: (what: 'pot' | 'pansy') => void;
 }) {
   const [menu, setMenu] = useState(false);
   const other: View = settings.view === 'room' ? 'shelves' : 'room';
@@ -127,6 +130,35 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
               </button>
               <button aria-label="Night" aria-pressed={manual && weather.night} onClick={() => choose({ night: true })}>
                 <Icon>{MOON}</Icon>
+              </button>
+            </div>
+            <button
+              className="wide with-icon"
+              onClick={() => {
+                setMenu(false);
+                onBook();
+              }}
+            >
+              <Icon>{BOOK_ICON}</Icon>
+              Pressed flowers
+            </button>
+            <p className="hint">Make your own</p>
+            <div className="row two">
+              <button
+                onClick={() => {
+                  setMenu(false);
+                  onStudio('pansy');
+                }}
+              >
+                Bratek
+              </button>
+              <button
+                onClick={() => {
+                  setMenu(false);
+                  onStudio('pot');
+                }}
+              >
+                Pot
               </button>
             </div>
             <p className="hint">Climbing vines</p>

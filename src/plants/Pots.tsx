@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import type { PotDesign } from '../garden/designs';
+import { openingColor, PaintedFront } from './PaintedPot';
 import type { GardenPot } from '../garden/species';
 
 export type PotKind = GardenPot | 'tiny-clay' | 'tiny-speckle' | 'tiny-pink';
@@ -154,14 +156,17 @@ export const RIM: Record<PotKind, [number, string]> = {
   'tiny-pink': [14, '#cf95a2'],
 };
 
-/** A plant in a pot: rim and soil behind, plant in the middle, pot front over the stem bases. */
-export function Potted({ kind, wet = false, children }: { kind: PotKind; wet?: boolean; children: ReactNode }) {
-  const [rim, color] = RIM[kind];
+/**
+ * A plant in a pot: rim and soil behind, plant in the middle, pot front over the stem bases.
+ * With a design it is the pot she painted, in that design's shape.
+ */
+export function Potted({ kind, design, wet = false, children }: { kind: PotKind; design?: PotDesign; wet?: boolean; children: ReactNode }) {
+  const [rim, color] = RIM[design ? design.shape : kind];
   return (
     <g>
-      <Opening rim={rim} color={color} wet={wet} />
+      <Opening rim={rim} color={design ? openingColor(design) : color} wet={wet} />
       {children}
-      <Front kind={kind} />
+      {design ? <PaintedFront d={design} /> : <Front kind={kind} />}
     </g>
   );
 }

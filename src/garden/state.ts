@@ -1,5 +1,7 @@
 import { SKY_KINDS, type Theme, type Weather } from '../theme/palettes';
-import { plantedAtForStage } from './growth';
+import { plantedAtForStage, stageAt } from './growth';
+import { MAX_PRESSED, parsePressed, pressedToday, pressingOf, type Pressing } from './pressed';
+import { designId, NO_DESIGNS, PANSY_PRESETS, parseDesigns, upsert, type Designs, type PansyDesign, type PotDesign, type PotRef } from './designs';
 import { lastNight, runNights, settleMiddleDir, trimmed, type Vine } from './vines';
 import { POT_KINDS, SPECIES, SPECIES_IDS, type GardenPot, type SpeciesId, type Stage } from './species';
 
@@ -18,7 +20,9 @@ export type Plant = {
   id: string;
   species: SpeciesId;
   slot: SlotId;
-  pot: GardenPot;
+  pot: PotRef;
+  /** For a bratek: which colours it blooms in, a built-in variety or one she designed. */
+  variety: string | null;
   plantedAt: number;
   waterings: number[];
   /** Where it is shown in the window, if anywhere. It stays on its shelf as well. */
@@ -54,6 +58,10 @@ export type GardenState = {
   vinesCheckedAt: number;
   /** When the garden was last open on screen, so the next visit can show what happened since. */
   lastSeen: number;
+  /** Bratki and pots she designed herself. */
+  designs: Designs;
+  /** Her book of pressed flowers, oldest first. */
+  pressed: Pressing[];
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -79,6 +87,7 @@ export function starterGarden(now: number): GardenState {
     species,
     slot,
     pot: SPECIES[species].pot,
+    variety: null,
     plantedAt: plantedAtForStage(species, stage, now),
     waterings: [],
     display,
@@ -98,6 +107,8 @@ export function starterGarden(now: number): GardenState {
     settings: { ...DEFAULT_SETTINGS },
     vinesCheckedAt: lastNight(now),
     lastSeen: now,
+    designs: NO_DESIGNS,
+    pressed: [],
   };
 }
 
@@ -105,9 +116,12 @@ export function plantAt(state: GardenState, slot: SlotId): Plant | undefined {
   return state.plants.find((p) => p.slot === slot);
 }
 
-export function addPlant(state: GardenState, slot: SlotId, species: SpeciesId, now: number, id = newId()): GardenState {
+export function addPlant(state: GardenState, slot: SlotId, species: SpeciesId, now: number, id = newId(), variety: string | null = null): GardenState {
   if (plantAt(state, slot)) return state;
-  const plant: Plant = { id, species, slot, pot: SPECIES[species].pot, plantedAt: now, waterings: [], display: null, vine: null };
+  const plant: Plant = {
+    id, species, slot, pot: SPECIES[species].pot, variety: species === 'pansy' ? variety : null,
+    plantedAt: now, waterings: [], display: null, vine: null,
+  };
   return { ...state, plants: [...state.plants, plant] };
 }
 
@@ -150,6 +164,29 @@ export function trimVine(state: GardenState, id: string): GardenState {
   return { ...state, plants: state.plants.map((p) => (p.id === id ? { ...p, vine: trimmed(p.vine) } : p)) };
 }
 
+/** Whether a flower can be pressed from this plant now: it has to be in bloom, and each plant gives one a day. */
+export function canPress(state: GardenState, id: string, now: number): boolean {
+  const plant = state.plants.find((p) => p.id === id);
+  return (
+    !!plant &&
+    stageAt(plant.species, plant, now) === 'bloom' &&
+    !pressedToday(state.pressed, id, now) &&
+    state.pressed.length < MAX_PRESSED
+  );
+}
+
+/** Presses one of the plant's flowers into the book. The plant itself is none the worse for it. */
+export function pressFlower(state: GardenState, id: string, now: number, pressId = newId()): GardenState {
+  const plant = state.plants.find((p) => p.id === id);
+  if (!plant || !canPress(state, id, now)) return state;
+  return { ...state, pressed: [...state.pressed, pressingOf(plant, state.designs, now, pressId)] };
+}
+
+/** Takes a flower back out of the book. */
+export function unpress(state: GardenState, pressId: string): GardenState {
+  return { ...state, pressed: state.pressed.filter((p) => p.id !== pressId) };
+}
+
 /** Catches up on every 3:00 since the last visit. Returns the same object when nothing is due. */
 export function catchUpNights(state: GardenState, now: number): GardenState {
   const { plants, checkedAt } = runNights(state.plants, state.vinesCheckedAt, now, state.settings.vines);
@@ -166,12 +203,37 @@ export function removePlant(state: GardenState, id: string): GardenState {
 }
 
 export function cyclePot(state: GardenState, id: string): GardenState {
-  return {
-    ...state,
-    plants: state.plants.map((p) =>
-      p.id === id ? { ...p, pot: POT_KINDS[(POT_KINDS.indexOf(p.pot) + 1) % POT_KINDS.length]! } : p,
-    ),
-  };
+  const next = (pot: PotRef) => POT_KINDS[(POT_KINDS.indexOf(pot as GardenPot) + 1) % POT_KINDS.length]!;
+  return { ...state, plants: state.plants.map((p) => (p.id === id ? { ...p, pot: next(p.pot) } : p)) };
+}
+
+export function setPot(state: GardenState, id: string, pot: PotRef): GardenState {
+  return { ...state, plants: state.plants.map((p) => (p.id === id ? { ...p, pot } : p)) };
+}
+
+export function setVariety(state: GardenState, id: string, variety: string): GardenState {
+  return { ...state, plants: state.plants.map((p) => (p.id === id && p.species === 'pansy' ? { ...p, variety } : p)) };
+}
+
+export function savePansyDesign(state: GardenState, design: PansyDesign): GardenState {
+  return { ...state, designs: { ...state.designs, pansies: upsert(state.designs.pansies, design) } };
+}
+
+export function savePotDesign(state: GardenState, design: PotDesign): GardenState {
+  return { ...state, designs: { ...state.designs, pots: upsert(state.designs.pots, design) } };
+}
+
+/** Throws a design away; plants that used it go back to their usual pot or colours. */
+export function deleteDesign(state: GardenState, kind: 'pansy' | 'pot', id: string): GardenState {
+  const ref = `d:${id}`;
+  const designs =
+    kind === 'pansy'
+      ? { ...state.designs, pansies: state.designs.pansies.filter((d) => d.id !== id) }
+      : { ...state.designs, pots: state.designs.pots.filter((d) => d.id !== id) };
+  const plants = state.plants.map((p) =>
+    kind === 'pot' && p.pot === ref ? { ...p, pot: SPECIES[p.species].pot } : kind === 'pansy' && p.variety === ref ? { ...p, variety: null } : p,
+  );
+  return { ...state, designs, plants };
 }
 
 export function updateSettings(state: GardenState, patch: Partial<Settings>): GardenState {
@@ -181,16 +243,30 @@ export function updateSettings(state: GardenState, patch: Partial<Settings>): Ga
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
 const isTime = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0;
 
-function parsePlant(v: unknown): Plant | null {
+function parsePotRef(pot: unknown, species: SpeciesId, designs: Designs): PotRef {
+  if (POT_KINDS.includes(pot as GardenPot)) return pot as GardenPot;
+  const id = designId(typeof pot === 'string' ? pot : undefined);
+  return id !== null && designs.pots.some((d) => d.id === id) ? (pot as PotRef) : SPECIES[species].pot;
+}
+
+function parseVariety(v: unknown, species: SpeciesId, designs: Designs): string | null {
+  if (species !== 'pansy' || typeof v !== 'string') return null;
+  if ((PANSY_PRESETS as readonly string[]).includes(v)) return v;
+  const id = designId(v);
+  return id !== null && designs.pansies.some((d) => d.id === id) ? v : null;
+}
+
+function parsePlant(v: unknown, designs: Designs): Plant | null {
   if (!isObj(v)) return null;
-  const { id, species, slot, pot, plantedAt, waterings, display, vine } = v;
+  const { id, species, slot, pot, variety, plantedAt, waterings, display, vine } = v;
   if (typeof id !== 'string' || !SPECIES_IDS.includes(species as SpeciesId)) return null;
   if (!SLOT_IDS.includes(slot as SlotId) || !isTime(plantedAt)) return null;
   return {
     id,
     species: species as SpeciesId,
     slot: slot as SlotId,
-    pot: POT_KINDS.includes(pot as GardenPot) ? (pot as GardenPot) : SPECIES[species as SpeciesId].pot,
+    pot: parsePotRef(pot, species as SpeciesId, designs),
+    variety: parseVariety(variety, species as SpeciesId, designs),
     plantedAt,
     waterings: Array.isArray(waterings) ? waterings.filter(isTime) : [],
     display: WINDOW_SPOTS.includes(display as WindowSpot) ? (display as WindowSpot) : null,
@@ -278,11 +354,12 @@ export function parseSave(input: unknown, now = Date.now()): GardenState | null 
   // version 3 had no vines: nothing has outgrown yet, and the nightly checks start from now
   if (raw.version === 3) raw = { ...raw, version: 4, vinesCheckedAt: lastNight(now) };
   if (raw.version !== SAVE_VERSION) return null;
+  const designs = parseDesigns(raw.designs);
   const taken = new Set<SlotId>();
   const shown = new Set<WindowSpot>();
   const plants: Plant[] = [];
   for (const entry of raw.plants as unknown[]) {
-    const plant = parsePlant(entry);
+    const plant = parsePlant(entry, designs);
     if (plant && !taken.has(plant.slot)) {
       taken.add(plant.slot);
       if (plant.display && shown.has(plant.display)) plant.display = null;
@@ -292,5 +369,13 @@ export function parseSave(input: unknown, now = Date.now()): GardenState | null 
   }
   const checked = isTime(raw.vinesCheckedAt) && raw.vinesCheckedAt <= now ? raw.vinesCheckedAt : lastNight(now);
   const lastSeen = isTime(raw.lastSeen) && raw.lastSeen <= now ? raw.lastSeen : now;
-  return { version: SAVE_VERSION, plants, settings: parseSettings(raw.settings), vinesCheckedAt: checked, lastSeen };
+  return {
+    version: SAVE_VERSION,
+    plants,
+    settings: parseSettings(raw.settings),
+    vinesCheckedAt: checked,
+    lastSeen,
+    designs,
+    pressed: parsePressed(raw.pressed),
+  };
 }

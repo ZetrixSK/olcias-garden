@@ -1,4 +1,5 @@
 import type { Weather } from '../theme/palettes';
+import { moonLit, moonPath } from '../weather/moon';
 import { fv, seeded } from './geometry';
 
 /** A scalloped storybook cloud bank: a row of soft bumps along the top, flat underneath. */
@@ -61,16 +62,35 @@ function Sun() {
   );
 }
 
-function Moon() {
+/** Today's moon: the lit part follows the real phase, the dark part is only a faint ghost of the disc. */
+function Moon({ phase }: { phase: number }) {
+  const lit = moonLit(phase);
+  const d = moonPath(24, phase);
+  // the halo grows with the moon, so a thin crescent doesn't glow like a full one
+  const halo = 0.3 + 0.7 * lit;
   return (
     <g transform="translate(266 164) rotate(-18)">
-      <circle r="44" fill="#f5ecd2" opacity="0.06" />
-      <circle r="31" fill="#f5ecd2" opacity="0.07" />
-      <circle r="24" fill="#f5ecd2" opacity="0.08" />
-      <path className="ink" fill="#f3e8cb" d="M0,-24 A24,24 0 0 0 0,24 A13,24 0 0 1 0,-24 Z" />
-      <circle cx="-15" cy="-4" r="2.2" fill="#e0d1aa" />
-      <circle cx="-12" cy="8" r="1.4" fill="#e0d1aa" />
-      <circle cx="-18" cy="5" r="1" fill="#e0d1aa" />
+      <defs>
+        <clipPath id="moon-lit">{d && <path d={d} />}</clipPath>
+      </defs>
+      <circle r="44" fill="#f5ecd2" opacity={0.06 * halo} />
+      <circle r="31" fill="#f5ecd2" opacity={0.07 * halo} />
+      <circle r="24" fill="#f5ecd2" opacity={0.06} />
+      <circle r="24" fill="none" stroke="#f5ecd2" strokeWidth="0.8" opacity="0.14" />
+      {d && (
+        <>
+          <path className="ink" fill="#f3e8cb" d={d} />
+          <g clipPath="url(#moon-lit)">
+            <circle cx="-13" cy="-6" r="3" fill="#e0d1aa" />
+            <circle cx="-8" cy="9" r="1.8" fill="#e0d1aa" />
+            <circle cx="-17" cy="6" r="1.2" fill="#e0d1aa" />
+            <circle cx="9" cy="-11" r="2.4" fill="#e0d1aa" />
+            <circle cx="12" cy="5" r="3.4" fill="#e0d1aa" />
+            <circle cx="4" cy="14" r="1.3" fill="#e0d1aa" />
+            <circle cx="2" cy="-2" r="1.6" fill="#e0d1aa" />
+          </g>
+        </>
+      )}
     </g>
   );
 }
@@ -160,20 +180,20 @@ export function Sky({ weather }: { weather: Weather }) {
 }
 
 /** Things that should stay luminous above the room's night tint. */
-export function SkyLights({ weather }: { weather: Weather }) {
+export function SkyLights({ weather, phase }: { weather: Weather; phase: number }) {
   if (!weather.night || weather.sky === 'rain') return null;
   if (weather.sky === 'cloudy') {
     // the moon glows through a thin patch of cloud
     return (
       <g opacity={0.6}>
-        <Moon />
+        <Moon phase={phase} />
       </g>
     );
   }
   return (
     <g>
       <Stars />
-      <Moon />
+      <Moon phase={phase} />
     </g>
   );
 }

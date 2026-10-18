@@ -1,13 +1,42 @@
-import type { ReactNode } from 'react';
+import { memo, type ReactNode } from 'react';
 import { isSoilWet, stageAt } from '../garden/growth';
+import type { Designs } from '../garden/designs';
+import type { GardenPot, Stage } from '../garden/species';
 import type { Plant } from '../garden/state';
+import { plantLook } from '../plants/looks';
+import type { PansyColors } from '../plants/Pansy';
+import type { PotDesign } from '../garden/designs';
 import { PlantArt } from '../plants/PlantArt';
 import { POT_HEIGHT, Potted, RIM } from '../plants/Pots';
 
 /** One of her plants in its pot, as drawn in either view. Rooted at the rim; the pot hangs below. */
-export function GardenPlanter({ plant, now, selected, moving, watering, ribbon = false, lean = 0, runner }: {
-  plant: Plant;
+export function GardenPlanter({ plant, now, designs, ...rest }: Omit<PlanterProps, 'stage' | 'wet' | 'shape' | 'potDesign' | 'palette' | 'label'> & {
   now: number;
+  designs: Designs;
+}) {
+  const look = plantLook(plant, designs);
+  return (
+    <PlanterArt
+      plant={plant}
+      stage={stageAt(plant.species, plant, now)}
+      wet={isSoilWet(plant, now)}
+      shape={look.shape}
+      potDesign={look.pot}
+      palette={look.palette}
+      label={look.label}
+      {...rest}
+    />
+  );
+}
+
+type PlanterProps = {
+  plant: Plant;
+  stage: Stage;
+  wet: boolean;
+  shape: GardenPot;
+  potDesign: PotDesign | undefined;
+  palette: PansyColors[];
+  label: string | undefined;
   selected: boolean;
   moving: boolean;
   watering: boolean;
@@ -17,29 +46,30 @@ export function GardenPlanter({ plant, now, selected, moving, watering, ribbon =
   lean?: number;
   /** A vine's runner, drawn over the plant but behind the pot front so it comes out of the soil. */
   runner?: ReactNode;
-}) {
-  const stage = stageAt(plant.species, plant, now);
-  const wet = isSoilWet(plant, now);
+};
+
+/** Redrawn only when something visible changes, which matters while the clock replays time. */
+const PlanterArt = memo(function PlanterArt({ plant, stage, wet, shape, potDesign, palette, label, selected, moving, watering, ribbon = false, lean = 0, runner }: PlanterProps) {
   // remount the inner group on each watering so the wobble replays
   const last = plant.waterings[plant.waterings.length - 1];
   return (
     <g className={moving ? 'moving' : undefined}>
-      <Potted kind={plant.pot} wet={wet}>
+      <Potted kind={shape} design={potDesign} wet={wet}>
         <g transform={lean ? `rotate(${lean})` : undefined}>
           <g className="sway" style={{ animationDuration: `${7 + (plant.id.charCodeAt(0) % 5)}s` }}>
             <g key={last ?? 0} className={last ? 'wobble' : undefined}>
-              <PlantArt species={plant.species} stage={stage} />
+              <PlantArt species={plant.species} stage={stage} palette={palette} label={label} />
             </g>
           </g>
         </g>
         {runner}
       </Potted>
-      {ribbon && <Ribbon x={RIM[plant.pot][0] * 0.62} />}
-      {selected && <ellipse cx="0" cy={POT_HEIGHT[plant.pot] + 4} rx="40" ry="6" fill="none" className="ink selected-ring" strokeDasharray="4 5" />}
+      {ribbon && <Ribbon x={RIM[shape][0] * 0.62} />}
+      {selected && <ellipse cx="0" cy={POT_HEIGHT[shape] + 4} rx="40" ry="6" fill="none" className="ink selected-ring" strokeDasharray="4 5" />}
       {watering && <WateringCan />}
     </g>
   );
-}
+});
 
 function Ribbon({ x }: { x: number }) {
   return (

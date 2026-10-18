@@ -1,15 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   addPlant,
+  canPress,
   catchUpNights,
   DEFAULT_SETTINGS,
-  cyclePot,
+  deleteDesign,
+  newId,
+  savePansyDesign,
+  savePotDesign,
+  setPot,
+  setVariety,
   movePlant,
   placeInWindow,
   plantAt,
+  pressFlower,
   removePlant,
   takeDown,
   trimVine,
+  unpress,
   updateSettings,
   waterPlant,
   windowPlantAt,
@@ -19,8 +27,10 @@ import {
   type WindowSpot,
 } from './garden/state';
 import { loadGarden, persistStorage, saveGarden } from './garden/storage';
-import { buildTimelapse, gardenAt, LAPSE_MIN_GAP, type Timelapse } from './garden/timelapse';
+import { buildTimelapse, gardenAt, LAPSE_MIN_GAP, somethingGrew, type Timelapse } from './garden/timelapse';
+import { stageAt } from './garden/growth';
 import { isVineSpecies, isVineSpot } from './garden/vines';
+import { pansyPalette } from './plants/looks';
 import type { SpeciesId } from './garden/species';
 import { grainDataUrl } from './grain';
 import { Scene } from './scene/Scene';
@@ -28,8 +38,15 @@ import { ShelfView } from './scene/ShelfView';
 import type { Snip, VineSpec } from './scene/Vines';
 import { ease, lapseDuration, LapseClock } from './ui/Clock';
 import { Letter } from './ui/Letter';
+import { PressedBook } from './ui/PressedBook';
+import { pressedToday } from './garden/pressed';
 import { paletteVars } from './theme/palettes';
-import { MoveBanner, PlantCard, PlantPicker, WindowChooser } from './ui/Sheets';
+import { seasonShown } from './theme/seasons';
+import { MoveBanner, PlantCard, PlantPicker, StyleSheet, VarietyPicker, WindowChooser } from './ui/Sheets';
+import { NEW_PANSY, NEW_POT, PansyStudio, PotStudio } from './ui/Studio';
+import { designRef } from './garden/designs';
+import { PlantArt } from './plants/PlantArt';
+import { pansyPalette as paletteOf } from './plants/looks';
 import { Toolbar } from './ui/Toolbar';
 import { useWeather } from './weather/useWeather';
 import { requestLocation } from './weather/weather';
@@ -91,8 +108,14 @@ function devVines(): VineSpec[] {
 
 const prefersStill = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
-/** A replay in progress: how far along it is, and whether it is fading out. */
-type Lapse = { tl: Timelapse; p: number; fading: boolean; skipped: boolean };
+/**
+ * A replay in progress: how far along it is, and whether it is fading out. When nothing grew only
+ * the clock moves, so the room isn't redrawn for nothing.
+ */
+type Lapse = { tl: Timelapse; grew: boolean; p: number; fading: boolean; skipped: boolean };
+
+/** The room is redrawn at most this often during a replay; the phone has a whole illustration to repaint. */
+const LAPSE_FRAME_MS = 33;
 
 type Mode =
   | { kind: 'idle' }
@@ -104,7 +127,15 @@ type Mode =
   /** window: choosing where a plant should stand */
   | { kind: 'place'; id: string }
   /** window: choosing which plant goes into an empty spot */
-  | { kind: 'choose'; spot: WindowSpot };
+  | { kind: 'choose'; spot: WindowSpot }
+  /** planting a bratek: choosing its colours */
+  | { kind: 'variety'; slot: SlotId }
+  /** a plant's pot and colours */
+  | { kind: 'style'; id: string }
+  /** painting a pot, new or one of hers; `forPlant` gets it once saved */
+  | { kind: 'potStudio'; editing: string | null; forPlant: string | null }
+  /** designing a bratek; `forSlot` is planted with it, `forPlant` switches to it, once saved */
+  | { kind: 'pansyStudio'; editing: string | null; forSlot: SlotId | null; forPlant: string | null };
 
 export function App() {
   const [garden, setGarden] = useState<GardenState | null>(null);
@@ -123,12 +154,15 @@ export function App() {
   const opened = useRef<{ at: number; garden: GardenState } | null>(null);
   const [letterOpen, setLetterOpen] = useState(false);
   const [snip, setSnip] = useState<Snip | null>(null);
+  const [bookOpen, setBookOpen] = useState(false);
+  const openBook = useCallback(() => setBookOpen(true), []);
 
   /** Replays what happened between two moments. With reduced motion it only plays when asked. */
   const playLapse = useCallback((tl: Timelapse, auto: boolean) => {
     lastLapse.current = tl;
     if (auto && prefersStill()) return;
-    setLapse({ tl, p: 0, fading: false, skipped: false });
+    const grew = somethingGrew(tl, (p, t) => stageAt(p.species, p, t));
+    setLapse({ tl, grew, p: 0, fading: false, skipped: false });
   }, []);
 
   useEffect(() => {
@@ -183,18 +217,24 @@ export function App() {
     const start = performance.now();
     const timers: number[] = [];
     let raf = 0;
+    let lastDrawn = -Infinity;
     const mine = (fn: (l: Lapse) => Lapse | null) => setLapse((l) => (l && l.tl === lapseTl ? fn(l) : l));
     const finish = () => {
       timers.push(window.setTimeout(() => mine((l) => ({ ...l, fading: true })), 1300));
       timers.push(window.setTimeout(() => mine(() => null), 2300));
     };
     const frame = (t: number) => {
-      const p = duration ? Math.min(1, (t - start) / duration) : 1;
-      mine((l) => (l.skipped ? l : { ...l, p }));
+      const p = duration ? Math.min(1, Math.max(0, (t - start) / duration)) : 1;
+      if (p === 1 || t - lastDrawn >= LAPSE_FRAME_MS) {
+        lastDrawn = t;
+        mine((l) => (l.skipped ? l : { ...l, p }));
+      }
       if (p < 1) raf = requestAnimationFrame(frame);
       else finish();
     };
     raf = requestAnimationFrame(frame);
+    // a safety net: however the phone schedules frames, the replay never outstays its welcome
+    timers.push(window.setTimeout(() => mine(() => null), duration + 4500));
     return () => {
       cancelAnimationFrame(raf);
       timers.forEach((id) => window.clearTimeout(id));
@@ -264,12 +304,18 @@ export function App() {
     }
   };
 
-  const plantSpecies = (species: SpeciesId) => {
-    if (mode.kind !== 'pick') return;
+  const plantIn = (slot: SlotId, species: SpeciesId, variety: string | null = null) => {
     const t = Date.now();
     setNow(t);
-    update((g) => addPlant(g, mode.slot, species, t));
+    update((g) => addPlant(g, slot, species, t, newId(), variety));
     setMode({ kind: 'idle' });
+  };
+
+  const plantSpecies = (species: SpeciesId) => {
+    if (mode.kind !== 'pick') return;
+    // a bratek first asks which colours it should bloom in
+    if (species === 'pansy') setMode({ kind: 'variety', slot: mode.slot });
+    else plantIn(mode.slot, species);
   };
 
   const water = (id: string) => {
@@ -281,8 +327,9 @@ export function App() {
   };
 
   // during a replay the garden is drawn as it was at that moment
-  const shownNow = lapse ? lapse.tl.from + (lapse.tl.to - lapse.tl.from) * ease(lapse.p) : now;
-  const shown = lapse ? { ...garden, plants: gardenAt(lapse.tl, shownNow).plants } : garden;
+  const replayRoom = lapse !== null && lapse.grew;
+  const shownNow = replayRoom ? lapse.tl.from + (lapse.tl.to - lapse.tl.from) * ease(lapse.p) : now;
+  const shown = replayRoom ? { ...garden, plants: gardenAt(lapse.tl, shownNow).plants } : garden;
 
   // vines show while they're switched on and their plant stands on the sill
   const vines: VineSpec[] = devVineList.length
@@ -290,15 +337,26 @@ export function App() {
     : settings.vines
       ? shown.plants.flatMap((p) =>
           p.vine && isVineSpot(p.display) && isVineSpecies(p.species)
-            ? [{ id: p.id, species: p.species, from: p.display, length: p.vine.length, ...(p.vine.dir ? { dir: p.vine.dir } : {}) }]
+            ? [
+                {
+                  id: p.id,
+                  species: p.species,
+                  from: p.display,
+                  length: p.vine.length,
+                  palette: pansyPalette(p.variety, garden.designs),
+                  ...(p.vine.dir ? { dir: p.vine.dir } : {}),
+                },
+              ]
             : [],
         )
       : [];
 
   const cardPlant = mode.kind === 'card' ? garden.plants.find((p) => p.id === mode.id) : undefined;
+  const stylePlant = mode.kind === 'style' ? garden.plants.find((p) => p.id === mode.id) : undefined;
+  const studioPlant = mode.kind === 'potStudio' && mode.forPlant ? garden.plants.find((p) => p.id === mode.forPlant) : undefined;
 
   return (
-    <div className={weather.night ? 'garden night' : 'garden'} style={paletteVars(theme, weather)}>
+    <div className={`garden${weather.night ? ' night' : ''}${lapse ? ' replaying' : ''}`} style={paletteVars(theme, weather, seasonShown(now))}>
       <div className="view" key={settings.view}>
         {settings.view === 'room' ? (
           <Scene
@@ -307,6 +365,7 @@ export function App() {
             viewH={viewH}
             vines={vines}
             snip={snip}
+            onBook={openBook}
             hideCurtains={import.meta.env.DEV && window.location.search.includes('nocurtains')}
             garden={shown}
             now={shownNow}
@@ -338,6 +397,14 @@ export function App() {
         onLiveWeather={liveWeather}
         locating={locating}
         onLetter={() => setLetterOpen(true)}
+        onBook={openBook}
+        onStudio={(what) =>
+          setMode(
+            what === 'pot'
+              ? { kind: 'potStudio', editing: null, forPlant: null }
+              : { kind: 'pansyStudio', editing: null, forSlot: null, forPlant: null },
+          )
+        }
         onClock={() => {
           const o = opened.current;
           const tl = lastLapse.current ?? (o ? buildTimelapse(o.garden, o.at, Date.now()) : null);
@@ -349,6 +416,7 @@ export function App() {
         <WindowChooser
           plants={garden.plants.filter((p) => p.display === null)}
           now={now}
+          designs={garden.designs}
           onPick={(id) => {
             update((g) => placeInWindow(g, id, mode.spot));
             setMode({ kind: 'idle' });
@@ -374,15 +442,29 @@ export function App() {
               setMode({ kind: 'place', id: cardPlant.id });
             }
           }}
-          onPot={() => update((g) => cyclePot(g, cardPlant.id))}
+          onStyle={() => setMode({ kind: 'style', id: cardPlant.id })}
           onTrim={
             settings.vines && cardPlant.vine
               ? () => {
-                  update((g) => trimVine(g, cardPlant.id));
+                  // a flower from the cut stem goes into the book, the first trim of the day
+                  const t = Date.now();
+                  setNow(t);
+                  update((g) => pressFlower(trimVine(g, cardPlant.id), cardPlant.id, t));
                   setSnip((s) => ({ id: cardPlant.id, n: (s?.n ?? 0) + 1 }));
                 }
               : null
           }
+          onPress={
+            canPress(garden, cardPlant.id, now)
+              ? () => {
+                  const t = Date.now();
+                  setNow(t);
+                  update((g) => pressFlower(g, cardPlant.id, t));
+                }
+              : null
+          }
+          pressedToday={pressedToday(garden.pressed, cardPlant.id, now)}
+          onBook={openBook}
           onRemove={() => {
             update((g) => removePlant(g, cardPlant.id));
             setMode({ kind: 'idle' });
@@ -390,9 +472,83 @@ export function App() {
           onClose={() => setMode({ kind: 'idle' })}
         />
       )}
+      {mode.kind === 'variety' && (
+        <VarietyPicker
+          designs={garden.designs}
+          onPick={(v) => plantIn(mode.slot, 'pansy', v)}
+          onDesign={() => setMode({ kind: 'pansyStudio', editing: null, forSlot: mode.slot, forPlant: null })}
+          onEdit={(id) => setMode({ kind: 'pansyStudio', editing: id, forSlot: mode.slot, forPlant: null })}
+          onClose={() => setMode({ kind: 'idle' })}
+        />
+      )}
+      {mode.kind === 'style' && stylePlant && (
+        <StyleSheet
+          plant={stylePlant}
+          designs={garden.designs}
+          now={now}
+          onPot={(pot) => update((g) => setPot(g, stylePlant.id, pot))}
+          onVariety={(v) => update((g) => setVariety(g, stylePlant.id, v))}
+          onPaint={() => setMode({ kind: 'potStudio', editing: null, forPlant: stylePlant.id })}
+          onEditPot={(id) => setMode({ kind: 'potStudio', editing: id, forPlant: stylePlant.id })}
+          onDesignPansy={() => setMode({ kind: 'pansyStudio', editing: null, forSlot: null, forPlant: stylePlant.id })}
+          onEditPansy={(id) => setMode({ kind: 'pansyStudio', editing: id, forSlot: null, forPlant: stylePlant.id })}
+          onClose={() => setMode({ kind: 'card', id: stylePlant.id })}
+        />
+      )}
+      {mode.kind === 'potStudio' && (
+        <PotStudio
+          key={mode.editing ?? 'new'}
+          initial={garden.designs.pots.find((d) => d.id === mode.editing) ?? NEW_POT()}
+          editing={mode.editing !== null}
+          onSave={(d) => {
+            update((g) => {
+              const saved = savePotDesign(g, d);
+              return mode.forPlant ? setPot(saved, mode.forPlant, designRef(d.id)) : saved;
+            });
+            setMode(mode.forPlant ? { kind: 'style', id: mode.forPlant } : { kind: 'idle' });
+          }}
+          onDelete={() => {
+            if (mode.editing) update((g) => deleteDesign(g, 'pot', mode.editing!));
+            setMode(mode.forPlant ? { kind: 'style', id: mode.forPlant } : { kind: 'idle' });
+          }}
+          onClose={() => setMode(mode.forPlant ? { kind: 'style', id: mode.forPlant } : { kind: 'idle' })}
+        >
+          {studioPlant ? (
+            <PlantArt species={studioPlant.species} stage="bloom" palette={paletteOf(studioPlant.variety, garden.designs)} />
+          ) : (
+            <PlantArt species="pansy" stage="bloom" />
+          )}
+        </PotStudio>
+      )}
+      {mode.kind === 'pansyStudio' && (
+        <PansyStudio
+          key={mode.editing ?? 'new'}
+          initial={garden.designs.pansies.find((d) => d.id === mode.editing) ?? NEW_PANSY()}
+          editing={mode.editing !== null}
+          onSave={(d) => {
+            const ref = designRef(d.id);
+            update((g) => {
+              const saved = savePansyDesign(g, d);
+              return mode.forPlant ? setVariety(saved, mode.forPlant, ref) : saved;
+            });
+            if (mode.forSlot) plantIn(mode.forSlot, 'pansy', ref);
+            else setMode(mode.forPlant ? { kind: 'style', id: mode.forPlant } : { kind: 'idle' });
+          }}
+          onDelete={() => {
+            if (mode.editing) update((g) => deleteDesign(g, 'pansy', mode.editing!));
+            setMode(mode.forSlot ? { kind: 'variety', slot: mode.forSlot } : mode.forPlant ? { kind: 'style', id: mode.forPlant } : { kind: 'idle' });
+          }}
+          onClose={() =>
+            setMode(mode.forSlot ? { kind: 'variety', slot: mode.forSlot } : mode.forPlant ? { kind: 'style', id: mode.forPlant } : { kind: 'idle' })
+          }
+        />
+      )}
       {mode.kind === 'move' && <MoveBanner text="Tap where it should go" onCancel={() => setMode({ kind: 'idle' })} />}
       {mode.kind === 'place' && <MoveBanner text="Tap a place in the window" onCancel={() => setMode({ kind: 'idle' })} />}
       {lapse && <LapseClock lapse={lapse.tl} p={lapse.p} fading={lapse.fading} onSkip={skipLapse} />}
+      {bookOpen && (
+        <PressedBook pressed={garden.pressed} onRemove={(id) => update((g) => unpress(g, id))} onClose={() => setBookOpen(false)} />
+      )}
       {letterOpen && !lapse && (
         <Letter
           onKeep={() => {

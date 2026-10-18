@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { memo, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { WindowSpot } from '../garden/state';
 import type { MiddleDir, RouteKind } from '../garden/vines';
 import { Stem } from '../plants/common';
-import { PANSY_CREAM, PANSY_OLCIA, PANSY_ROSY, PANSY_VELVET, PansyBud, PansyFlower, PansyLeaf } from '../plants/Pansy';
+import { PANSY_MIX, PansyBud, PansyFlower, PansyLeaf, type PansyColors } from '../plants/Pansy';
 import { LeafCluster, RoseBloom, RoseBud, RoseHalf, Thorns } from '../plants/Rose';
 import { seeded } from './geometry';
 
@@ -10,7 +10,7 @@ import { seeded } from './geometry';
  * A vine growing out of a pot on the sill. `length` is how far along its route it has got, 0 to 1.
  * A vine from the middle pot also remembers which way it turned at the top.
  */
-export type VineSpec = { id: string; species: 'pansy' | 'rose'; from: WindowSpot; length: number; dir?: MiddleDir };
+export type VineSpec = { id: string; species: 'pansy' | 'rose'; from: WindowSpot; length: number; dir?: MiddleDir; palette?: PansyColors[] };
 
 /**
  * Which part of the route a point is on: the runner leaving the pot, the frame it holds on to while
@@ -192,13 +192,15 @@ function Tendril({ p, color }: { p: Pt; color: string }) {
   );
 }
 
-const PANSY_COLOURS = [PANSY_OLCIA, PANSY_ROSY, PANSY_CREAM, PANSY_VELVET];
 
 /**
  * Leaves, flowers and hanging sprigs along the stem, for the stretch from s0 to s1. Everything is
  * placed by distance from the pot, so a piece drawn in two layers lines up exactly.
  */
-function Growth({ rose, pts, length, s0, s1, seed }: { rose: boolean; pts: Pt[]; length: number; s0: number; s1: number; seed: number }) {
+function Growth({ rose, pts, length, s0, s1, seed, palette }: {
+  rose: boolean; pts: Pt[]; length: number; s0: number; s1: number; seed: number; palette: PansyColors[];
+}) {
+  const hue = (i: number) => palette[i % palette.length]!;
   const rnd = seeded(seed);
   const back: ReactNode[] = [];
   const front: ReactNode[] = [];
@@ -270,7 +272,7 @@ function Growth({ rose, pts, length, s0, s1, seed }: { rose: boolean; pts: Pt[];
               <RoseBud x={0} y={0} rot={0} />
             </g>
           ) : (
-            <PansyFlower key={`hf${s}`} x={tipX} y={tipY + 6} rot={sway} s={0.34} c={PANSY_COLOURS[(s / 2) % 4]!} />
+            <PansyFlower key={`hf${s}`} x={tipX} y={tipY + 6} rot={sway} s={0.34} c={hue(s / 2)} />
           ),
         );
       }
@@ -301,9 +303,9 @@ function Growth({ rose, pts, length, s0, s1, seed }: { rose: boolean; pts: Pt[];
           );
         }
       } else if (age > 44) {
-        front.push(<PansyFlower key={`f${s}`} x={fx} y={fy} rot={tilt} s={0.4 + r[1] * 0.06} c={PANSY_COLOURS[n % 4]!} />);
+        front.push(<PansyFlower key={`f${s}`} x={fx} y={fy} rot={tilt} s={0.4 + r[1] * 0.06} c={hue(n)} />);
       } else if (age > 18) {
-        front.push(<PansyBud key={`f${s}`} x={fx} y={fy} rot={tilt * 0.6} c={PANSY_COLOURS[n % 4]!} />);
+        front.push(<PansyBud key={`f${s}`} x={fx} y={fy} rot={tilt * 0.6} c={hue(n)} />);
       }
     }
   }
@@ -316,7 +318,7 @@ function Growth({ rose, pts, length, s0, s1, seed }: { rose: boolean; pts: Pt[];
   );
 }
 
-type Shaped = { pts: Pt[]; length: number; total: number; runnerEnd: number; rose: boolean; seed: number; color: string };
+type Shaped = { pts: Pt[]; length: number; total: number; runnerEnd: number; rose: boolean; seed: number; color: string; palette: PansyColors[] };
 
 function shape(vine: VineSpec, kind: RouteKind, start: Start, phase: number): Shaped | null {
   if (vine.length <= 0) return null;
@@ -328,10 +330,10 @@ function shape(vine: VineSpec, kind: RouteKind, start: Start, phase: number): Sh
   if (pts.length < 2) return null;
   const runnerEnd = route.find((p) => p.kind !== 'runner')?.s ?? total;
   const seed = [...vine.id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
-  return { pts, length, total, runnerEnd, rose, seed, color: rose ? '#6b8049' : '#6b9455' };
+  return { pts, length, total, runnerEnd, rose, seed, color: rose ? '#6b8049' : '#6b9455', palette: vine.palette ?? PANSY_MIX };
 }
 
-function Piece({ v, from, to }: { v: Shaped; from: number; to: number }) {
+function PieceArt({ v, from, to }: { v: Shaped; from: number; to: number }) {
   const pts = v.pts.filter((p) => p.s >= from - 2 && p.s <= to + 2);
   if (pts.length < 2) return null;
   const tipHere = v.length <= to;
@@ -339,10 +341,24 @@ function Piece({ v, from, to }: { v: Shaped; from: number; to: number }) {
     <g>
       <TaperedStem pts={pts} total={v.total} base={v.rose ? 3.2 : 2.6} tip={1.2} color={v.color} />
       {tipHere && <Tendril p={v.pts[v.pts.length - 1]!} color={v.color} />}
-      <Growth rose={v.rose} pts={v.pts} length={v.length} s0={from} s1={to} seed={v.seed} />
+      <Growth rose={v.rose} pts={v.pts} length={v.length} s0={from} s1={to} seed={v.seed} palette={v.palette} />
     </g>
   );
 }
+
+/** Redrawn only once the vine has visibly grown (or moved), so a replay doesn't redraw every leaf each frame. */
+const Piece = memo(
+  PieceArt,
+  (a, b) =>
+    a.from === b.from &&
+    a.to === b.to &&
+    a.v.seed === b.v.seed &&
+    a.v.total === b.v.total &&
+    a.v.palette === b.v.palette &&
+    Math.round(a.v.length / 3) === Math.round(b.v.length / 3) &&
+    a.v.pts[0]!.x === b.v.pts[0]!.x &&
+    a.v.pts[0]!.y === b.v.pts[0]!.y,
+);
 
 export type PlacedVine = { vine: VineSpec; kind: RouteKind; start: Start; phase: number };
 

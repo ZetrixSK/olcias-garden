@@ -1,14 +1,19 @@
 import { SLOT_IDS, type GardenState, type SlotId } from '../garden/state';
 import { POT_HEIGHT } from '../plants/Pots';
+import { plantLook } from '../plants/looks';
 import { candleLit as isCandleLit, roomTint, type Theme, type Weather } from '../theme/palettes';
 import { CANDLE_FLAME, Flame, SillCandle } from './Decor';
 import { PeekingDogs } from './Dogs';
+import { dogMood } from './dogMood';
 import { EmptySlot, GardenPlanter } from './GardenPlanter';
 import { fv, sv } from './geometry';
 import { Sign, WallMotifs } from './Room';
 import { Bunting, SillEnds } from './ShelfDecor';
-import { Landscape, Rain } from './Outside';
+import { Landscape, Rain, SeasonAir, SeasonBranch } from './Outside';
 import { Sky, SkyLights } from './Sky';
+import { moonPhase } from '../weather/moon';
+import { occasionShown, seasonShown } from '../theme/seasons';
+import { Bats, JackOLantern, LanternLight } from './Halloween';
 
 /** The shelf wall is drawn in a 400 x 760 frame; taller screens show more wall above and more dog below. */
 const CORE_H = 760;
@@ -107,6 +112,9 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
   const [fx, fy] = CANDLE_FLAME[theme];
   const candleShift = { x: 200 - 335, y: 277 - 517 };
   const bySlot = new Map(garden.plants.map((p) => [p.slot, p]));
+  const season = seasonShown(now);
+  const occasion = occasionShown(now);
+  const lantern = { x: 200, y: bottom - 46, s: 0.95 };
 
   return (
     <svg className="scene" viewBox={`0 ${minY.toFixed(1)} 400 ${h.toFixed(1)}`} preserveAspectRatio="xMidYMid meet">
@@ -125,7 +133,10 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
       <g clipPath="url(#shelf-window-clip)">
         <g transform={SKY_FIT}>
           <Sky weather={weather} />
-          <Landscape weather={weather} />
+          <Landscape weather={weather} season={season} />
+          <SeasonBranch season={season} />
+          <SeasonAir season={season} weather={weather} />
+          {occasion === 'halloween' && weather.night && weather.sky !== 'rain' && <Bats />}
         </g>
         {weather.sky === 'rain' && <Rain box={WINDOW_BOX} density={0.7} />}
       </g>
@@ -133,7 +144,7 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
       <path fillRule="evenodd" style={fv('wall')} d={`M-400,-400 H800 V1200 H-400 Z ${OUTER}`} />
       <path fillRule="evenodd" fill={`url(#motif-${theme})`} d={`M-400,-400 H800 V1200 H-400 Z ${OUTER}`} />
       <ShelfWindow />
-      <Bunting theme={theme} />
+      <Bunting theme={theme} occasion={occasion} />
       <SillEnds theme={theme} />
 
       <Board x0={10} x1={390} y={446} />
@@ -146,7 +157,7 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
       {SLOT_IDS.map((slot) => {
         const pos = SLOT_POS[slot];
         const plant = bySlot.get(slot);
-        const potH = plant ? POT_HEIGHT[plant.pot] * PLANT_SCALE : 30;
+        const potH = plant ? POT_HEIGHT[plantLook(plant, garden.designs).shape] * PLANT_SCALE : 30;
         const rimY = pos.y - potH;
         return (
           <g key={slot}>
@@ -155,6 +166,7 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
               {plant ? (
                 <GardenPlanter
                   plant={plant}
+                  designs={garden.designs}
                   ribbon={plant.display !== null}
                   now={now}
                   selected={plant.id === selectedId}
@@ -183,14 +195,17 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
         <Sign theme={theme} />
       </g>
 
-      <PeekingDogs bottom={bottom} />
+      <PeekingDogs bottom={bottom} mood={dogMood(weather, new Date(now).getHours())} />
+      {/* at Halloween a pumpkin sits on the sofa back between the dogs */}
+      {occasion === 'halloween' && <JackOLantern {...lantern} />}
 
       {tint && <rect className="tint" x="-400" y="-400" width="1200" height="1600" fill={tint.color} opacity={tint.opacity} />}
       <g clipPath="url(#shelf-window-clip)">
         <g transform={SKY_FIT}>
-          <SkyLights weather={weather} />
+          <SkyLights weather={weather} phase={Math.round(moonPhase(now) * 100) / 100} />
         </g>
       </g>
+      {occasion === 'halloween' && candleLit && <LanternLight {...lantern} glow="shelf-candle-glow" />}
       {candleLit && (
         <>
           <circle className="glow" cx={fx + candleShift.x} cy={fy + candleShift.y} r={weather.night ? 240 : 160} fill="url(#shelf-candle-glow)" />

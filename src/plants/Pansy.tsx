@@ -1,7 +1,7 @@
 import type { Stage } from '../garden/species';
 import { LEAF, SeedMarker, Seeds, Stem } from './common';
 
-type PansyColors = {
+export type PansyColors = {
   top: string;
   topShade: string;
   topHi: string;
@@ -10,6 +10,8 @@ type PansyColors = {
   face: string;
   edge?: string;
   whiskers?: boolean;
+  /** No markings at all on the lower petals, only the little golden eye. */
+  clear?: boolean;
 };
 
 /** Pink and near-black, after her favourite colours. */
@@ -82,7 +84,7 @@ export function PansyFlower({ x, y, rot = 0, s = 1, c }: { x: number; y: number;
           <path d="M-4,4 L-14,4 M-4,5.5 L-13,8 M4,4 L14,5 M4,5.5 L13,9" />
           <path d="M-5,5 C-3,8 3,8 5,5 C3,4 -3,4 -5,5 Z" fill={c.face} />
         </g>
-      ) : (
+      ) : c.clear ? null : (
         <>
           <path d="M-10,5 C-15,10 -12,19 -5,22 C-2,24 2,24 5,22 C12,19 15,10 10,5 C5,3 -5,3 -10,5 Z" fill={c.face} />
           <path d="M-2,3 C-8,1 -17,2 -18,8 C-12,10 -6,9 -2,7 Z" fill={c.face} />
@@ -128,12 +130,17 @@ export function PansyBud({ x, y, rot, c }: { x: number; y: number; rot: number; 
   );
 }
 
-export function PansyPlant({ stage }: { stage: Stage }) {
+/** The original bed of four: pink-and-black, blush, cream and velvet. */
+export const PANSY_MIX: PansyColors[] = [PANSY_OLCIA, PANSY_ROSY, PANSY_CREAM, PANSY_VELVET];
+
+/** A bratek at any stage; `palette` gives the colours of its four flowers (and its buds). */
+export function PansyPlant({ stage, palette = PANSY_MIX, label = 'bratek' }: { stage: Stage; palette?: PansyColors[]; label?: string }) {
+  const [c0, c1, c2, c3] = [palette[0]!, palette[1 % palette.length]!, palette[2 % palette.length]!, palette[3 % palette.length]!];
   if (stage === 'seed') {
     return (
       <g>
         <Seeds />
-        <SeedMarker label="bratek" />
+        <SeedMarker label={label} />
       </g>
     );
   }
@@ -157,8 +164,8 @@ export function PansyPlant({ stage }: { stage: Stage }) {
         <PansyLeaf rot={58} len={9} s={0.62} />
         <Stem d="M-1,0 C-3,-14 -8,-28 -12,-36 C-13,-38 -12,-40 -10,-40" w={1.8} />
         <Stem d="M1,0 C3,-16 8,-34 14,-44 C16,-46 18,-46 19,-44" w={1.8} />
-        <PansyBud x={-10} y={-40} rot={20} c={PANSY_OLCIA} />
-        <PansyBud x={19} y={-44} rot={-28} c={PANSY_VELVET} />
+        <PansyBud x={-10} y={-40} rot={20} c={c0} />
+        <PansyBud x={19} y={-44} rot={-28} c={c3} />
         <PansyLeaf rot={-28} len={10} s={0.7} />
         <PansyLeaf rot={14} len={11} s={0.72} />
         <PansyLeaf rot={-92} len={4} s={0.5} />
@@ -181,11 +188,11 @@ export function PansyPlant({ stage }: { stage: Stage }) {
       <Stem d="M3,-4 C12,-20 26,-36 38,-50" w={2.2} />
       <Stem d="M1,-4 C-2,-16 -6,-28 -8,-34 C-9,-37 -7,-40 -4,-40" w={1.8} />
       <Stem d="M2,-4 C10,-14 18,-20 24,-26" w={2} />
-      <PansyBud x={-4} y={-40} rot={-24} c={PANSY_VELVET} />
-      <PansyFlower x={24} y={-28} rot={22} s={0.62} c={PANSY_VELVET} />
-      <PansyFlower x={-30} y={-58} rot={-14} s={0.86} c={PANSY_ROSY} />
-      <PansyFlower x={38} y={-52} rot={12} s={0.8} c={PANSY_CREAM} />
-      <PansyFlower x={8} y={-78} rot={3} s={0.92} c={PANSY_OLCIA} />
+      <PansyBud x={-4} y={-40} rot={-24} c={c3} />
+      <PansyFlower x={24} y={-28} rot={22} s={0.62} c={c3} />
+      <PansyFlower x={-30} y={-58} rot={-14} s={0.86} c={c1} />
+      <PansyFlower x={38} y={-52} rot={12} s={0.8} c={c2} />
+      <PansyFlower x={8} y={-78} rot={3} s={0.92} c={c0} />
       {/* front leaves spilling over the rim */}
       <PansyLeaf x={-14} y={0} rot={-108} len={6} s={0.95} />
       <PansyLeaf x={16} y={0} rot={112} len={5} s={0.9} />

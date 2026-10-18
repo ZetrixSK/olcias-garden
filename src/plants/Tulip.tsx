@@ -3,13 +3,13 @@ import { SeedMarker, Stem } from './common';
 
 type TulipColors = { base: string; shade: string; hi: string; deep: string };
 
-const TULIP_PINK: TulipColors = { base: '#ea93ac', shade: '#cd6f8d', hi: '#f7c3d1', deep: '#b0557a' };
+export const TULIP_PINK: TulipColors = { base: '#ea93ac', shade: '#cd6f8d', hi: '#f7c3d1', deep: '#b0557a' };
 /** 'Queen of Night': the nearly black tulip. */
-const TULIP_NIGHT: TulipColors = { base: '#3e1a35', shade: '#2a1124', hi: '#74395f', deep: '#1c0a17' };
+export const TULIP_NIGHT: TulipColors = { base: '#3e1a35', shade: '#2a1124', hi: '#74395f', deep: '#1c0a17' };
 
-const BLUE_LEAF = { base: '#84a68c', shade: '#678a71', hi: '#a9c5ad' };
+export const BLUE_LEAF = { base: '#84a68c', shade: '#678a71', hi: '#a9c5ad' };
 
-function TulipFlower({ x, y, rot, c, s = 1 }: { x: number; y: number; rot: number; c: TulipColors; s?: number }) {
+export function TulipFlower({ x, y, rot, c, s = 1 }: { x: number; y: number; rot: number; c: TulipColors; s?: number }) {
   return (
     <g transform={`translate(${x} ${y}) rotate(${rot}) scale(${s})`}>
       <path className="ink" fill={c.shade} d="M-9,-4 C-11,-18 -6,-31 0,-36 C6,-31 11,-18 9,-4 Z" />

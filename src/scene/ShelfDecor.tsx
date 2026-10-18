@@ -1,4 +1,6 @@
 import type { Theme } from '../theme/palettes';
+import type { Occasion } from '../theme/seasons';
+import { HALLOWEEN_PENNANTS } from './Halloween';
 import { fv } from './geometry';
 
 const MOON = 'M0,-5 A5,5 0 1 0 0,5 A3.4,5 0 1 1 0,-5 Z';
@@ -12,10 +14,11 @@ function along(t: number) {
 }
 
 /** Bunting across the top of the wall: pennants in the cozy room, little moons and stars in the witchy one. */
-export function Bunting({ theme }: { theme: Theme }) {
+export function Bunting({ theme, occasion = null }: { theme: Theme; occasion?: Occasion }) {
   const cozy = theme === 'cozy';
+  const halloween = occasion === 'halloween';
   const items = Array.from({ length: 11 }, (_, i) => along(0.07 + (i * 0.86) / 10));
-  const pennant = ['#e58aa6', '#f3e6d6', '#c95d7f'];
+  const pennant = halloween ? HALLOWEEN_PENNANTS : ['#e58aa6', '#f3e6d6', '#c95d7f'];
   return (
     <g>
       <path d="M50,-28 Q200,48 350,-28" fill="none" style={{ stroke: 'var(--ink)' }} strokeWidth={cozy ? 1.4 : 1} />
@@ -37,7 +40,7 @@ export function Bunting({ theme }: { theme: Theme }) {
               className="ink-thin"
               transform={`translate(0 ${drop + 4.5}) scale(${i % 2 ? 0.9 : 1})`}
               d={i % 2 ? STAR : MOON}
-              fill={i % 4 === 1 ? '#e58aa6' : '#c9a45c'}
+              fill={halloween ? (i % 2 ? '#a07cc4' : '#e48a3c') : i % 4 === 1 ? '#e58aa6' : '#c9a45c'}
             />
           </g>
         );

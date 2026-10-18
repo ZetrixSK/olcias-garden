@@ -1,14 +1,20 @@
+import { memo } from 'react';
 import { WINDOW_SPOTS, type GardenState, type WindowSpot } from '../garden/state';
 import { chooseRoutes, type VineSpot } from '../garden/vines';
 import { POT_HEIGHT } from '../plants/Pots';
+import { plantLook } from '../plants/looks';
 import { candleLit as isCandleLit, roomTint, type Theme, type Weather } from '../theme/palettes';
 import { Ball, CANDLE_FLAME, CornerPiece, Flame, ShelfTrinket, SillCandle, WallDecor } from './Decor';
 import { DogBed, Dogs } from './Dogs';
+import { dogMood, type DogMood } from './dogMood';
 import { EmptySlot, GardenPlanter } from './GardenPlanter';
 import { FLOOR_Y, SILL_Y, VIEW_H, VIEW_W, WINDOW_OPENING } from './geometry';
-import { Landscape, Rain } from './Outside';
+import { Frost, Landscape, Rain, SeasonAir, SeasonBranch } from './Outside';
 import { Curtains, Floor, Shelf, Sign, Sill, Wall, WindowFrame } from './Room';
 import { Sky, SkyLights } from './Sky';
+import { moonPhase } from '../weather/moon';
+import { occasionShown, seasonShown, type Occasion, type Season } from '../theme/seasons';
+import { Bats, LanternLight, ROOM_LANTERN, RoomPumpkins } from './Halloween';
 import { leanFor, runnerStart, VINE_PHASE, VineRunner, Vines, type PlacedVine, type Snip, type VineSpec } from './Vines';
 
 /** Where each window spot stands: x, the surface it stands on, the drawing scale and the tap area's width. */
@@ -44,7 +50,7 @@ function placeVines(vines: VineSpec[], garden: GardenState): PlacedVine[] {
     const plant = garden.plants.find((p) => p.display === spot);
     if (!kind || !plant) return [];
     const pos = SPOT_POS[spot];
-    const rimY = pos.base - POT_HEIGHT[plant.pot] * pos.scale;
+    const rimY = pos.base - POT_HEIGHT[plantLook(plant, garden.designs).shape] * pos.scale;
     return [{ vine, kind, start: runnerStart(kind, pos.x, rimY), phase: VINE_PHASE[spot] ?? 0 }];
   });
 }
@@ -57,13 +63,14 @@ function WindowRow({ row, garden, now, selectedId, placingId, wateringId, onSpot
       {spots.map((spot) => {
         const pos = SPOT_POS[spot];
         const plant = garden.plants.find((p) => p.display === spot);
-        const rimY = pos.base - (plant ? POT_HEIGHT[plant.pot] * pos.scale : 0);
+        const rimY = pos.base - (plant ? POT_HEIGHT[plantLook(plant, garden.designs).shape] * pos.scale : 0);
         const climbing = placed.filter((v) => v.vine.from === spot);
         return (
           <g key={spot} transform={`translate(${pos.x} ${rimY.toFixed(1)}) scale(${pos.scale})`}>
             {plant ? (
               <GardenPlanter
                 plant={plant}
+                designs={garden.designs}
                 now={now}
                 selected={plant.id === selectedId}
                 moving={plant.id === placingId}
@@ -121,7 +128,100 @@ function layoutFor(viewH: number) {
   return { dy, minY, wallMid, pictureScale };
 }
 
-export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains = false, ...rest }: {
+type Lit = { theme: Theme; sky: Weather['sky']; night: boolean };
+type Calendar = { season: Season; occasion: Occasion };
+/** The moon's phase, rounded so the lights aren't redrawn every minute for a change nobody could see. */
+const phaseAt = (now: number) => Math.round(moonPhase(now) * 100) / 100;
+
+/** Sky, landscape, wall and window frame: they only change with the theme and the weather. */
+const Backdrop = memo(function Backdrop({ theme, sky, night, season, occasion }: Lit & Calendar) {
+  const weather = { sky, night };
+  return (
+    <>
+      <g clipPath="url(#window-clip)">
+        <Sky weather={weather} />
+        <Landscape weather={weather} season={season} />
+        <SeasonBranch season={season} />
+        <SeasonAir season={season} weather={weather} />
+        {/* outside, so they pass behind the shelf and the plants */}
+        {occasion === 'halloween' && night && sky !== 'rain' && <Bats />}
+        {sky === 'rain' && <Rain />}
+        {season === 'winter' && <Frost />}
+      </g>
+      <Wall theme={theme} />
+      <WindowFrame />
+    </>
+  );
+});
+
+/** Curtains, pictures, sign, floor and the dogs. */
+const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hideCurtains, phase, mood, occasion, onBook }: {
+  theme: Theme; dy: number; wallMid: number; pictureScale: number; hideCurtains: boolean; phase: number; mood: DogMood;
+  occasion: Occasion;
+  onBook?: () => void;
+}) {
+  return (
+    <>
+      {!hideCurtains && <Curtains theme={theme} />}
+      <WallDecor theme={theme} cy={wallMid} scale={pictureScale} phase={phase} onBook={onBook} />
+      <g transform={`translate(0 ${(wallMid - 606).toFixed(1)})`}>
+        <Sign theme={theme} />
+      </g>
+      <g transform={`translate(0 ${dy})`}>
+        <Floor />
+        <CornerPiece theme={theme} />
+        <g transform="translate(210 866) scale(1.1) translate(-210 -866)">
+          <DogBed part="back" />
+          <Dogs mood={mood} />
+          <DogBed part="front" />
+        </g>
+        {occasion === 'halloween' ? (
+          <>
+            {/* the ball rolls aside for the pumpkins */}
+            <g transform="translate(112 18)">
+              <Ball />
+            </g>
+            <RoomPumpkins theme={theme} />
+          </>
+        ) : (
+          <Ball />
+        )}
+      </g>
+    </>
+  );
+});
+
+/** The light over everything: night or rain tint, moon and stars, candlelight. */
+const Lights = memo(function Lights({ theme, sky, night, phase, occasion, dy }: Lit & { phase: number; occasion: Occasion; dy: number }) {
+  const weather = { sky, night };
+  const tint = roomTint(weather, theme);
+  const [fx, fy] = CANDLE_FLAME[theme];
+  return (
+    <>
+      {/* one tint for the whole scene keeps sky and room in the same light */}
+      {tint && <rect className="tint" x="0" y="-300" width={VIEW_W} height={VIEW_H + 600} fill={tint.color} opacity={tint.opacity} />}
+      <SkyLights weather={weather} phase={phase} />
+      {occasion === 'halloween' && isCandleLit(weather) && (
+        <g transform={`translate(0 ${dy})`}>
+          <LanternLight {...ROOM_LANTERN} />
+        </g>
+      )}
+      {isCandleLit(weather) && (
+        <>
+          <circle className="glow" cx={fx} cy={fy} r={night ? 250 : 170} fill="url(#candle-glow)" />
+          <Flame x={fx} y={fy} />
+        </>
+      )}
+    </>
+  );
+});
+
+const ShelfBoard = memo(Shelf);
+const SillBoard = memo(Sill);
+const Trinket = memo(ShelfTrinket);
+const Candle = memo(SillCandle);
+
+export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains = false, onBook, ...rest }: {
   theme: Theme;
   weather: Weather;
   viewH: number;
@@ -129,13 +229,13 @@ export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains 
   snip?: Snip | null;
   /** Dev only: shows the bare window, to judge the vines without the curtains over them. */
   hideCurtains?: boolean;
+  /** Tapping the pressed pansy on the wall opens her book. */
+  onBook?: () => void;
 } & Omit<SpotProps, 'placed'>) {
   const placed = placeVines(vines, rest.garden);
   const spots = { ...rest, placed };
   const { dy, minY, wallMid, pictureScale } = layoutFor(viewH);
-  const tint = roomTint(weather, theme);
-  const candleLit = isCandleLit(weather);
-  const [fx, fy] = CANDLE_FLAME[theme];
+  const cal: Calendar = { season: seasonShown(rest.now), occasion: occasionShown(rest.now) };
   return (
     <svg className="scene" viewBox={`0 ${minY.toFixed(1)} ${VIEW_W} ${viewH.toFixed(1)}`} preserveAspectRatio="xMidYMax slice">
       <defs>
@@ -149,51 +249,30 @@ export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains 
         </radialGradient>
       </defs>
 
-      <g clipPath="url(#window-clip)">
-        <Sky weather={weather} />
-        <Landscape weather={weather} />
-        {weather.sky === 'rain' && <Rain />}
-      </g>
-
-      <Wall theme={theme} />
-      <WindowFrame />
+      <Backdrop theme={theme} sky={weather.sky} night={weather.night} season={cal.season} occasion={cal.occasion} />
 
       {/* vines climb behind the shelf board, like the ropes, and behind the pots on the sill */}
       <Vines placed={placed} snip={snip} />
-      <Shelf />
+      <ShelfBoard />
       <WindowRow row="shelf" {...spots} />
-      <ShelfTrinket theme={theme} />
+      <Trinket theme={theme} />
 
-      <Sill />
+      <SillBoard />
       <WindowRow row="sill" {...spots} />
-      <SillCandle theme={theme} />
+      <Candle theme={theme} />
 
-      {!hideCurtains && <Curtains theme={theme} />}
-      <WallDecor theme={theme} cy={wallMid} scale={pictureScale} />
-      <g transform={`translate(0 ${(wallMid - 606).toFixed(1)})`}>
-        <Sign theme={theme} />
-      </g>
-
-      <g transform={`translate(0 ${dy})`}>
-        <Floor />
-        <CornerPiece theme={theme} />
-        <g transform="translate(210 866) scale(1.1) translate(-210 -866)">
-          <DogBed part="back" />
-          <Dogs />
-          <DogBed part="front" />
-        </g>
-        <Ball />
-      </g>
-
-      {/* light: one tint for the whole scene keeps sky and room in the same light */}
-      {tint && <rect className="tint" x="0" y="-300" width={VIEW_W} height={VIEW_H + 600} fill={tint.color} opacity={tint.opacity} />}
-      <SkyLights weather={weather} />
-      {candleLit && (
-        <>
-          <circle className="glow" cx={fx} cy={fy} r={weather.night ? 250 : 170} fill="url(#candle-glow)" />
-          <Flame x={fx} y={fy} />
-        </>
-      )}
+      <RoomFront
+        theme={theme}
+        dy={dy}
+        wallMid={wallMid}
+        pictureScale={pictureScale}
+        hideCurtains={hideCurtains}
+        phase={phaseAt(rest.now)}
+        mood={dogMood(weather, new Date(rest.now).getHours())}
+        occasion={cal.occasion}
+        onBook={onBook}
+      />
+      <Lights theme={theme} sky={weather.sky} night={weather.night} phase={phaseAt(rest.now)} occasion={cal.occasion} dy={dy} />
     </svg>
   );
 }

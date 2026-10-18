@@ -2,16 +2,16 @@ import type { Stage } from '../garden/species';
 import { LEAF, SeedMarker, Seeds, Stem } from './common';
 
 /** Stokrotka, the small Polish lawn daisy: two rows of fine rays, often tipped pink. */
-type DaisyColors = { ray: string; tip: string; inner: string };
+export type DaisyColors = { ray: string; tip: string; inner: string };
 
-const DAISY_WHITE: DaisyColors = { ray: '#fbf6ee', tip: '#e992ab', inner: '#f3e6e4' };
-const DAISY_PINK: DaisyColors = { ray: '#f3b4c6', tip: '#d8708f', inner: '#eea0b6' };
-const DAISY_DEEP: DaisyColors = { ray: '#e486a2', tip: '#b9507a', inner: '#d9748f' };
+export const DAISY_WHITE: DaisyColors = { ray: '#fbf6ee', tip: '#e992ab', inner: '#f3e6e4' };
+export const DAISY_PINK: DaisyColors = { ray: '#f3b4c6', tip: '#d8708f', inner: '#eea0b6' };
+export const DAISY_DEEP: DaisyColors = { ray: '#e486a2', tip: '#b9507a', inner: '#d9748f' };
 
 const RAY = 'M0,-3.2 C1.15,-6 1.15,-10 0,-12 C-1.15,-10 -1.15,-6 0,-3.2 Z';
 const TIP = 'M0,-9 C0.9,-10 0.8,-11.4 0,-12 C-0.8,-11.4 -0.9,-10 0,-9 Z';
 
-function DaisyFlower({ x, y, s = 1, c, tilt = 0 }: { x: number; y: number; s?: number; c: DaisyColors; tilt?: number }) {
+export function DaisyFlower({ x, y, s = 1, c, tilt = 0 }: { x: number; y: number; s?: number; c: DaisyColors; tilt?: number }) {
   const outer = Array.from({ length: 22 }, (_, i) => (i * 360) / 22);
   return (
     <g transform={`translate(${x} ${y}) rotate(${tilt}) scale(${s} ${s * 0.92})`}>
@@ -33,7 +33,7 @@ function DaisyFlower({ x, y, s = 1, c, tilt = 0 }: { x: number; y: number; s?: n
   );
 }
 
-function SpoonLeaf({ rot, s }: { rot: number; s: number }) {
+export function SpoonLeaf({ rot, s }: { rot: number; s: number }) {
   return (
     <g transform={`rotate(${rot}) scale(${s})`}>
       <path className="ink" fill={LEAF.base} d="M0,0 C-2.6,-4 -3.4,-9 -4.6,-14 C-5.8,-20 -3,-24 0,-24 C3,-24 5.8,-20 4.6,-14 C3.4,-9 2.6,-4 0,0 Z" />

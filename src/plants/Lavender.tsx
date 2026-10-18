@@ -2,11 +2,11 @@ import type { Stage } from '../garden/species';
 import { SeedMarker, Seeds, Stem } from './common';
 
 const SAGE = { base: '#91a78e', shade: '#76906f', stem: '#7f9370' };
-const BLOOM = ['#8b74b6', '#a690cf', '#6c5697'];
+export const BLOOM = ['#8b74b6', '#a690cf', '#6c5697'];
 const GREEN_SPIKE = ['#9fb097', '#a99fbf', '#859a7e'];
 
 /** A flower spike: little whorls stacked up the stem, tapering to the tip. */
-function Spike({ x, y, rot, n, colors }: { x: number; y: number; rot: number; n: number; colors: string[] }) {
+export function Spike({ x, y, rot, n, colors }: { x: number; y: number; rot: number; n: number; colors: string[] }) {
   return (
     <g transform={`translate(${x} ${y}) rotate(${rot})`}>
       {Array.from({ length: n }, (_, i) => {

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { DogMood } from './dogMood';
 import { fv, seeded, sv } from './geometry';
 
 const G = { base: '#e3e0db', shade: '#c0bbb5', hi: '#f6f4f0', muzzle: '#f0ede8', ear: '#23201f', tick: '#4a4648', earIn: '#4d4347' };
@@ -22,8 +23,11 @@ const GREY_BODY = 'M-96,0 C-104,-6 -106,-22 -98,-34 C-90,-46 -70,-50 -54,-48 C-4
 const GREY_HEAD = 'M10,-26 C8,-40 22,-50 36,-48 C46,-47 52,-41 54,-35 C62,-33 70,-29 73,-24 C75,-19 72,-15 66,-14 C56,-13 42,-11 30,-12 C18,-13 11,-18 10,-26 Z';
 const GREY_LEGS = 'M-6,-11 C16,-9 32,-7 42,-6 C50,-6 55,-3 54,0 C53,2 46,2 40,1.5 L-6,1 Z';
 
-/** The older one: white wire coat thick with black ticking, upright black ears, asleep with his chin on his paws. */
-function GreyDog({ onPet, petted }: { onPet: () => void; petted: boolean }) {
+/**
+ * The older one: white wire coat thick with black ticking, upright black ears. Lying down with his
+ * chin on his paws; awake, he lifts his head and yawns now and then.
+ */
+function GreyDog({ onPet, petted, awake = false }: { onPet: () => void; petted: boolean; awake?: boolean }) {
   return (
     <g onClick={onPet} className="tappable">
       <defs>
@@ -48,6 +52,7 @@ function GreyDog({ onPet, petted }: { onPet: () => void; petted: boolean }) {
         <path className="ink" fill={G.base} d="M-60,-2 C-54,-8 -42,-8 -36,-4 C-33,-1 -35,1 -40,1 L-62,1 Z" />
         <path className="ink-thin" fill="none" d="M-41,-5 L-40.4,0 M-45.4,-6 L-45,0" />
       </g>
+      <g transform={awake ? 'rotate(-13 14 -28)' : undefined}>
       <g className={petted ? 'nuzzle' : undefined}>
         <path className="ink" fill={G.ear} d="M20,-43 C19,-50 20,-57 22,-63 C26,-58 29,-52 30,-46 Z" />
         <path fill={G.base} d={GREY_HEAD} />
@@ -63,17 +68,86 @@ function GreyDog({ onPet, petted }: { onPet: () => void; petted: boolean }) {
           <path className="ink" fill={G.ear} d="M27,-45 C28,-53 31,-61 35,-68 C39,-61 43,-53 44,-45 C38,-43 32,-43 27,-45 Z" />
           <path d="M33,-48 C34,-54 35,-59 36,-63" fill="none" stroke={G.earIn} strokeWidth="1.2" strokeLinecap="round" />
         </g>
-        <path d="M46.5,-31 Q50.5,-28.4 55,-31" fill="none" style={sv('ink')} strokeWidth="1.5" strokeLinecap="round" />
+        {awake ? (
+          <>
+            <ellipse cx="50.8" cy="-31" rx="2.5" ry="2.8" fill="#1f1719" />
+            <circle cx="50" cy="-32" r="0.9" fill="#fff" />
+          </>
+        ) : (
+          <path d="M46.5,-31 Q50.5,-28.4 55,-31" fill="none" style={sv('ink')} strokeWidth="1.5" strokeLinecap="round" />
+        )}
         <path className="ink-thin" fill={G.hi} d="M44.6,-36.4 L46.6,-39.8 L48.2,-37.8 L50.6,-41 L51.8,-38.4 L54.6,-40 L55,-36 C51,-35 48,-35.4 44.6,-36.4 Z" />
         <path className="ink-thin" fill="#231b1e" d="M69.4,-29 C73.4,-30.4 76,-27 75,-24 C73,-22.6 70,-23.4 69.4,-26 Z" />
         <path className="ink-thin" fill="none" d="M73.6,-19.6 C69.6,-17.6 64.6,-17.2 60.6,-18" />
+        {awake && (
+          <g className="yawn">
+            <path className="ink-thin" fill="#5a2630" d="M60.6,-18 C62,-11 69,-9 73.6,-19.6 C69.6,-17.6 64.6,-17.2 60.6,-18 Z" />
+            <path fill="#e5899a" d="M64,-14.6 C65.6,-11.4 69.4,-11.4 70.6,-15 C68.4,-14.4 66,-14.2 64,-14.6 Z" />
+          </g>
+        )}
+      </g>
+      </g>
+    </g>
+  );
+}
+
+const WHITE_EAR = 'M24,-45 C28,-52 38,-54 45,-49 C47,-44 45,-39 41,-37 C38,-40 32,-43 24,-45 Z';
+
+/**
+ * The white one asleep: stretched out on his side the same way as the grey one, drawn facing right
+ * and turned round where he lies, so the two of them sleep nose to nose.
+ */
+function WhiteAsleep({ onPet, petted }: { onPet: () => void; petted: boolean }) {
+  return (
+    <g onClick={onPet} className="tappable">
+      <defs>
+        <clipPath id="white-sleep-head"><path d={GREY_HEAD} /></clipPath>
+      </defs>
+      <path className="ink" fill={W.shade} d="M-6,-16 C14,-15 30,-14 42,-12 C50,-12 54,-9 53,-6 C52,-3 46,-3 40,-4 L-6,-6 Z" />
+      <path className="ink" fill={W.base} d={GREY_LEGS} />
+      <path className="ink-thin" fill="none" d="M47,-5 C48,-3 48,-1 47.4,1.4 M43,-5.6 C44,-3.4 44,-1 43.4,1.4" />
+      <g className="breathe" style={{ animationDelay: '-1.8s', animationDuration: '5.2s' }}>
+        <path className="ink" fill={W.base} d={GREY_BODY} />
+        <path fill={W.shade} d="M-98,-7 C-60,-3 -20,-3 18,-7 L18,0 L-96,0 Z" />
+        <path d="M-84,-42 C-70,-48 -50,-46 -40,-46 C-30,-48 -18,-48 -8,-46" fill="none" stroke={W.hi} strokeWidth="3" strokeLinecap="round" />
+        <path fill={W.shade} opacity="0.5" d="M-92,-4 C-98,-20 -86,-36 -68,-34 C-78,-30 -88,-20 -86,-4 Z" />
+        {/* his haunch and shoulder: the muscle shows even when he's asleep */}
+        <path className="ink-thin" fill="none" d="M-92,-4 C-98,-20 -86,-36 -68,-34 C-56,-32 -52,-20 -56,-6" />
+        <path className="ink-thin" fill="none" opacity="0.6" d="M-10,-44 C-2,-38 2,-28 0,-16" />
+        {/* tail tucked round along the bed */}
+        <path className="ink" fill={W.base} d="M-94,-6 C-104,-2 -112,-8 -110,-18 C-106,-12 -100,-10 -92,-12 Z" />
+        <path className="ink" fill={W.base} d="M-60,-2 C-54,-8 -42,-8 -36,-4 C-33,-1 -35,1 -40,1 L-62,1 Z" />
+        <path className="ink-thin" fill="none" d="M-41,-5 L-40.4,0 M-45.4,-6 L-45,0" />
+      </g>
+      <g className={petted ? 'nuzzle' : undefined}>
+        <path fill={W.base} d={GREY_HEAD} />
+        <g clipPath="url(#white-sleep-head)">
+          {/* the brown that runs from his ear over his eye */}
+          <path fill={W.brown} d="M20,-50 C30,-54 44,-52 52,-44 C57,-39 56,-32 51,-28.6 C46,-26 40,-29 36,-34 C32,-39 26,-43 20,-46 Z" />
+          <path fill={W.shade} opacity="0.7" d="M12,-22 C15,-15 22,-13 30,-12.4 C22,-15 17,-19 15,-25 Z" />
+        </g>
+        <path className="ink" fill="none" d={GREY_HEAD} />
+        <path d="M46.5,-31 Q50.5,-28.4 55,-31" fill="none" stroke={W.nose} strokeWidth="1.5" strokeLinecap="round" />
+        <path className="ink-thin" fill={W.nose} d="M69.4,-29 C73.4,-30.4 76,-27 75,-24 C73,-22.6 70,-23.4 69.4,-26 Z" />
+        <path className="ink-thin" fill="none" d="M73.6,-19.6 C69.6,-17.6 64.6,-17.2 60.6,-18" />
+        <g className={petted ? 'ear-flick' : undefined} style={{ transformOrigin: '30px -46px' }}>
+          <path className="ink" fill={W.brown} d={WHITE_EAR} />
+          <path d="M30,-46 C35,-47.6 40,-46 43,-43" fill="none" stroke={W.brownShade} strokeWidth="1.2" strokeLinecap="round" />
+        </g>
       </g>
     </g>
   );
 }
 
 /** His face: brown ears, and the brown that runs from his right ear over his right eye. */
-function WhiteHead({ petted, tilt = -5, clipId = 'white-dog-skull' }: { petted: boolean; tilt?: number; clipId?: string }) {
+function WhiteHead({ petted, tilt = -5, clipId = 'white-dog-skull', eyes = 'open' }: {
+  petted: boolean;
+  tilt?: number;
+  clipId?: string;
+  /** 'up' looks up and to the left, out of the window. */
+  eyes?: 'open' | 'up' | 'closed';
+}) {
+  const [ex, ey] = eyes === 'up' ? [-1.2, -1.6] : [0, 0];
   return (
   <g transform={`rotate(${tilt} 0 -84)`}>
       <defs>
@@ -91,10 +165,16 @@ function WhiteHead({ petted, tilt = -5, clipId = 'white-dog-skull' }: { petted: 
       <path className="ink" fill="none" d="M-24,-84 C-26,-101 -14,-111 0,-111 C14,-111 26,-101 24,-84 C23,-73 15,-65 0,-63 C-15,-65 -23,-73 -24,-84 Z" />
       <path className="ink-thin" fill="none" opacity="0.55" d="M-12,-75 C-12,-68 -7,-63 0,-63 C7,-63 12,-68 12,-75" />
       <path className="ink-thin" fill="none" opacity="0.45" d="M0,-97 L0,-91" />
-      <ellipse cx="-9.5" cy="-88" rx="3.2" ry="3.6" fill={W.nose} />
-      <ellipse cx="9.5" cy="-88" rx="3.2" ry="3.6" fill={W.nose} />
-      <circle cx="-10.6" cy="-89.4" r="1.1" fill="#fff" />
-      <circle cx="8.4" cy="-89.4" r="1.1" fill="#fff" />
+      {eyes === 'closed' ? (
+        <path d="M-13,-88 Q-9.5,-85.4 -6,-88 M6,-88 Q9.5,-85.4 13,-88" fill="none" stroke={W.nose} strokeWidth="1.5" strokeLinecap="round" />
+      ) : (
+        <>
+          <ellipse cx={-9.5 + ex} cy={-88 + ey} rx="3.2" ry="3.6" fill={W.nose} />
+          <ellipse cx={9.5 + ex} cy={-88 + ey} rx="3.2" ry="3.6" fill={W.nose} />
+          <circle cx={-10.6 + ex} cy={-89.4 + ey} r="1.1" fill="#fff" />
+          <circle cx={8.4 + ex} cy={-89.4 + ey} r="1.1" fill="#fff" />
+        </>
+      )}
       <path className="ink-thin" fill="none" d="M-13.5,-95 C-11,-97.4 -8,-97.2 -6,-95.6 M6,-95.6 C8,-97.2 11,-97.4 13.5,-95" />
       <path className="ink-thin" fill={W.nose} d="M-5.5,-77 C-5.5,-81 5.5,-81 5.5,-77 C5,-73 1.5,-72 0,-72 C-1.5,-72 -5,-73 -5.5,-77 Z" />
       <path d="M-2.5,-79 C-1,-79.8 1,-79.8 2,-79" fill="none" stroke="#6b5655" strokeWidth="1" strokeLinecap="round" />
@@ -111,7 +191,7 @@ function WhiteHead({ petted, tilt = -5, clipId = 'white-dog-skull' }: { petted: 
 }
 
 /** The white one: stocky and muscular, brown ears, the brown patch running from his right ear over his right eye. */
-function WhiteDog({ onPet, petted }: { onPet: () => void; petted: boolean }) {
+function WhiteDog({ onPet, petted, watching = false }: { onPet: () => void; petted: boolean; watching?: boolean }) {
   return (
     <g onClick={onPet} className="tappable">
       <g className={petted ? 'wag-fast' : 'wag'} style={{ transformOrigin: '44px -12px' }}>
@@ -135,7 +215,7 @@ function WhiteDog({ onPet, petted }: { onPet: () => void; petted: boolean }) {
       <path className="ink" fill={W.base} d="M-20,-1 C-21,-7 -4,-8 -3,-2 C-3,1.8 -19,2 -20,-1 Z" />
       <path className="ink" fill={W.base} d="M20,-1 C21,-7 4,-8 3,-2 C3,1.8 19,2 20,-1 Z" />
       <path className="ink-thin" fill="none" d="M-14.6,-3.4 L-14.4,0.8 M-9,-3.6 L-8.8,0.8 M14.6,-3.4 L14.4,0.8 M9,-3.6 L8.8,0.8" />
-      <WhiteHead petted={petted} />
+      {watching ? <WhiteHead petted={petted} tilt={-15} eyes="up" /> : <WhiteHead petted={petted} />}
     </g>
   );
 }
@@ -160,7 +240,7 @@ export function DogBed({ part }: { part: 'back' | 'front' }) {
   );
 }
 
-export function Dogs() {
+export function Dogs({ mood }: { mood: DogMood }) {
   const [petted, setPetted] = useState<'grey' | 'white' | null>(null);
   const pet = (who: 'grey' | 'white') => {
     setPetted(who);
@@ -169,11 +249,17 @@ export function Dogs() {
   return (
     <g>
       <g transform="translate(152 824)">
-        <GreyDog onPet={() => pet('grey')} petted={petted === 'grey'} />
+        <GreyDog onPet={() => pet('grey')} petted={petted === 'grey'} awake={mood === 'morning'} />
       </g>
-      <g transform="translate(296 824)">
-        <WhiteDog onPet={() => pet('white')} petted={petted === 'white'} />
-      </g>
+      {mood === 'asleep' ? (
+        <g transform="translate(300 826) scale(-0.8 0.8)">
+          <WhiteAsleep onPet={() => pet('white')} petted={petted === 'white'} />
+        </g>
+      ) : (
+        <g transform="translate(296 824)">
+          <WhiteDog onPet={() => pet('white')} petted={petted === 'white'} watching={mood === 'rain'} />
+        </g>
+      )}
     </g>
   );
 }
@@ -182,7 +268,7 @@ const GREY_SKULL = 'M-23,-84 C-25,-100 -13,-109 0,-109 C13,-109 25,-100 23,-84 C
 const GREY_NECK = 'M-21,-74 C-27,-44 -31,-12 -35,34 L35,34 C31,-12 27,-44 21,-74 Z';
 
 /** The grey one facing us, as in the photo: pricked black ears, bushy brows and beard, ticked all over. */
-function GreyFace({ petted }: { petted: boolean }) {
+function GreyFace({ petted, sleepy }: { petted: boolean; sleepy: boolean }) {
   return (
     <g>
       <defs>
@@ -210,10 +296,16 @@ function GreyFace({ petted }: { petted: boolean }) {
         d="M-12,-77 C-15,-69 -12,-61 -7,-57.6 L-5,-60.6 L-3,-55.6 L0,-59.2 L3,-55.6 L5,-60.6 L7,-57.6 C12,-61 15,-69 12,-77 C8,-80.6 -8,-80.6 -12,-77 Z"
       />
       <path d="M-8,-68 l0.8,0.4 M-5,-66 l0.8,0.4 M5,-66 l-0.8,0.4 M8,-68 l-0.8,0.4 M-9,-72 l0.8,0.3 M9,-72 l-0.8,0.3" stroke={G.tick} strokeWidth="1.1" strokeLinecap="round" />
-      <ellipse cx="-9.5" cy="-87.5" rx="3" ry="3.3" fill="#1f1719" />
-      <ellipse cx="9.5" cy="-87.5" rx="3" ry="3.3" fill="#1f1719" />
-      <circle cx="-10.4" cy="-88.8" r="1" fill="#fff" />
-      <circle cx="8.6" cy="-88.8" r="1" fill="#fff" />
+      {sleepy ? (
+        <path d="M-13,-87.5 Q-9.5,-85 -6,-87.5 M6,-87.5 Q9.5,-85 13,-87.5" fill="none" stroke="#1f1719" strokeWidth="1.5" strokeLinecap="round" />
+      ) : (
+        <>
+          <ellipse cx="-9.5" cy="-87.5" rx="3" ry="3.3" fill="#1f1719" />
+          <ellipse cx="9.5" cy="-87.5" rx="3" ry="3.3" fill="#1f1719" />
+          <circle cx="-10.4" cy="-88.8" r="1" fill="#fff" />
+          <circle cx="8.6" cy="-88.8" r="1" fill="#fff" />
+        </>
+      )}
       <path className="ink-thin" fill={G.hi} d="M-15,-93.6 L-13,-97.4 L-11.4,-95.2 L-9,-98.4 L-7.6,-95.6 L-5.4,-97 L-5.2,-93 C-8.4,-92 -11.6,-92.4 -15,-93.6 Z" />
       <path className="ink-thin" fill={G.hi} d="M15,-93.6 L13,-97.4 L11.4,-95.2 L9,-98.4 L7.6,-95.6 L5.4,-97 L5.2,-93 C8.4,-92 11.6,-92.4 15,-93.6 Z" />
       <path className="ink-thin" fill="#1f1719" d="M-5,-76.4 C-5,-80.2 5,-80.2 5,-76.4 C4.6,-73 1.4,-72 0,-72 C-1.4,-72 -4.6,-73 -5,-76.4 Z" />
@@ -223,13 +315,13 @@ function GreyFace({ petted }: { petted: boolean }) {
   );
 }
 
-function WhiteFace({ petted }: { petted: boolean }) {
+function WhiteFace({ petted, eyes }: { petted: boolean; eyes: 'open' | 'up' | 'closed' }) {
   return (
     <g>
       <path className="ink" fill={W.base} d="M-22,-70 C-28,-42 -32,-12 -37,34 L37,34 C32,-12 28,-42 22,-70 Z" />
       <path fill={W.shade} d="M14,-66 C22,-44 26,-14 30,34 L37,34 C32,-12 28,-42 22,-70 Z" />
       <path d="M-8,-60 C-4,-55 4,-55 8,-60 C5,-52 -5,-52 -8,-60 Z" fill={W.hi} />
-      <WhiteHead petted={petted} tilt={6} clipId="white-face-skull" />
+      <WhiteHead petted={petted} tilt={eyes === 'up' ? -8 : 6} clipId="white-face-skull" eyes={eyes} />
     </g>
   );
 }
@@ -276,25 +368,28 @@ function SofaBack({ T, part }: { T: number; part: 'shadow' | 'sofa' }) {
 }
 
 /** Both dogs peeking up over the sofa back; bottom is where the screen ends. */
-export function PeekingDogs({ bottom }: { bottom: number }) {
+export function PeekingDogs({ bottom, mood }: { bottom: number; mood: DogMood }) {
+  const sleepy = mood === 'asleep';
   const [petted, setPetted] = useState<'grey' | 'white' | null>(null);
   const pet = (who: 'grey' | 'white') => {
     setPetted(who);
     window.setTimeout(() => setPetted((p) => (p === who ? null : p)), 1400);
   };
   const T = bottom - 48;
-  const head = (x: number, dy: number) => `translate(${x} ${bottom - 6 + dy}) scale(0.84)`;
+  // sleepy heads sink a little lower behind the sofa
+  const sink = sleepy ? 12 : 0;
+  const head = (x: number, dy: number) => `translate(${x} ${bottom - 6 + dy + sink}) scale(0.84)`;
   return (
     <g>
       <SofaBack T={T} part="shadow" />
       <g transform={head(104, 0)} className="tappable" onClick={() => pet('grey')}>
         <g className={petted === 'grey' ? 'nuzzle' : 'peek'} style={{ animationDelay: '-2s' }}>
-          <GreyFace petted={petted === 'grey'} />
+          <GreyFace petted={petted === 'grey'} sleepy={sleepy} />
         </g>
       </g>
       <g transform={head(298, 4)} className="tappable" onClick={() => pet('white')}>
         <g className={petted === 'white' ? 'nuzzle' : 'peek'}>
-          <WhiteFace petted={petted === 'white'} />
+          <WhiteFace petted={petted === 'white'} eyes={sleepy ? 'closed' : mood === 'rain' ? 'up' : 'open'} />
         </g>
       </g>
       <SofaBack T={T} part="sofa" />

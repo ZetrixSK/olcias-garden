@@ -3,6 +3,8 @@ import { PlantArt } from './plants/PlantArt';
 import { PansyPlant } from './plants/Pansy';
 import { Potted } from './plants/Pots';
 import { WallMotifs } from './scene/Room';
+import type { Pressing } from './garden/pressed';
+import { PressedBook } from './ui/PressedBook';
 
 /** Dev-only sheet of every species at every stage, opened with ?gallery. */
 export function Gallery() {
@@ -42,4 +44,19 @@ export function IconArt({ pad }: { pad: number }) {
       </g>
     </svg>
   );
+}
+
+/** Dev-only: the pressed-flower book filled with two of every species and one of her own bratki. Opened with ?pressed. */
+export function PressedGallery() {
+  const day = Date.UTC(2026, 9, 1);
+  const own = { id: 'f1', name: 'Słoneczko', top: '#f3d36b', low: '#6b3fa0', face: 'whiskers' as const, faceColor: '#241326', edge: '#fbf6ee' };
+  const pressed: Pressing[] = [
+    ...SPECIES_IDS.flatMap((species, i) => [0, 1].map((k) => ({
+      id: `${species}-${k}`, plantId: species, species, at: day + (i * 2 + k) * 86_400_000, variety: null, design: null,
+    }))),
+    { id: 'own', plantId: 'own', species: 'pansy', at: day + 12 * 86_400_000, variety: null, design: own },
+    { id: 'velvet', plantId: 'v', species: 'pansy', at: day + 13 * 86_400_000, variety: 'velvet', design: null },
+  ];
+  const page = Number(new URLSearchParams(location.search).get('page') ?? 0);
+  return <PressedBook key={page} pressed={pressed.slice(page * 4, page * 4 + 4)} onRemove={() => {}} onClose={() => {}} />;
 }

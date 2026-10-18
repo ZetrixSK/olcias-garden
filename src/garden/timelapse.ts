@@ -11,15 +11,17 @@ export type Timelapse = { from: number; to: number; frames: { t: number; plants:
 export const LAPSE_MIN_GAP = 30 * 60_000;
 
 export function buildTimelapse(start: GardenState, from: number, to: number): Timelapse {
-  const frames = [{ t: from, plants: start.plants }];
-  let plants = start.plants;
-  let checked = start.vinesCheckedAt;
+  // nights before `from` already happened before the replay begins, so they're settled first
+  const settled = runNights(start.plants, start.vinesCheckedAt, from, start.settings.vines);
+  const frames = [{ t: from, plants: settled.plants }];
+  let plants = settled.plants;
+  let checked = settled.checkedAt;
   for (const night of nightsBetween(checked, to)) {
     plants = runNights(plants, checked, night, start.settings.vines).plants;
     checked = night;
     frames.push({ t: Math.max(night, from), plants });
   }
-  return { from, to, frames, base: start };
+  return { from, to, frames, base: { ...start, plants: settled.plants, vinesCheckedAt: settled.checkedAt } };
 }
 
 const smooth = (x: number) => x * x * (3 - 2 * x);

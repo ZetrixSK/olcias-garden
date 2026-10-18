@@ -8,7 +8,7 @@ const at = (day: number, hour: number) => new Date(2026, 9, day, hour).getTime()
 function garden(): GardenState {
   const waterings = Array.from({ length: 30 }, (_, i) => at(1 + i, 15));
   const p = (id: string, display: Plant['display']): Plant => ({
-    id, species: 'pansy', slot: 'row3-a', pot: 'wide', plantedAt: at(1, 9), waterings, display, vine: null,
+    id, species: 'pansy', slot: 'row3-a', pot: 'wide', variety: null, plantedAt: at(1, 9), waterings, display, vine: null,
   });
   return { ...starterGarden(at(10, 12)), plants: [p('a', 'sill-1'), p('b', 'sill-3')], vinesCheckedAt: at(10, 3), lastSeen: at(10, 20) };
 }
@@ -43,5 +43,14 @@ describe('the replay of what happened while she was away', () => {
     expect(somethingGrew(buildTimelapse(g, g.lastSeen, at(10, 23)), stage)).toBe(false);
     const young = { ...g, plants: g.plants.map((p) => ({ ...p, plantedAt: at(10, 12) })) };
     expect(somethingGrew(buildTimelapse(young, at(10, 20), at(14, 9)), stage)).toBe(true);
+  });
+
+  it('does not replay nights that happened before it starts', () => {
+    // last checked long ago, but the replay only covers a quiet hour today
+    const g = { ...garden(), vinesCheckedAt: at(10, 3) };
+    const lapse = buildTimelapse(g, at(20, 10), at(20, 11));
+    const settled = catchUpNights(g, at(20, 10)).plants;
+    expect(gardenAt(lapse, at(20, 10)).plants).toEqual(settled);
+    expect(somethingGrew(lapse, (p, t) => stageAt(p.species, p, t))).toBe(false);
   });
 });
