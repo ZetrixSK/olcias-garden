@@ -273,15 +273,19 @@ function ShootingStars() {
       ].map((s, i) => (
         <g key={i} transform={`translate(${s.x} ${s.y}) rotate(${s.rot})`}>
           <g className="shooting-star" style={{ animationDuration: s.dur, animationDelay: s.delay }}>
-            <path d="M0,0 L-46,0" stroke="url(#star-trail)" strokeWidth="1.6" strokeLinecap="round" />
-            <circle r="1.6" fill="#fffbe9" />
+            {/* a long tail tapering to nothing behind a bright head */}
+            <path d="M0,-1.4 L-78,0 L0,1.4 Z" fill="url(#star-trail)" />
+            <circle r="5" fill="#fffbe9" opacity="0.25" />
+            <circle r="1.9" fill="#fffef6" />
           </g>
         </g>
       ))}
       <defs>
-        <linearGradient id="star-trail" x1="0" y1="0" x2="1" y2="0">
+        {/* in the tail's own units: a flat shape has no height for a relative gradient to stretch over */}
+        <linearGradient id="star-trail" gradientUnits="userSpaceOnUse" x1="-78" y1="0" x2="0" y2="0">
           <stop offset="0" stopColor="#fffbe9" stopOpacity="0" />
-          <stop offset="1" stopColor="#fffbe9" stopOpacity="0.9" />
+          <stop offset="0.7" stopColor="#fff3cf" stopOpacity="0.55" />
+          <stop offset="1" stopColor="#fffef6" stopOpacity="1" />
         </linearGradient>
       </defs>
     </g>

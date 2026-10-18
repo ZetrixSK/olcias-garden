@@ -17,6 +17,7 @@ import { moonPhase } from '../weather/moon';
 import { occasionShown, seasonShown, type Occasion, type Season } from '../theme/seasons';
 import { Bats, LanternLight, ROOM_LANTERN, RoomPumpkins } from './Halloween';
 import type { OwnPaper } from './OwnDecor';
+import { HangingBat } from './HangingBat';
 import { leanFor, runnerStart, VINE_PHASE, VineRunner, Vines, type PlacedVine, type Snip, type VineSpec } from './Vines';
 
 /** Where each window spot stands: x, the surface it stands on, the drawing scale and the tap area's width. */
@@ -168,6 +169,8 @@ const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hi
   return (
     <>
       {!hideCurtains && <Curtains theme={theme} />}
+      {/* the witchy room's bat, asleep on the curtain rod by day; it visits the cozy room for Halloween */}
+      {(theme === 'witchy' || occasion === 'halloween') && <HangingBat x={298} y={36} s={1.55} awake={mood === 'asleep'} />}
       <WallDecor theme={theme} cy={wallMid} scale={pictureScale} phase={phase} onBook={onBook} photoUrl={photoUrl} onFrame={onFrame} />
       <g transform={`translate(0 ${(wallMid - 606).toFixed(1)})`}>
         <Sign theme={theme} />

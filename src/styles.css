@@ -271,10 +271,10 @@ body {
   animation: shooting-star 71s linear infinite;
 }
 @keyframes shooting-star {
-  0%, 96% { opacity: 0; transform: translateX(-60px); }
-  96.6% { opacity: 1; }
-  98.4% { opacity: 1; }
-  99.2%, 100% { opacity: 0; transform: translateX(110px); }
+  0%, 97% { opacity: 0; transform: translateX(-40px) scaleX(0.3); }
+  97.3% { opacity: 1; transform: translateX(-10px) scaleX(1); }
+  98.6% { opacity: 1; transform: translateX(150px) scaleX(1); }
+  99%, 100% { opacity: 0; transform: translateX(185px) scaleX(0.6); }
 }
 .aurora-sway {
   transform-box: fill-box;
@@ -350,12 +350,31 @@ body {
 .bat-fly {
   animation: bat-fly 20s linear infinite;
 }
+/* a crossing takes the first part of the cycle; the rest of the time the bat is away out of sight */
 @keyframes bat-fly {
-  0% { transform: translate(-180px, 20px); }
-  25% { transform: translate(-90px, -10px); }
-  50% { transform: translate(0, 12px); }
-  75% { transform: translate(90px, -14px); }
-  100% { transform: translate(180px, 8px); }
+  0% { transform: translate(-260px, 20px); }
+  10% { transform: translate(-130px, -10px); }
+  20% { transform: translate(0, 12px); }
+  30% { transform: translate(130px, -14px); }
+  40%, 100% { transform: translate(260px, 8px); }
+}
+/* the bat on the curtain rod sways a little, and stretches its wings when tapped */
+.bat-hang {
+  animation: bat-hang 7s ease-in-out infinite;
+}
+@keyframes bat-hang {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+.bat-stretch {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  animation: bat-stretch 1.6s ease-in-out both;
+}
+@keyframes bat-stretch {
+  0% { transform: scaleX(0.2); opacity: 0; }
+  20%, 70% { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(0.2); opacity: 0; }
 }
 .bat-flap {
   transform-box: fill-box;

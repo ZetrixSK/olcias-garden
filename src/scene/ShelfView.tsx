@@ -17,6 +17,7 @@ import { moonPhase } from '../weather/moon';
 import { occasionShown, seasonShown } from '../theme/seasons';
 import { Bats, JackOLantern, LanternLight } from './Halloween';
 import { OwnWallpaper, ShelfDrawing, wallFill, type OwnPaper } from './OwnDecor';
+import { HangingBat } from './HangingBat';
 
 /** The shelf wall is drawn in a 400 x 760 frame; taller screens show more wall above and more dog below. */
 const CORE_H = 760;
@@ -159,6 +160,7 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
       <path fillRule="evenodd" fill={wallFill(theme, paper)} d={`M-400,-400 H800 V1200 H-400 Z ${OUTER}`} />
       <ShelfWindow />
       <Bunting theme={theme} occasion={occasion} />
+      {(theme === 'witchy' || occasion === 'halloween') && <HangingBat x={317} y={-13} s={1.35} awake={weather.night} />}
       <SillEnds theme={theme} />
 
       <Board x0={10} x1={390} y={446} />

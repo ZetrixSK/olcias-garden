@@ -76,10 +76,10 @@ const BAT =
 
 /** A few bats crossing the night sky, outside the window and behind everything on the sill. */
 export function Bats() {
+  // two of them, each crossing now and then and away out of sight in between
   const bats: Array<[number, number, number, string, string]> = [
-    [180, 120, 1.7, '19s', '-12s'],
-    [210, 240, 1.25, '24s', '-4s'],
-    [160, 290, 1, '29s', '-18s'],
+    [190, 130, 1.6, '42s', '-6s'],
+    [200, 250, 1.2, '57s', '-31s'],
   ];
   return (
     <g>
