@@ -777,6 +777,119 @@ body {
   gap: 8px;
 }
 
+/* decorating: her wallpaper, photo and drawings */
+.sheet.decorate .studio-body {
+  padding-bottom: 6px;
+}
+.decor-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.decor-thumb {
+  flex: 0 0 auto;
+  width: 76px;
+  height: 76px;
+  border-radius: 12px;
+  border: 1.5px solid color-mix(in srgb, var(--ink) 35%, transparent);
+  background-color: var(--wall);
+  background-repeat: repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.2;
+  opacity: 1;
+}
+.decor-thumb span {
+  opacity: 0.65;
+  padding: 4px;
+}
+.decor-thumb.photo {
+  width: 57px;
+  height: 76px;
+  background-size: cover;
+  background-position: center;
+  margin: 0 9px;
+}
+.decor-buttons {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.decor-buttons button,
+.decor-choice button {
+  font-size: 16px;
+  padding: 0 10px;
+}
+.sheet button.quiet {
+  border-style: dashed;
+  font-size: 15px;
+}
+.sheet button.danger {
+  background: color-mix(in srgb, #c0435f 22%, transparent);
+}
+.sheet button:disabled {
+  opacity: 0.55;
+}
+.decor-choice {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+.decor-choice.two {
+  grid-template-columns: 1fr 1fr;
+}
+.decor-choice button[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--ink) 12%, transparent);
+  border-color: var(--ink);
+}
+.decor-hint {
+  margin: 6px 2px 0;
+  font-size: 15px;
+  line-height: 1.4;
+  opacity: 0.8;
+}
+.decor-error {
+  margin: 4px 2px 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: color-mix(in srgb, #c0435f 16%, transparent);
+  font-size: 15px;
+}
+.decor-guide {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  border: 1.5px dashed color-mix(in srgb, var(--ink) 30%, transparent);
+  font-size: 15px;
+  line-height: 1.45;
+}
+.decor-guide summary {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  font-weight: 700;
+  cursor: pointer;
+}
+.decor-guide dt {
+  margin-top: 8px;
+  font-weight: 700;
+}
+.decor-guide dd {
+  margin: 2px 0 0;
+}
+.decor-guide p {
+  margin: 10px 0 2px;
+  opacity: 0.8;
+}
+.actions.two-wide {
+  grid-template-columns: 1fr 1fr;
+}
+
 .letter-scrim {
   background: rgba(30, 18, 26, 0.45);
   animation: fade-in 0.4s ease-out;

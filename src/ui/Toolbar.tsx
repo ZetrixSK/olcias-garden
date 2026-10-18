@@ -56,7 +56,7 @@ const STATUS_TEXT: Record<WeatherStatus, string> = {
   manual: 'Chosen by you',
 };
 
-export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onBook, onClock, onStudio }: {
+export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onBook, onDecorate, onClock, onStudio }: {
   settings: Settings;
   weather: Weather;
   status: WeatherStatus;
@@ -65,6 +65,7 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
   locating: boolean;
   onLetter: () => void;
   onBook: () => void;
+  onDecorate: () => void;
   onClock: () => void;
   onStudio: (what: 'pot' | 'pansy') => void;
 }) {
@@ -143,6 +144,15 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
               Pressed flowers
             </button>
             <p className="hint">Make your own</p>
+            <button
+              className="wide"
+              onClick={() => {
+                setMenu(false);
+                onDecorate();
+              }}
+            >
+              Decorate · wallpaper, photo, drawings
+            </button>
             <div className="row two">
               <button
                 onClick={() => {

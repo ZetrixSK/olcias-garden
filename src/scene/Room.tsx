@@ -1,4 +1,5 @@
 import type { Theme } from '../theme/palettes';
+import { OwnWallpaper, wallFill, type OwnPaper } from './OwnDecor';
 import { FLOOR_Y, WINDOW_OPENING, WINDOW_OUTER, fv, sv } from './geometry';
 
 /** Wallpaper patterns for both themes, shared by every view. */
@@ -25,13 +26,14 @@ export function WallMotifs() {
   );
 }
 
-export function Wall({ theme }: { theme: Theme }) {
+export function Wall({ theme, paper = null }: { theme: Theme; paper?: OwnPaper | null }) {
   const hole = `M0,-300 H400 V1000 H0 Z ${WINDOW_OUTER}`;
   return (
     <g>
       <WallMotifs />
+      {paper && <OwnWallpaper paper={paper} />}
       <path fillRule="evenodd" style={fv('wall')} d={hole} />
-      <path fillRule="evenodd" fill={`url(#motif-${theme})`} d={hole} />
+      <path fillRule="evenodd" fill={wallFill(theme, paper)} d={hole} />
       {/* ceiling shadow and the shadow the sill casts on the wall */}
       <rect x="0" y="-300" width="400" height="326" style={fv('wall-shade')} opacity="0.7" />
       <path d="M12,548 L388,548 L380,560 L22,560 Z" style={fv('wall-shade')} />

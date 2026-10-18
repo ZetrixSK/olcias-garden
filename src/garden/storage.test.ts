@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
 import { addPlant, SAVE_VERSION } from './state';
-import { loadGarden, saveGarden } from './storage';
+import { deleteImage, getImage, loadGarden, putImage, saveGarden, tidyImages } from './storage';
 
 const NOW = Date.UTC(2026, 9, 14);
 
@@ -46,5 +46,18 @@ describe('storage', () => {
     const g = await loadGarden(NOW);
     expect(g.version).toBe(SAVE_VERSION);
     expect((await savedKeys()).some((k) => String(k).startsWith('corrupt-'))).toBe(true);
+  });
+
+  it('keeps her pictures apart from the save, and tidies away the ones nothing uses', async () => {
+    await putImage('a', new Blob(['tile'], { type: 'image/png' }));
+    await putImage('b', new Blob(['photo'], { type: 'image/jpeg' }));
+    expect(await (await getImage('a'))?.text()).toBe('tile');
+    await tidyImages(new Set(['a']));
+    expect(await getImage('b')).toBeNull();
+    expect(await getImage('a')).not.toBeNull();
+    await deleteImage('a');
+    expect(await getImage('a')).toBeNull();
+    // the garden save itself is untouched
+    expect(await savedKeys()).toContain('garden');
   });
 });

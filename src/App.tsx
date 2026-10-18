@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  addDrawing,
   addPlant,
   canPress,
   catchUpNights,
   DEFAULT_SETTINGS,
   deleteDesign,
+  drawingAt,
+  isHanging,
+  moveDrawing,
   newId,
+  removeDrawing,
+  setPhoto,
+  setWallpaper,
   savePansyDesign,
   savePotDesign,
   setPot,
@@ -26,7 +33,11 @@ import {
   type SlotId,
   type WindowSpot,
 } from './garden/state';
-import { loadGarden, persistStorage, saveGarden } from './garden/storage';
+import { deleteImage, getImage, loadGarden, persistStorage, putImage, saveGarden, tidyImages } from './garden/storage';
+import { imagesInUse, MAX_PIXELS, type Decor, type WallpaperSize } from './garden/decor';
+import type { OwnPaper } from './scene/OwnDecor';
+import { DecorateSheet, DrawingCard } from './ui/Decorate';
+import { chooseImage, prepareImage } from './ui/upload';
 import { buildTimelapse, gardenAt, LAPSE_MIN_GAP, somethingGrew, type Timelapse } from './garden/timelapse';
 import { stageAt } from './garden/growth';
 import { isVineSpecies, isVineSpot } from './garden/vines';
@@ -135,7 +146,27 @@ type Mode =
   /** painting a pot, new or one of hers; `forPlant` gets it once saved */
   | { kind: 'potStudio'; editing: string | null; forPlant: string | null }
   /** designing a bratek; `forSlot` is planted with it, `forPlant` switches to it, once saved */
-  | { kind: 'pansyStudio'; editing: string | null; forSlot: SlotId | null; forPlant: string | null };
+  | { kind: 'pansyStudio'; editing: string | null; forSlot: SlotId | null; forPlant: string | null }
+  /** her wallpaper, photo and drawings */
+  | { kind: 'decorate' }
+  /** one of her drawings on the shelves */
+  | { kind: 'drawing'; id: string };
+
+/** Her pictures, as addresses the drawing can use, keyed by the image's name in storage. */
+type Pictures = Record<string, string>;
+
+async function loadPictures(decor: Decor): Promise<Pictures> {
+  const inUse = imagesInUse(decor);
+  const out: Pictures = {};
+  await Promise.all(
+    [...inUse].map(async (key) => {
+      const blob = await getImage(key);
+      if (blob) out[key] = URL.createObjectURL(blob);
+    }),
+  );
+  void tidyImages(inUse);
+  return out;
+}
 
 export function App() {
   const [garden, setGarden] = useState<GardenState | null>(null);
@@ -156,6 +187,10 @@ export function App() {
   const [snip, setSnip] = useState<Snip | null>(null);
   const [bookOpen, setBookOpen] = useState(false);
   const openBook = useCallback(() => setBookOpen(true), []);
+  const [pictures, setPictures] = useState<Pictures>({});
+  const [adding, setAdding] = useState<'wallpaper' | 'photo' | 'drawing' | null>(null);
+  const [pictureError, setPictureError] = useState<string | null>(null);
+  const openDecorate = useCallback(() => setMode({ kind: 'decorate' }), []);
 
   /** Replays what happened between two moments. With reduced motion it only plays when asked. */
   const playLapse = useCallback((tl: Timelapse, auto: boolean) => {
@@ -171,6 +206,7 @@ export function App() {
       const t = Date.now();
       opened.current = { at: t, garden: g };
       const caughtUp = catchUpNights(g, t);
+      void loadPictures(g.decor).then(setPictures);
       setGarden(import.meta.env.DEV ? devOverrides(caughtUp) : caughtUp);
       if (t - g.lastSeen >= LAPSE_MIN_GAP) playLapse(buildTimelapse(g, g.lastSeen, t), true);
       void persistStorage();
@@ -256,6 +292,14 @@ export function App() {
   }, [letterUnread, replaying]);
 
   const update = useCallback((fn: (g: GardenState) => GardenState) => setGarden((g) => (g ? fn(g) : g)), []);
+
+  // her wallpaper, drawn only once its picture has been read back from storage
+  const wallpaper = garden?.decor.wallpaper ?? null;
+  const wallpaperUrl = wallpaper ? (pictures[wallpaper.img] ?? null) : null;
+  const paper = useMemo<OwnPaper | null>(
+    () => (wallpaper && wallpaperUrl ? { url: wallpaperUrl, w: wallpaper.w, h: wallpaper.h, size: wallpaper.size, soft: wallpaper.soft } : null),
+    [wallpaper, wallpaperUrl],
+  );
   const settings = garden?.settings;
   const { weather, status } = useWeather(settings ?? DEFAULT_SETTINGS, now);
   const theme = settings?.theme ?? 'cozy';
@@ -282,14 +326,78 @@ export function App() {
 
   const onSlot = (slot: SlotId) => {
     const here = plantAt(garden, slot);
+    const drawing = drawingAt(garden, slot);
     if (mode.kind === 'move') {
-      update((g) => movePlant(g, mode.id, slot));
+      const id = mode.id;
+      update((g) => (g.decor.drawings.some((d) => d.id === id) ? moveDrawing(g, id, slot) : movePlant(g, id, slot)));
       setMode({ kind: 'idle' });
     } else if (here) {
       setMode(mode.kind === 'card' && mode.id === here.id ? { kind: 'idle' } : { kind: 'card', id: here.id });
+    } else if (drawing) {
+      setMode(mode.kind === 'drawing' && mode.id === drawing.id ? { kind: 'idle' } : { kind: 'drawing', id: drawing.id });
     } else {
       setMode({ kind: 'pick', slot });
     }
+  };
+
+  /** Asks for a picture, shrinks it, keeps it, and hands back its name and size; null if she cancelled or it failed. */
+  const addPicture = async (what: 'wallpaper' | 'photo' | 'drawing') => {
+    const file = await chooseImage();
+    if (!file) return null;
+    setAdding(what);
+    setPictureError(null);
+    try {
+      const prepared = await prepareImage(file, MAX_PIXELS[what], what === 'photo' ? 'jpeg' : 'png');
+      const img = newId();
+      try {
+        await putImage(img, prepared.blob);
+      } catch {
+        setPictureError("There wasn't room on the phone to keep that picture.");
+        return null;
+      }
+      const url = URL.createObjectURL(prepared.blob);
+      setPictures((p) => ({ ...p, [img]: url }));
+      return { img, w: prepared.w, h: prepared.h };
+    } catch {
+      setPictureError("That picture couldn't be opened. A PNG or JPEG works best.");
+      return null;
+    } finally {
+      setAdding(null);
+    }
+  };
+
+  /** Lets go of a picture nothing uses any more. */
+  const dropPicture = (img: string | undefined) => {
+    if (!img) return;
+    void deleteImage(img);
+    setPictures((p) => {
+      if (p[img]) URL.revokeObjectURL(p[img]!);
+      const { [img]: _, ...rest } = p;
+      return rest;
+    });
+  };
+
+  const chooseWallpaper = async () => {
+    const pic = await addPicture('wallpaper');
+    if (!pic) return;
+    const old = garden.decor.wallpaper;
+    update((g) => setWallpaper(g, { ...pic, size: old?.size ?? 'm', soft: old?.soft ?? false }));
+    dropPicture(old?.img);
+  };
+
+  const choosePhoto = async () => {
+    const pic = await addPicture('photo');
+    if (!pic) return;
+    const old = garden.decor.photo;
+    update((g) => setPhoto(g, pic));
+    dropPicture(old?.img);
+  };
+
+  const drawingIn = async (slot: SlotId) => {
+    const pic = await addPicture('drawing');
+    if (!pic) return;
+    update((g) => addDrawing(g, { id: newId(), slot, ...pic }));
+    setMode({ kind: 'idle' });
   };
 
   const onSpot = (spot: WindowSpot) => {
@@ -366,6 +474,9 @@ export function App() {
             vines={vines}
             snip={snip}
             onBook={openBook}
+            paper={paper}
+            photoUrl={garden.decor.photo ? (pictures[garden.decor.photo.img] ?? null) : null}
+            onFrame={openDecorate}
             hideCurtains={import.meta.env.DEV && window.location.search.includes('nocurtains')}
             garden={shown}
             now={shownNow}
@@ -383,6 +494,9 @@ export function App() {
             now={shownNow}
             selectedId={cardPlant?.id ?? null}
             movingId={mode.kind === 'move' ? mode.id : null}
+            paper={paper}
+            pictures={pictures}
+            drawingId={mode.kind === 'drawing' ? mode.id : null}
             wateringId={wateringId}
             onSlot={onSlot}
           />
@@ -398,6 +512,7 @@ export function App() {
         locating={locating}
         onLetter={() => setLetterOpen(true)}
         onBook={openBook}
+        onDecorate={openDecorate}
         onStudio={(what) =>
           setMode(
             what === 'pot'
@@ -411,7 +526,55 @@ export function App() {
           if (tl) playLapse(tl, false);
         }}
       />
-      {mode.kind === 'pick' && <PlantPicker onPick={plantSpecies} onClose={() => setMode({ kind: 'idle' })} />}
+      {mode.kind === 'pick' && (
+        <PlantPicker
+          onPick={plantSpecies}
+          onDrawing={isHanging(mode.slot) ? null : () => void drawingIn(mode.slot)}
+          busy={adding === 'drawing'}
+          error={pictureError}
+          onClose={() => setMode({ kind: 'idle' })}
+        />
+      )}
+      {mode.kind === 'decorate' && (
+        <DecorateSheet
+          decor={garden.decor}
+          wallpaperUrl={wallpaperUrl}
+          photoUrl={garden.decor.photo ? (pictures[garden.decor.photo.img] ?? null) : null}
+          busy={adding}
+          error={pictureError}
+          onWallpaper={() => void chooseWallpaper()}
+          onWallpaperLook={(patch: { size?: WallpaperSize; soft?: boolean }) =>
+            update((g) => (g.decor.wallpaper ? setWallpaper(g, { ...g.decor.wallpaper, ...patch }) : g))
+          }
+          onWallpaperReset={() => {
+            const old = garden.decor.wallpaper;
+            update((g) => setWallpaper(g, null));
+            dropPicture(old?.img);
+          }}
+          onPhoto={() => void choosePhoto()}
+          onPhotoReset={() => {
+            const old = garden.decor.photo;
+            update((g) => setPhoto(g, null));
+            dropPicture(old?.img);
+          }}
+          onClose={() => {
+            setPictureError(null);
+            setMode({ kind: 'idle' });
+          }}
+        />
+      )}
+      {mode.kind === 'drawing' && (
+        <DrawingCard
+          onMove={() => setMode({ kind: 'move', id: mode.id })}
+          onRemove={() => {
+            const d = garden.decor.drawings.find((x) => x.id === mode.id);
+            update((g) => removeDrawing(g, mode.id));
+            dropPicture(d?.img);
+            setMode({ kind: 'idle' });
+          }}
+          onClose={() => setMode({ kind: 'idle' })}
+        />
+      )}
       {mode.kind === 'choose' && (
         <WindowChooser
           plants={garden.plants.filter((p) => p.display === null)}

@@ -2,18 +2,21 @@ import { parseSave, starterGarden, type GardenState } from './state';
 
 const DB_NAME = 'olcias-garden';
 const STORE = 'saves';
+/** Her own pictures, kept apart from the garden save so the save stays small and quick. */
+const IMAGES = 'images';
+const STORES = [STORE, IMAGES];
 const KEY = 'garden';
 
-/** Opens the database; if it somehow exists without its store, bumps the version to create it. */
+/** Opens the database; if it exists without one of its stores (an older version), bumps the version to add it. */
 function openDb(version?: number): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = version ? indexedDB.open(DB_NAME, version) : indexedDB.open(DB_NAME);
     req.onupgradeneeded = () => {
-      if (!req.result.objectStoreNames.contains(STORE)) req.result.createObjectStore(STORE);
+      for (const name of STORES) if (!req.result.objectStoreNames.contains(name)) req.result.createObjectStore(name);
     };
     req.onsuccess = () => {
       const db = req.result;
-      if (db.objectStoreNames.contains(STORE)) return resolve(db);
+      if (STORES.every((name) => db.objectStoreNames.contains(name))) return resolve(db);
       const next = db.version + 1;
       db.close();
       openDb(next).then(resolve, reject);
@@ -22,11 +25,11 @@ function openDb(version?: number): Promise<IDBDatabase> {
   });
 }
 
-async function run<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
+async function run<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBRequest<T>, store = STORE): Promise<T> {
   const db = await openDb();
   return new Promise<T>((resolve, reject) => {
-    const tx = db.transaction(STORE, mode);
-    const req = fn(tx.objectStore(STORE));
+    const tx = db.transaction(store, mode);
+    const req = fn(tx.objectStore(store));
     tx.oncomplete = () => {
       db.close();
       resolve(req.result);
@@ -70,5 +73,37 @@ export async function saveGarden(state: GardenState): Promise<void> {
     await run('readwrite', (s) => s.put(state, KEY));
   } catch {
     // Private browsing or blocked storage: keep going without saving.
+  }
+}
+
+/** Keeps one of her pictures. Throws if it can't be stored, so she can be told rather than lose it quietly. */
+export async function putImage(key: string, blob: Blob): Promise<void> {
+  await run('readwrite', (s) => s.put(blob, key), IMAGES);
+}
+
+export async function getImage(key: string): Promise<Blob | null> {
+  try {
+    const v = await run('readonly', (s) => s.get(key), IMAGES);
+    return v instanceof Blob ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteImage(key: string): Promise<void> {
+  try {
+    await run('readwrite', (s) => s.delete(key), IMAGES);
+  } catch {
+    // left behind; it's cleared the next time unused pictures are tidied away
+  }
+}
+
+/** Removes pictures nothing uses any more, such as a wallpaper she has since replaced. */
+export async function tidyImages(inUse: Set<string>): Promise<void> {
+  try {
+    const keys = await run('readonly', (s) => s.getAllKeys(), IMAGES);
+    await Promise.all(keys.filter((k) => typeof k === 'string' && !inUse.has(k)).map((k) => deleteImage(k as string)));
+  } catch {
+    // nothing to tidy, or storage unavailable
   }
 }

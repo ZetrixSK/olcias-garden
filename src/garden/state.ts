@@ -1,5 +1,6 @@
 import { SKY_KINDS, type Theme, type Weather } from '../theme/palettes';
 import { plantedAtForStage, stageAt } from './growth';
+import { MAX_DRAWINGS, NO_DECOR, parseDecor, type Decor, type Drawing, type Photo, type Wallpaper } from './decor';
 import { MAX_PRESSED, parsePressed, pressedToday, pressingOf, type Pressing } from './pressed';
 import { designId, NO_DESIGNS, PANSY_PRESETS, parseDesigns, upsert, type Designs, type PansyDesign, type PotDesign, type PotRef } from './designs';
 import { lastNight, runNights, settleMiddleDir, trimmed, type Vine } from './vines';
@@ -11,6 +12,9 @@ export const SLOT_IDS = [
   'row3-a', 'row3-b', 'row3-c', 'row3-d',
 ] as const;
 export type SlotId = (typeof SLOT_IDS)[number];
+/** The two pots hanging from the ceiling: only plants can hang there, not drawings. */
+export const HANGING_SLOTS: readonly SlotId[] = ['hang-l', 'hang-r'];
+export const isHanging = (slot: SlotId) => HANGING_SLOTS.includes(slot);
 
 /** Places in the room view's window: three on the hanging shelf, three on the sill. */
 export const WINDOW_SPOTS = ['shelf-1', 'shelf-2', 'shelf-3', 'sill-1', 'sill-2', 'sill-3'] as const;
@@ -62,6 +66,8 @@ export type GardenState = {
   designs: Designs;
   /** Her book of pressed flowers, oldest first. */
   pressed: Pressing[];
+  /** Her own wallpaper, framed photo and drawings on the shelves. */
+  decor: Decor;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -109,6 +115,7 @@ export function starterGarden(now: number): GardenState {
     lastSeen: now,
     designs: NO_DESIGNS,
     pressed: [],
+    decor: NO_DECOR,
   };
 }
 
@@ -116,8 +123,12 @@ export function plantAt(state: GardenState, slot: SlotId): Plant | undefined {
   return state.plants.find((p) => p.slot === slot);
 }
 
+export function drawingAt(state: GardenState, slot: SlotId): Drawing | undefined {
+  return state.decor.drawings.find((d) => d.slot === slot);
+}
+
 export function addPlant(state: GardenState, slot: SlotId, species: SpeciesId, now: number, id = newId(), variety: string | null = null): GardenState {
-  if (plantAt(state, slot)) return state;
+  if (plantAt(state, slot) || drawingAt(state, slot)) return state;
   const plant: Plant = {
     id, species, slot, pot: SPECIES[species].pot, variety: species === 'pansy' ? variety : null,
     plantedAt: now, waterings: [], display: null, vine: null,
@@ -132,15 +143,58 @@ export function waterPlant(state: GardenState, id: string, now: number): GardenS
   };
 }
 
-/** Move to another slot; if something already lives there, the two swap places. */
+/**
+ * Move to another slot; if something already lives there, the two swap places. A drawing can't be
+ * swapped up into a hanging pot, so that move simply doesn't happen.
+ */
 export function movePlant(state: GardenState, id: string, to: SlotId): GardenState {
   const moving = state.plants.find((p) => p.id === id);
   if (!moving || moving.slot === to) return state;
   const from = moving.slot;
+  const drawing = drawingAt(state, to);
+  if (drawing && isHanging(from)) return state;
   return {
     ...state,
     plants: state.plants.map((p) => (p.id === id ? { ...p, slot: to } : p.slot === to ? { ...p, slot: from } : p)),
+    decor: drawing ? { ...state.decor, drawings: state.decor.drawings.map((d) => (d === drawing ? { ...d, slot: from } : d)) } : state.decor,
   };
+}
+
+/** Stands one of her drawings in an empty spot on the shelves. */
+export function addDrawing(state: GardenState, drawing: Drawing): GardenState {
+  const slot = drawing.slot as SlotId;
+  if (!SLOT_IDS.includes(slot) || isHanging(slot) || plantAt(state, slot) || drawingAt(state, slot)) return state;
+  if (state.decor.drawings.length >= MAX_DRAWINGS) return state;
+  return { ...state, decor: { ...state.decor, drawings: [...state.decor.drawings, drawing] } };
+}
+
+/** Moves a drawing along the shelves, swapping with whatever stands there; never into a hanging pot. */
+export function moveDrawing(state: GardenState, id: string, to: SlotId): GardenState {
+  const moving = state.decor.drawings.find((d) => d.id === id);
+  if (!moving || moving.slot === to || isHanging(to)) return state;
+  const from = moving.slot as SlotId;
+  return {
+    ...state,
+    plants: state.plants.map((p) => (p.slot === to ? { ...p, slot: from } : p)),
+    decor: {
+      ...state.decor,
+      drawings: state.decor.drawings.map((d) => (d.id === id ? { ...d, slot: to } : d.slot === to ? { ...d, slot: from } : d)),
+    },
+  };
+}
+
+export function removeDrawing(state: GardenState, id: string): GardenState {
+  return { ...state, decor: { ...state.decor, drawings: state.decor.drawings.filter((d) => d.id !== id) } };
+}
+
+/** Her wallpaper, or null for the room's own. */
+export function setWallpaper(state: GardenState, wallpaper: Wallpaper | null): GardenState {
+  return { ...state, decor: { ...state.decor, wallpaper } };
+}
+
+/** The photo in the frame, or null for the little painting that's there by default. */
+export function setPhoto(state: GardenState, photo: Photo | null): GardenState {
+  return { ...state, decor: { ...state.decor, photo } };
 }
 
 export function windowPlantAt(state: GardenState, spot: WindowSpot): Plant | undefined {
@@ -377,5 +431,6 @@ export function parseSave(input: unknown, now = Date.now()): GardenState | null 
     lastSeen,
     designs,
     pressed: parsePressed(raw.pressed),
+    decor: parseDecor(raw.decor, (slot) => SLOT_IDS.includes(slot as SlotId) && !isHanging(slot as SlotId) && !taken.has(slot as SlotId)),
   };
 }

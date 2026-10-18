@@ -2,6 +2,7 @@ import type { Theme } from '../theme/palettes';
 import { PansyFlower, PANSY_OLCIA } from '../plants/Pansy';
 import { moonPath } from '../weather/moon';
 import { fv } from './geometry';
+import { PhotoFrame } from './OwnDecor';
 
 export const CANDLE_FLAME: Record<Theme, [number, number]> = {
   cozy: [335, 483],
@@ -171,14 +172,25 @@ export function Ball() {
 }
 
 /** Wall pieces between sill and floor, centred in whatever wall height the screen leaves. */
-export function WallDecor({ theme, cy, scale, phase, onBook }: { theme: Theme; cy: number; scale: number; phase: number; onBook?: () => void }) {
+export function WallDecor({ theme, cy, scale, phase, onBook, photoUrl = null, onFrame }: {
+  theme: Theme;
+  cy: number;
+  scale: number;
+  phase: number;
+  onBook?: () => void;
+  photoUrl?: string | null;
+  onFrame?: () => void;
+}) {
   return (
     <g>
       <g transform={`translate(62 ${cy + 6}) scale(${scale}) translate(-62 -652)`}>
         <WallPicture theme={theme} phase={phase} onBook={onBook} />
       </g>
+      <g transform={`translate(332 ${cy + 6}) scale(${scale}) translate(-332 -652)`}>
+        <PhotoFrame theme={theme} url={photoUrl} onTap={onFrame} />
+      </g>
       {theme === 'witchy' && (
-        <g transform={`translate(318 ${cy - 30}) scale(${scale})`}>
+        <g transform={`translate(378 ${cy - 34}) scale(${scale * 0.85})`}>
           {/* a sprig of dried lavender hanging from a nail */}
           <circle r="1.8" style={fv('ink')} />
           <path className="ink-thin" fill="none" d="M0,0 L0,8" />

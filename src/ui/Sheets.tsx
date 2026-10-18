@@ -164,7 +164,14 @@ export function StyleSheet({ plant, designs, now, onPot, onVariety, onPaint, onE
 
 const WINDOW_ICON = <path d="M-8,10 L-8,-2 A8,8 0 0 1 8,-2 L8,10 Z M0,-10 L0,10 M-8,2 L8,2" />;
 
-export function PlantPicker({ onPick, onClose }: { onPick: (s: SpeciesId) => void; onClose: () => void }) {
+export function PlantPicker({ onPick, onDrawing, busy, error, onClose }: {
+  onPick: (s: SpeciesId) => void;
+  /** Present on the shelves (not the hanging pots): stand one of her drawings here instead. */
+  onDrawing: (() => void) | null;
+  busy: boolean;
+  error: string | null;
+  onClose: () => void;
+}) {
   return (
     <div className="sheet" role="dialog" aria-label="Plant something">
       <div className="sheet-head">
@@ -180,6 +187,18 @@ export function PlantPicker({ onPick, onClose }: { onPick: (s: SpeciesId) => voi
           </button>
         ))}
       </div>
+      {onDrawing && (
+        <div className="press-row">
+          <button onClick={onDrawing} disabled={busy}>
+            <svg viewBox="-14 -14 28 28" aria-hidden="true">
+              <path d="M-10,-9 L10,-9 L10,9 L-10,9 Z M-10,5 L-3,-1 L2,4 L5,1 L10,6" />
+              <circle cx="4" cy="-4" r="2" />
+            </svg>
+            {busy ? 'Adding…' : 'One of my drawings'}
+          </button>
+          {error && <p className="decor-error">{error}</p>}
+        </div>
+      )}
     </div>
   );
 }

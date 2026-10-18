@@ -14,6 +14,7 @@ import { Sky, SkyLights } from './Sky';
 import { moonPhase } from '../weather/moon';
 import { occasionShown, seasonShown } from '../theme/seasons';
 import { Bats, JackOLantern, LanternLight } from './Halloween';
+import { OwnWallpaper, ShelfDrawing, wallFill, type OwnPaper } from './OwnDecor';
 
 /** The shelf wall is drawn in a 400 x 760 frame; taller screens show more wall above and more dog below. */
 const CORE_H = 760;
@@ -92,7 +93,7 @@ function Hanger({ x, rimY }: { x: number; rimY: number }) {
   );
 }
 
-export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movingId, wateringId, onSlot }: {
+export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movingId, wateringId, onSlot, paper = null, pictures = {}, drawingId = null }: {
   theme: Theme;
   weather: Weather;
   viewH: number;
@@ -102,6 +103,11 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
   movingId: string | null;
   wateringId: string | null;
   onSlot: (slot: SlotId) => void;
+  paper?: OwnPaper | null;
+  /** Her pictures by name, for the drawings on the shelves. */
+  pictures?: Record<string, string>;
+  /** The drawing whose card is open. */
+  drawingId?: string | null;
 }) {
   // short screens (Safari with its bars) see the whole wall slightly smaller, with wallpaper at the sides
   const h = Math.max(viewH, CORE_H);
@@ -142,7 +148,8 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
       </g>
 
       <path fillRule="evenodd" style={fv('wall')} d={`M-400,-400 H800 V1200 H-400 Z ${OUTER}`} />
-      <path fillRule="evenodd" fill={`url(#motif-${theme})`} d={`M-400,-400 H800 V1200 H-400 Z ${OUTER}`} />
+      {paper && <OwnWallpaper paper={paper} />}
+      <path fillRule="evenodd" fill={wallFill(theme, paper)} d={`M-400,-400 H800 V1200 H-400 Z ${OUTER}`} />
       <ShelfWindow />
       <Bunting theme={theme} occasion={occasion} />
       <SillEnds theme={theme} />
@@ -157,13 +164,22 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
       {SLOT_IDS.map((slot) => {
         const pos = SLOT_POS[slot];
         const plant = bySlot.get(slot);
+        const drawing = plant ? undefined : garden.decor.drawings.find((d) => d.slot === slot);
         const potH = plant ? POT_HEIGHT[plantLook(plant, garden.designs).shape] * PLANT_SCALE : 30;
         const rimY = pos.y - potH;
         return (
           <g key={slot}>
             {pos.hang && <Hanger x={pos.x} rimY={plant ? rimY : pos.y - 26} />}
             <g transform={`translate(${pos.x} ${plant ? rimY : pos.y}) scale(${plant ? PLANT_SCALE : 1})`}>
-              {plant ? (
+              {drawing ? (
+                <ShelfDrawing
+                  url={pictures[drawing.img]}
+                  w={drawing.w}
+                  h={drawing.h}
+                  selected={drawing.id === drawingId}
+                  moving={drawing.id === movingId}
+                />
+              ) : plant ? (
                 <GardenPlanter
                   plant={plant}
                   designs={garden.designs}

@@ -15,6 +15,7 @@ import { Sky, SkyLights } from './Sky';
 import { moonPhase } from '../weather/moon';
 import { occasionShown, seasonShown, type Occasion, type Season } from '../theme/seasons';
 import { Bats, LanternLight, ROOM_LANTERN, RoomPumpkins } from './Halloween';
+import type { OwnPaper } from './OwnDecor';
 import { leanFor, runnerStart, VINE_PHASE, VineRunner, Vines, type PlacedVine, type Snip, type VineSpec } from './Vines';
 
 /** Where each window spot stands: x, the surface it stands on, the drawing scale and the tap area's width. */
@@ -134,7 +135,7 @@ type Calendar = { season: Season; occasion: Occasion };
 const phaseAt = (now: number) => Math.round(moonPhase(now) * 100) / 100;
 
 /** Sky, landscape, wall and window frame: they only change with the theme and the weather. */
-const Backdrop = memo(function Backdrop({ theme, sky, night, season, occasion }: Lit & Calendar) {
+const Backdrop = memo(function Backdrop({ theme, sky, night, season, occasion, paper }: Lit & Calendar & { paper: OwnPaper | null }) {
   const weather = { sky, night };
   return (
     <>
@@ -148,22 +149,24 @@ const Backdrop = memo(function Backdrop({ theme, sky, night, season, occasion }:
         {sky === 'rain' && <Rain />}
         {season === 'winter' && <Frost />}
       </g>
-      <Wall theme={theme} />
+      <Wall theme={theme} paper={paper} />
       <WindowFrame />
     </>
   );
 });
 
 /** Curtains, pictures, sign, floor and the dogs. */
-const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hideCurtains, phase, mood, occasion, onBook }: {
+const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hideCurtains, phase, mood, occasion, onBook, photoUrl, onFrame }: {
   theme: Theme; dy: number; wallMid: number; pictureScale: number; hideCurtains: boolean; phase: number; mood: DogMood;
   occasion: Occasion;
   onBook?: () => void;
+  photoUrl: string | null;
+  onFrame?: () => void;
 }) {
   return (
     <>
       {!hideCurtains && <Curtains theme={theme} />}
-      <WallDecor theme={theme} cy={wallMid} scale={pictureScale} phase={phase} onBook={onBook} />
+      <WallDecor theme={theme} cy={wallMid} scale={pictureScale} phase={phase} onBook={onBook} photoUrl={photoUrl} onFrame={onFrame} />
       <g transform={`translate(0 ${(wallMid - 606).toFixed(1)})`}>
         <Sign theme={theme} />
       </g>
@@ -221,7 +224,7 @@ const SillBoard = memo(Sill);
 const Trinket = memo(ShelfTrinket);
 const Candle = memo(SillCandle);
 
-export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains = false, onBook, ...rest }: {
+export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, ...rest }: {
   theme: Theme;
   weather: Weather;
   viewH: number;
@@ -231,6 +234,11 @@ export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains 
   hideCurtains?: boolean;
   /** Tapping the pressed pansy on the wall opens her book. */
   onBook?: () => void;
+  /** Her own wallpaper, if she has one. */
+  paper?: OwnPaper | null;
+  /** Her photo in the frame on the wall; tapping the frame calls onFrame. */
+  photoUrl?: string | null;
+  onFrame?: () => void;
 } & Omit<SpotProps, 'placed'>) {
   const placed = placeVines(vines, rest.garden);
   const spots = { ...rest, placed };
@@ -249,7 +257,7 @@ export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains 
         </radialGradient>
       </defs>
 
-      <Backdrop theme={theme} sky={weather.sky} night={weather.night} season={cal.season} occasion={cal.occasion} />
+      <Backdrop theme={theme} sky={weather.sky} night={weather.night} season={cal.season} occasion={cal.occasion} paper={paper} />
 
       {/* vines climb behind the shelf board, like the ropes, and behind the pots on the sill */}
       <Vines placed={placed} snip={snip} />
@@ -271,6 +279,8 @@ export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains 
         mood={dogMood(weather, new Date(rest.now).getHours())}
         occasion={cal.occasion}
         onBook={onBook}
+        photoUrl={photoUrl}
+        onFrame={onFrame}
       />
       <Lights theme={theme} sky={weather.sky} night={weather.night} phase={phaseAt(rest.now)} occasion={cal.occasion} dy={dy} />
     </svg>
