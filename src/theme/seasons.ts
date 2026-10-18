@@ -64,7 +64,7 @@ export function seasonVars(season: Season, weather: Weather, base: Record<string
   if (!land) return {};
   // snow stays pale even at night; leaves and grass go as dark as everything else
   const night = season === 'winter' ? 0.42 : 0.22;
-  const k = weather.night ? night : weather.sky === 'rain' ? 0.55 : weather.sky === 'cloudy' ? 0.7 : 1;
+  const k = weather.night ? night : weather.sky === 'rain' ? 0.55 : weather.twilight ? 0.6 : weather.sky === 'cloudy' ? 0.7 : 1;
   const out: Record<string, string> = {};
   for (const [name, color] of Object.entries(land)) {
     const own = base[name];

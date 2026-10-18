@@ -1,14 +1,16 @@
 import { seasonVars, type Season } from './seasons';
+import type { Twilight } from '../weather/sun';
 import { ownRoomVars, type OwnRoom } from './ownRoom';
 
 export type SkyKind = 'clear' | 'cloudy' | 'rain';
-/** What the window shows: the sky's condition, by day or by night. */
-export type Weather = { sky: SkyKind; night: boolean };
+/** What the window shows: the sky's condition, by day or by night, and the glow of dawn or dusk. */
+export type Weather = { sky: SkyKind; night: boolean; twilight?: Twilight | null };
 
 export const SKY_KINDS: SkyKind[] = ['clear', 'cloudy', 'rain'];
 
-type SkyKey = 'sunny' | 'cloudy' | 'rain' | 'night' | 'night-cloudy' | 'night-rain';
+type SkyKey = 'sunny' | 'cloudy' | 'rain' | 'night' | 'night-cloudy' | 'night-rain' | 'dawn' | 'dusk';
 function skyKey(w: Weather): SkyKey {
+  if (w.twilight && !w.night && w.sky !== 'rain') return w.twilight;
   if (w.night) return w.sky === 'clear' ? 'night' : w.sky === 'cloudy' ? 'night-cloudy' : 'night-rain';
   return w.sky === 'clear' ? 'sunny' : w.sky;
 }
@@ -88,6 +90,44 @@ export const roomPalettes: Record<Theme, Palette> = {
 
 /** Sky and distant landscape colours, seen through the window. */
 const skyPalettes: Record<SkyKey, Palette> = {
+  // first light: pale blue overhead, rose and apricot along the hills, the lake catching the pink
+  dawn: {
+    'sky-top': '#9fb3d9',
+    'sky-mid': '#f0c3c9',
+    'sky-low': '#fbd8a6',
+    'hill-far': '#b7a7b7',
+    'hill-near': '#98a28a',
+    tree: '#6f8a72',
+    'tree-shade': '#5a735e',
+    roof: '#b9705a',
+    house: '#efd9c6',
+    cloud: '#fde4dc',
+    'cloud-shade': '#e7bccb',
+    'cloud-deep': '#d3a8bd',
+    lake: '#dcb4b9',
+    'lake-hi': '#fde3c8',
+    pine: '#4a6457',
+    'pine-shade': '#3b5248',
+  },
+  // sunset: violet overhead, coral and gold at the horizon, the forest going dark against it
+  dusk: {
+    'sky-top': '#5f5f9f',
+    'sky-mid': '#e39896',
+    'sky-low': '#f6b46a',
+    'hill-far': '#8b7896',
+    'hill-near': '#77796a',
+    tree: '#5b6c5a',
+    'tree-shade': '#4a5a4a',
+    roof: '#93594f',
+    house: '#e2c0aa',
+    cloud: '#f6c7b4',
+    'cloud-shade': '#d99aa6',
+    'cloud-deep': '#b27f9b',
+    lake: '#c48e98',
+    'lake-hi': '#f8c88a',
+    pine: '#3d4c45',
+    'pine-shade': '#303c37',
+  },
   sunny: {
     'sky-top': '#86b6d6',
     'sky-mid': '#b9d5e0',
@@ -203,13 +243,15 @@ export function roomTint(w: Weather, theme: Theme = 'witchy'): { color: string; 
   // the cozy room's pale walls need a deeper, warmer dusk than the already-dark witchy room
   if (w.night && theme === 'cozy') return w.sky === 'rain' ? { color: '#262447', opacity: 0.8 } : { color: '#2b2350', opacity: 0.78 };
   if (w.night) return w.sky === 'rain' ? { color: '#1f2444', opacity: 0.6 } : { color: '#24224f', opacity: 0.55 };
+  // dawn and dusk tint the room with warm light, dusk a little deeper
+  if (w.twilight && w.sky !== 'rain') return w.twilight === 'dawn' ? { color: '#e6a487', opacity: 0.16 } : { color: '#c4776e', opacity: 0.24 };
   if (w.sky === 'cloudy') return { color: '#77748a', opacity: 0.16 };
   if (w.sky === 'rain') return { color: '#4a5572', opacity: 0.3 };
   return null;
 }
 
 /** Candles are lit whenever the room is dim. */
-export const candleLit = (w: Weather) => w.night || w.sky === 'rain';
+export const candleLit = (w: Weather) => w.night || w.sky === 'rain' || w.twilight === 'dusk';
 
 export function paletteVars(theme: Theme, weather: Weather, season: Season = 'summer', own: OwnRoom | null = null): Record<string, string> {
   const vars: Record<string, string> = {};

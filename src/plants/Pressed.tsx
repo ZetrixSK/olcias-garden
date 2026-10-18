@@ -6,6 +6,8 @@ import { BLOOM, Spike } from './Lavender';
 import { PansyBud, PansyFlower, PansyLeaf, type PansyColors } from './Pansy';
 import { LeafCluster, RoseBloom, Thorns } from './Rose';
 import { BLUE_LEAF, TULIP_NIGHT, TULIP_PINK, TulipFlower } from './Tulip';
+import { CYCLAMEN_COLORS, CyclamenFlower, HelleboreFlower, SnowdropBell } from './Winter';
+import { HollyhockFlower, PumpkinFlower } from './Gothic';
 
 type Pt = [number, number];
 
@@ -108,6 +110,87 @@ export function PressedSprig({ species, palette, seed }: { species: SpeciesId; p
         </g>
         <Stem d={s.d} w={2.2} color="#7fa079" />
         <TulipFlower x={s.tip[0]} y={s.tip[1] + 2} rot={s.angle} c={c} s={0.95} />
+      </g>
+    );
+  }
+
+  if (species === 'snowdrop') {
+    // two stalks curling over, each with its bell, and a strap leaf
+    const s1 = stemOf(52 + r() * 8, side * 4, side * 6);
+    const s2 = stemOf(40 + r() * 8, -side * 3, -side * 4);
+    return (
+      <g>
+        <path className="ink-thin" fill="#86a894" d={`M-2,0 C-3,-20 ${side * -6},-38 ${side * -4},-46 C${side * -1},-38 2,-20 2,0 Z`} />
+        <Stem d={s1.d} w={1.4} color="#7fa36b" />
+        <Stem d={s2.d} w={1.4} color="#7fa36b" />
+        <SnowdropBell x={s1.tip[0] + side * 2} y={s1.tip[1]} rot={-side * 20} s={1.2} />
+        <SnowdropBell x={s2.tip[0] - side * 2} y={s2.tip[1]} rot={side * 16} s={1.05} />
+      </g>
+    );
+  }
+
+  if (species === 'cyclamen') {
+    const s = stemOf(48 + r() * 10, side * (4 + r() * 6), side * (3 + r() * 5));
+    const c = pick(CYCLAMEN_COLORS, r());
+    return (
+      <g>
+        <g transform={`translate(${-side * 6} -12) rotate(${-side * 30})`}>
+          <path className="ink-thin" fill="#3f6b4a" d="M0,2 C-9,0 -13,-9 -10,-15 C-8,-19.6 -2.4,-19 0,-14.6 C2.4,-19 8,-19.6 10,-15 C13,-9 9,0 0,2 Z" />
+          <path d="M0,-2 C-6,-3 -8.4,-8.6 -6.8,-12.4 C-5.4,-14.8 -2,-14.4 0,-11.4 C2,-14.4 5.4,-14.8 6.8,-12.4 C8.4,-8.6 6,-3 0,-2 Z" fill="none" stroke="#b4c9b4" strokeWidth="1.4" />
+        </g>
+        <Stem d={s.d} w={1.4} color="#8a4a5a" />
+        <CyclamenFlower x={s.tip[0]} y={s.tip[1]} c={c} rot={s.angle} s={1.25} />
+      </g>
+    );
+  }
+
+  if (species === 'hellebore') {
+    const s = stemOf(50 + r() * 10, side * (4 + r() * 6), side * (3 + r() * 5));
+    const [lx, ly] = s.at(0.35);
+    return (
+      <g>
+        <g transform={`translate(${lx} ${ly}) rotate(${-side * 50})`}>
+          {[-30, 0, 30].map((a) => (
+            <path key={a} transform={`rotate(${a})`} className="ink-thin" fill="#3d5f45" d="M0,0 C-3.4,-5 -3.6,-14 0,-20 C3.6,-14 3.4,-5 0,0 Z" />
+          ))}
+        </g>
+        <Stem d={s.d} w={1.8} color="#8a7a5a" />
+        <HelleboreFlower x={s.tip[0]} y={s.tip[1] - 6} rot={s.angle} s={1.3} />
+      </g>
+    );
+  }
+
+  if (species === 'hollyhock') {
+    // a cut length of the spire: two open flowers and buds at its tip
+    const s = stemOf(70 + r() * 10, side * (3 + r() * 5), side * (2 + r() * 4));
+    const [ax, ay] = s.at(0.45);
+    const [bx, by] = s.at(0.72);
+    return (
+      <g>
+        <Stem d={s.d} w={2} color="#6b8a50" />
+        <HollyhockFlower x={ax - side * 4} y={ay} s={1.15} />
+        <HollyhockFlower x={bx + side * 4} y={by} s={1} />
+        <ellipse className="ink-thin" cx={s.tip[0]} cy={s.tip[1] + 2} rx="2.6" ry="3.6" fill="#8fae6c" />
+        <ellipse className="ink-thin" cx={s.at(0.88)[0] - side * 2} cy={s.at(0.88)[1]} rx="2.8" ry="3.8" fill="#8fae6c" />
+      </g>
+    );
+  }
+
+  if (species === 'pumpkin') {
+    const s = stemOf(42 + r() * 10, side * (4 + r() * 6), side * (4 + r() * 4));
+    return (
+      <g>
+        <g transform={`translate(${-side * 4} -8) rotate(${-side * 40}) scale(0.9)`}>
+          <path
+            className="ink-thin"
+            fill="#5f8e57"
+            d="M0,1 C-5,1 -10,-1 -13,-4 C-15,-6 -14,-9 -11,-9 C-14,-12 -13,-16 -9,-16 C-9,-20 -5,-22 -2,-19 C-1,-23 1,-23 2,-19 C5,-22 9,-20 9,-16 C13,-16 14,-12 11,-9 C14,-9 15,-6 13,-4 C10,-1 5,1 0,1 Z"
+          />
+          <path d="M0,0 L0,-19 M0,-4 L-11,-8 M0,-4 L11,-8" fill="none" stroke="#3f6339" strokeWidth="0.8" />
+        </g>
+        <path d={`M${side * 3},-20 C${side * 12},-24 ${side * 10},-32 ${side * 16},-32 C${side * 20},-32 ${side * 19},-27 ${side * 16},-28`} fill="none" stroke="#7a9a4e" strokeWidth="0.9" />
+        <Stem d={s.d} w={1.5} color="#6f8f4a" />
+        <PumpkinFlower x={s.tip[0]} y={s.tip[1] - 4} rot={s.angle} s={1.4} />
       </g>
     );
   }

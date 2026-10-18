@@ -9,7 +9,7 @@ import { PressedBook } from './ui/PressedBook';
 /** Dev-only sheet of every species at every stage, opened with ?gallery. */
 export function Gallery() {
   return (
-    <svg viewBox="0 0 400 820" style={{ width: '100%', height: '100%', background: 'var(--wall)' }}>
+    <svg viewBox={`0 0 400 ${80 + SPECIES_IDS.length * 150}`} style={{ width: "100%", background: "var(--wall)" }}>
       {SPECIES_IDS.map((sp, r) =>
         STAGES.map((st, c) => (
           <g key={`${sp}-${st}`} transform={`translate(${55 + c * 97} ${150 + r * 150}) scale(0.72)`}>

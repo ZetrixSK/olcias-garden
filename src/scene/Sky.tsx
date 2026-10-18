@@ -155,7 +155,81 @@ function CloudLayers({ heavy }: { heavy: boolean }) {
   );
 }
 
-export function Sky({ weather }: { weather: Weather }) {
+/** Where the low sun sits at dawn (over the left-hand hills) and at dusk (over the right). */
+export const LOW_SUN_X = { dawn: 118, dusk: 286 } as const;
+const LOW_SUN_Y = 372;
+
+/** The sun at dawn or dusk: big, warm and low, half behind the far hills. */
+function LowSun({ x }: { x: number }) {
+  return (
+    <g transform={`translate(${x} ${LOW_SUN_Y})`}>
+      <circle r="62" fill="#ffd9a0" opacity="0.22" />
+      <circle r="42" fill="#ffcf8a" opacity="0.3" />
+      <circle r="27" className="ink" fill="#f6ad5c" />
+      <path d="M-17,-9 C-13,-18 -3,-22 6,-20 C-2,-17 -9,-12 -12,-4 Z" fill="#fbd08f" />
+    </g>
+  );
+}
+
+/** A long, thin cloud lit from below, for dawn and dusk. */
+function GlowCloud({ x, y, w }: { x: number; y: number; w: number }) {
+  return (
+    <g className="drift" style={{ animationDuration: '140s' }}>
+      <path
+        d={`M${x},${y} C${x + w * 0.2},${y - 6} ${x + w * 0.5},${y - 7} ${x + w * 0.7},${y - 3} C${x + w * 0.85},${y - 6} ${x + w},${y - 2} ${x + w},${y + 1} C${x + w * 0.6},${y + 4} ${x + w * 0.3},${y + 4} ${x},${y} Z`}
+        style={{ fill: 'var(--cloud)' }}
+      />
+      <path d={`M${x + w * 0.1},${y + 1} C${x + w * 0.4},${y + 3.4} ${x + w * 0.7},${y + 3.4} ${x + w * 0.95},${y + 1}`} fill="none" stroke="#ffd29a" strokeWidth="1.4" strokeLinecap="round" />
+    </g>
+  );
+}
+
+/** After the rain: a soft rainbow over the lake, its feet hidden behind the hills. */
+function Rainbow() {
+  const bands = ['#e88a8a', '#efb16f', '#f1d97c', '#9fcf8f', '#86b4d9', '#a993cf'];
+  return (
+    <g className="rainbow" opacity="0.5">
+      {bands.map((c, i) => (
+        <path key={c} d={`M${-20 + i * 5},420 A${230 - i * 5},${230 - i * 5} 0 0 1 ${420 - i * 5},420`} fill="none" stroke={c} strokeWidth="5.2" />
+      ))}
+    </g>
+  );
+}
+
+/** Northern lights: soft green curtains with a fringe of pink, swaying slowly. Very rare. */
+function Aurora() {
+  const curtain = (y: number, amp: number, c: string, o: number, dur: string, delay: string) => (
+    <g className="aurora-sway" style={{ animationDuration: dur, animationDelay: delay }}>
+      <path
+        d={`M20,${y} C80,${y - amp} 130,${y + amp} 200,${y - amp * 0.6} C260,${y - amp * 1.4} 320,${y + amp * 0.6} 380,${y - amp * 0.4} L380,${y + 70} C320,${y + 60 + amp * 0.4} 260,${y + 50} 200,${y + 62} C130,${y + 74} 80,${y + 56} 20,${y + 64} Z`}
+        fill={`url(#aurora-${c})`}
+        opacity={o}
+      />
+    </g>
+  );
+  return (
+    <g style={{ mixBlendMode: 'screen' }}>
+      <defs>
+        <linearGradient id="aurora-green" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#d79be8" stopOpacity="0.8" />
+          <stop offset="0.3" stopColor="#8affc8" stopOpacity="1" />
+          <stop offset="1" stopColor="#7dffbe" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="aurora-teal" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#ff9fd2" stopOpacity="0.4" />
+          <stop offset="0.35" stopColor="#6fe8d8" stopOpacity="0.7" />
+          <stop offset="1" stopColor="#6fe8d8" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {curtain(130, 26, 'green', 1, '18s', '0s')}
+      {curtain(176, 18, 'teal', 0.85, '23s', '-7s')}
+      {curtain(222, 14, 'green', 0.7, '29s', '-13s')}
+    </g>
+  );
+}
+
+export function Sky({ weather, rainbow = false, aurora = false }: { weather: Weather; rainbow?: boolean; aurora?: boolean }) {
+  const glow = weather.twilight && !weather.night && weather.sky !== 'rain' ? weather.twilight : null;
   return (
     <g>
       <defs>
@@ -166,7 +240,15 @@ export function Sky({ weather }: { weather: Weather }) {
         </linearGradient>
       </defs>
       <rect x="40" y="60" width="320" height="470" fill="url(#sky-grad)" />
-      {weather.sky === 'clear' && !weather.night && (
+      {glow && <LowSun x={LOW_SUN_X[glow]} />}
+      {glow && weather.sky === 'clear' && (
+        <>
+          <GlowCloud x={glow === 'dawn' ? 170 : 70} y={300} w={120} />
+          <GlowCloud x={glow === 'dawn' ? 60 : 230} y={250} w={90} />
+          <Puff x={glow === 'dawn' ? 250 : 92} y={140} s={0.7} drift="110s" />
+        </>
+      )}
+      {weather.sky === 'clear' && !weather.night && !glow && (
         <>
           <Sun />
           <Puff x={78} y={118} s={0.85} drift="80s" />
@@ -174,7 +256,34 @@ export function Sky({ weather }: { weather: Weather }) {
         </>
       )}
       {weather.sky === 'clear' && weather.night && <Puff x={92} y={210} s={0.7} drift="120s" />}
+      {weather.night && aurora && weather.sky === 'clear' && <Aurora />}
       {weather.sky !== 'clear' && <CloudLayers heavy={weather.sky === 'rain'} />}
+      {rainbow && !weather.night && weather.sky !== 'rain' && <Rainbow />}
+    </g>
+  );
+}
+
+/** Now and then a shooting star streaks across the night sky. */
+function ShootingStars() {
+  return (
+    <g>
+      {[
+        { x: 260, y: 96, rot: 160, dur: '71s', delay: '-9s' },
+        { x: 170, y: 150, rot: 148, dur: '113s', delay: '-50s' },
+      ].map((s, i) => (
+        <g key={i} transform={`translate(${s.x} ${s.y}) rotate(${s.rot})`}>
+          <g className="shooting-star" style={{ animationDuration: s.dur, animationDelay: s.delay }}>
+            <path d="M0,0 L-46,0" stroke="url(#star-trail)" strokeWidth="1.6" strokeLinecap="round" />
+            <circle r="1.6" fill="#fffbe9" />
+          </g>
+        </g>
+      ))}
+      <defs>
+        <linearGradient id="star-trail" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#fffbe9" stopOpacity="0" />
+          <stop offset="1" stopColor="#fffbe9" stopOpacity="0.9" />
+        </linearGradient>
+      </defs>
     </g>
   );
 }
@@ -193,6 +302,7 @@ export function SkyLights({ weather, phase }: { weather: Weather; phase: number 
   return (
     <g>
       <Stars />
+      <ShootingStars />
       <Moon phase={phase} />
     </g>
   );

@@ -9,7 +9,9 @@ import { EmptySlot, GardenPlanter } from './GardenPlanter';
 import { fv, sv } from './geometry';
 import { Sign, WallMotifs } from './Room';
 import { Bunting, SillEnds } from './ShelfDecor';
-import { Landscape, Rain, SeasonAir, SeasonBranch } from './Outside';
+import { LakeLife, Landscape, Rain, SeasonAir, SeasonBranch } from './Outside';
+import { outsideKey, outsideNow } from '../weather/moments';
+import { useMemo } from 'react';
 import { Sky, SkyLights } from './Sky';
 import { moonPhase } from '../weather/moon';
 import { occasionShown, seasonShown } from '../theme/seasons';
@@ -93,7 +95,7 @@ function Hanger({ x, rimY }: { x: number; rimY: number }) {
   );
 }
 
-export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movingId, wateringId, onSlot, paper = null, pictures = {}, drawingId = null }: {
+export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movingId, wateringId, onSlot, paper = null, pictures = {}, drawingId = null, rainbow = false }: {
   theme: Theme;
   weather: Weather;
   viewH: number;
@@ -108,6 +110,7 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
   pictures?: Record<string, string>;
   /** The drawing whose card is open. */
   drawingId?: string | null;
+  rainbow?: boolean;
 }) {
   // short screens (Safari with its bars) see the whole wall slightly smaller, with wallpaper at the sides
   const h = Math.max(viewH, CORE_H);
@@ -120,6 +123,9 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
   const bySlot = new Map(garden.plants.map((p) => [p.slot, p]));
   const season = seasonShown(now);
   const occasion = occasionShown(now);
+  const key = outsideKey(now, season, weather.night, weather.sky, rainbow);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the key holds everything that matters
+  const outside = useMemo(() => outsideNow(now, season, weather.night, weather.sky, rainbow), [key]);
   const lantern = { x: 200, y: bottom - 46, s: 0.95 };
 
   return (
@@ -138,9 +144,10 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
 
       <g clipPath="url(#shelf-window-clip)">
         <g transform={SKY_FIT}>
-          <Sky weather={weather} />
+          <Sky weather={weather} rainbow={outside.rainbow} aurora={outside.aurora} />
           <Landscape weather={weather} season={season} />
           <SeasonBranch season={season} />
+          <LakeLife visitors={outside.visitors} fog={outside.fog} />
           <SeasonAir season={season} weather={weather} />
           {occasion === 'halloween' && weather.night && weather.sky !== 'rain' && <Bats />}
         </g>

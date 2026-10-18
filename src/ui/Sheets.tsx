@@ -183,7 +183,9 @@ export function PlantPicker({ onPick, onDrawing, busy, error, onClose }: {
         {SPECIES_IDS.map((s) => (
           <button key={s} onClick={() => onPick(s)}>
             <Preview species={s} />
-            <span className="pl">{SPECIES[s].polish}</span>
+            <span className="pl" style={SPECIES[s].polish.length > 9 ? { fontSize: '0.82em' } : undefined}>
+              {SPECIES[s].polish}
+            </span>
             <span className="en">{SPECIES[s].name}</span>
           </button>
         ))}

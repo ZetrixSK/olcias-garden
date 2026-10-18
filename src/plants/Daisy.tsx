@@ -64,12 +64,12 @@ function DaisyBud({ x, y, pink }: { x: number; y: number; pink?: boolean }) {
   );
 }
 
-export function DaisyPlant({ stage }: { stage: Stage }) {
+export function DaisyPlant({ stage, label = 'stokrotka' }: { stage?: Stage; label?: string }) {
   if (stage === 'seed') {
     return (
       <g>
         <Seeds color="#7a5a3a" />
-        <SeedMarker label="stokrotka" />
+        <SeedMarker label={label} />
       </g>
     );
   }

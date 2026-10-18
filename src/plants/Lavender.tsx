@@ -65,12 +65,12 @@ function Stems({ count, spread, len, n, colors }: { count: number; spread: numbe
   );
 }
 
-export function LavenderPlant({ stage }: { stage: Stage }) {
+export function LavenderPlant({ stage, label = 'lawenda' }: { stage?: Stage; label?: string }) {
   if (stage === 'seed') {
     return (
       <g>
         <Seeds color="#3e3328" />
-        <SeedMarker label="lawenda" />
+        <SeedMarker label={label} />
       </g>
     );
   }

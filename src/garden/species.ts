@@ -1,4 +1,4 @@
-export type SpeciesId = 'pansy' | 'tulip' | 'rose' | 'daisy' | 'lavender';
+export type SpeciesId = 'pansy' | 'tulip' | 'rose' | 'daisy' | 'lavender' | 'snowdrop' | 'cyclamen' | 'hellebore' | 'hollyhock' | 'pumpkin';
 export type Stage = 'seed' | 'seedling' | 'bud' | 'bloom';
 
 export const STAGES: Stage[] = ['seed', 'seedling', 'bud', 'bloom'];
@@ -22,6 +22,14 @@ export const SPECIES: Record<SpeciesId, SpeciesInfo> = {
   rose: { name: 'Rose', polish: 'róża', hours: [12, 60, 120], pot: 'round' },
   daisy: { name: 'Daisy', polish: 'stokrotka', hours: [6, 30, 72], pot: 'teacup' },
   lavender: { name: 'Lavender', polish: 'lawenda', hours: [10, 48, 108], pot: 'cauldron' },
+  // winter flowers, so something is in bloom whatever the season outside
+  snowdrop: { name: 'Snowdrop', polish: 'przebiśnieg', hours: [8, 30, 72], pot: 'teacup' },
+  cyclamen: { name: 'Cyclamen', polish: 'cyklamen', hours: [10, 44, 96], pot: 'round' },
+  hellebore: { name: 'Christmas rose', polish: 'ciemiernik', hours: [12, 54, 110], pot: 'wide' },
+  // for the witchy room
+  hollyhock: { name: 'Black hollyhock', polish: 'malwa', hours: [14, 60, 120], pot: 'slim' },
+  // the Halloween one
+  pumpkin: { name: 'Pumpkin', polish: 'dynia', hours: [6, 30, 80], pot: 'cauldron' },
 };
 
 export const SPECIES_IDS = Object.keys(SPECIES) as SpeciesId[];

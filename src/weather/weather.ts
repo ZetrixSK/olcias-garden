@@ -1,13 +1,21 @@
 import type { Weather } from '../theme/palettes';
+import { skyPhase } from './sun';
 
 export function isNightAt(date: Date): boolean {
-  const h = date.getHours();
-  return h >= 20 || h < 6;
+  return skyPhase(date).night;
 }
 
-/** Local time only: a clear sky, at night from 8 pm to 6 am. */
+/** Local time only: a clear sky, dark from a little after sunset until a little before sunrise, glowing at dawn and dusk. */
 export function clockWeather(date: Date): Weather {
-  return { sky: 'clear', night: isNightAt(date) };
+  const { night, twilight } = skyPhase(date);
+  return twilight ? { sky: 'clear', night, twilight } : { sky: 'clear', night };
+}
+
+/** Adds the dawn or dusk glow to a live reading, when the sky isn't raining and it is daytime there. */
+export function withTwilight(w: Weather, date: Date): Weather {
+  if (w.night || w.sky === 'rain') return w;
+  const { twilight } = skyPhase(date);
+  return twilight ? { ...w, twilight } : w;
 }
 
 /** WMO weather codes as returned by Open-Meteo, folded into clear, cloudy or rain, by day or night. */

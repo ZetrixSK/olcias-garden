@@ -346,11 +346,11 @@ function WhiteFace({ petted, eyes }: { petted: boolean; eyes: 'open' | 'up' | 'c
 }
 
 /** Two front paws resting on the bottom edge of the screen. */
-function Paws({ fill, shade, ticked }: { fill: string; shade: string; ticked?: boolean }) {
+function Paws({ fill, shade, ticked, spread = 24 }: { fill: string; shade: string; ticked?: boolean; spread?: number }) {
   return (
     <g>
       {[-1, 1].map((side) => (
-        <g key={side} transform={`translate(${side * 24} -4)`}>
+        <g key={side} transform={`translate(${side * spread} -4)`}>
           <path className="ink" fill={fill} d="M-12,10 C-13,0 -9,-8 0,-8 C9,-8 13,0 12,10 Z" />
           <path fill={shade} d={side > 0 ? 'M6,-6 C11,-2 12,4 12,10 L7,10 C8,4 8,0 6,-6 Z' : 'M-6,-6 C-11,-2 -12,4 -12,10 L-7,10 C-8,4 -8,0 -6,-6 Z'} />
           <path className="ink-thin" fill="none" d="M-4,-7 L-4.4,-2 M0,-8 L0,-3 M4,-7 L4.4,-2" />
@@ -395,35 +395,77 @@ export function PeekingDogs({ bottom, mood }: { bottom: number; mood: DogMood })
     window.setTimeout(() => setPetted((p) => (p === who ? null : p)), 1400);
   };
   const T = bottom - 48;
-  // sleepy heads sink a little lower behind the sofa
-  const sink = sleepy ? 12 : 0;
-  const head = (x: number, dy: number) => `translate(${x} ${bottom - 6 + dy + sink}) scale(0.84)`;
-  return (
-    <g>
-      <SofaBack T={T} part="shadow" />
-      <g transform={head(104, 0)} className="tappable" onClick={() => pet('grey')} aria-label={DOG_NAMES.grey}>
-        <g className={petted === 'grey' ? 'nuzzle' : 'peek'} style={{ animationDelay: '-2s' }}>
-          <GreyFace petted={petted === 'grey'} sleepy={sleepy} />
-        </g>
-      </g>
-      <g transform={head(298, 4)} className="tappable" onClick={() => pet('white')}>
-        <g className={petted === 'white' ? 'nuzzle' : 'peek'}>
-          <WhiteFace petted={petted === 'white'} eyes={sleepy ? 'closed' : mood === 'rain' ? 'up' : 'open'} />
-        </g>
-      </g>
-      <SofaBack T={T} part="sofa" />
-      {petted === 'grey' && <NameTag x={104} y={T - 112 + sink} name={DOG_NAMES.grey} />}
-      {petted === 'white' && <NameTag x={298} y={T - 90 + sink} name={DOG_NAMES.white} />}
+  const head = (x: number, dy: number) => `translate(${x} ${bottom - 6 + dy}) scale(0.84)`;
+  const grey = (
+    <g className={petted === 'grey' ? 'nuzzle' : 'peek'} style={{ animationDelay: '-2s' }}>
+      <GreyFace petted={petted === 'grey'} sleepy={sleepy} />
+    </g>
+  );
+  const white = (
+    <g className={petted === 'white' ? 'nuzzle' : 'peek'}>
+      <WhiteFace petted={petted === 'white'} eyes={sleepy ? 'closed' : mood === 'rain' ? 'up' : 'open'} />
+    </g>
+  );
+  const paws = (spread: number) => (
+    <>
       <g transform={head(104, 0)} className="tappable" onClick={() => pet('grey')}>
         <g transform="translate(0 -51)">
-          <Paws fill={G.base} shade={G.shade} ticked />
+          <Paws fill={G.base} shade={G.shade} ticked spread={spread} />
         </g>
       </g>
       <g transform={head(298, 0)} className="tappable" onClick={() => pet('white')}>
         <g transform="translate(0 -51)">
-          <Paws fill={W.base} shade={W.shade} />
+          <Paws fill={W.base} shade={W.shade} spread={spread} />
         </g>
       </g>
+    </>
+  );
+  const tags = (
+    <>
+      {petted === 'grey' && <NameTag x={104} y={T - (sleepy ? 100 : 112)} name={DOG_NAMES.grey} />}
+      {petted === 'white' && <NameTag x={298} y={T - (sleepy ? 80 : 90)} name={DOG_NAMES.white} />}
+    </>
+  );
+
+  if (sleepy) {
+    // asleep: chins sunk onto the sofa back with the paws tucked in front of them. The heads are
+    // cut off at the sofa's top edge so their necks stay behind it.
+    const restY = 7;
+    return (
+      <g>
+        <defs>
+          <clipPath id="above-sofa">
+            <rect x="-400" y={T - 2000} width="1200" height={2000 + 3} />
+          </clipPath>
+        </defs>
+        <SofaBack T={T} part="shadow" />
+        <SofaBack T={T} part="sofa" />
+        <g clipPath="url(#above-sofa)">
+          <g transform={head(104, restY)} className="tappable" onClick={() => pet('grey')} aria-label={DOG_NAMES.grey}>
+            {grey}
+          </g>
+          <g transform={head(298, restY + 4)} className="tappable" onClick={() => pet('white')} aria-label={DOG_NAMES.white}>
+            {white}
+          </g>
+        </g>
+        {paws(17)}
+        {tags}
+      </g>
+    );
+  }
+
+  return (
+    <g>
+      <SofaBack T={T} part="shadow" />
+      <g transform={head(104, 0)} className="tappable" onClick={() => pet('grey')} aria-label={DOG_NAMES.grey}>
+        {grey}
+      </g>
+      <g transform={head(298, 4)} className="tappable" onClick={() => pet('white')} aria-label={DOG_NAMES.white}>
+        {white}
+      </g>
+      <SofaBack T={T} part="sofa" />
+      {tags}
+      {paws(24)}
     </g>
   );
 }

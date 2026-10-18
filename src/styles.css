@@ -265,6 +265,66 @@ body {
   100% { transform: translateY(150px); opacity: 0; }
 }
 
+/* sky moments */
+.shooting-star {
+  opacity: 0;
+  animation: shooting-star 71s linear infinite;
+}
+@keyframes shooting-star {
+  0%, 96% { opacity: 0; transform: translateX(-60px); }
+  96.6% { opacity: 1; }
+  98.4% { opacity: 1; }
+  99.2%, 100% { opacity: 0; transform: translateX(110px); }
+}
+.aurora-sway {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  animation: aurora 20s ease-in-out infinite alternate;
+}
+@keyframes aurora {
+  from { transform: skewX(-4deg) scaleY(0.94); }
+  to { transform: skewX(5deg) scaleY(1.08); }
+}
+.rainbow {
+  animation: rainbow-in 6s ease-out both;
+}
+@keyframes rainbow-in {
+  from { opacity: 0; }
+}
+
+/* life at the lake */
+.swim {
+  animation: swim 90s ease-in-out infinite alternate;
+}
+@keyframes swim {
+  from { transform: translateX(30px); }
+  to { transform: translateX(-120px); }
+}
+.skate {
+  animation: skate 16s ease-in-out infinite alternate;
+}
+@keyframes skate {
+  from { transform: translateX(-70px); }
+  to { transform: translateX(70px); }
+}
+.flit {
+  animation: flit 13s ease-in-out infinite;
+}
+@keyframes flit {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(24px, -14px); }
+  50% { transform: translate(8px, -26px); }
+  75% { transform: translate(-18px, -10px); }
+}
+.flutter {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: flutter 0.28s ease-in-out infinite alternate;
+}
+@keyframes flutter {
+  to { transform: scaleX(0.35); }
+}
+
 /* seasonal air outside the window */
 .leaf-fall {
   transform-box: fill-box;

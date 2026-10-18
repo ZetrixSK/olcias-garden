@@ -1,5 +1,6 @@
 import type { Weather } from '../theme/palettes';
 import type { Season } from '../theme/seasons';
+import type { Visitors } from '../weather/moments';
 import { fv, seeded } from './geometry';
 
 /** A bare winter tree: trunk and a few forked branches, with snow resting on them. */
@@ -152,6 +153,15 @@ export function Landscape({ weather, season = 'summer' }: { weather: Weather; se
           </g>
         ) : (
           <g>
+            {weather.twilight && !weather.night && weather.sky !== 'rain' && (
+              <g stroke="#ffd39a" strokeLinecap="round" opacity="0.85">
+                {[0, 1, 2, 3, 4].map((i) => {
+                  const x = weather.twilight === 'dawn' ? 118 : 286;
+                  const w = 26 - i * 4;
+                  return <path key={i} d={`M${x - w / 2},${418 + i * 8} L${x + w / 2},${418 + i * 8}`} strokeWidth={2 - i * 0.25} />;
+                })}
+              </g>
+            )}
             <path d="M40,410 C100,412 160,409 200,411 C260,413 320,410 360,412 L360,418 C300,417 240,419 200,417 C150,415 100,419 40,417 Z" style={fv('pine-shade')} opacity="0.35" />
             <g style={{ stroke: 'var(--lake-hi)' }} strokeWidth="1" strokeLinecap="round" opacity="0.8">
               <path d="M96,428 L118,428 M150,436 L164,436 M226,432 L250,432 M276,442 L292,442 M126,448 L140,448 M200,452 L214,452" />
@@ -414,6 +424,143 @@ export function Frost() {
           />
         </g>
       ))}
+    </g>
+  );
+}
+
+// ---- life at the lake ----
+
+function Duck({ x, y, drake }: { x: number; y: number; drake: boolean }) {
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <path d="M-7,1.6 C-3,2.6 3,2.6 7,1.4" fill="none" style={{ stroke: 'var(--lake-hi)' }} strokeWidth="0.9" strokeLinecap="round" />
+      <path className="ink-thin" fill={drake ? '#b7a99a' : '#8f6f55'} d="M-6,0 C-6,-3.4 -2,-4.4 2,-3.6 C4,-3.2 5,-2 5.4,0 C2,1 -3,1 -6,0 Z" />
+      <path fill={drake ? '#6d5444' : '#6f533f'} d="M-6,0 C-5.4,-2 -3.6,-2.8 -2,-2.6 C-3,-1.4 -4,-0.4 -6,0 Z" />
+      <circle className="ink-thin" cx="4.6" cy="-4.4" r="2" fill={drake ? '#2f6b4a' : '#8f6f55'} />
+      {drake && <path d="M3,-2.6 L6.2,-2.6" stroke="#f7f3ea" strokeWidth="0.8" />}
+      <path d="M6.4,-4.6 L8.4,-4 L6.4,-3.6 Z" fill="#e3b04a" />
+      <circle cx="5.1" cy="-4.9" r="0.35" fill="#140c10" />
+    </g>
+  );
+}
+
+function Heron({ x, y }: { x: number; y: number }) {
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <path d="M-1,0 L-0.6,-8 M1.4,0 L1,-8" stroke="#4d4a52" strokeWidth="0.8" />
+      <path className="ink-thin" fill="#a7adb8" d="M-4,-8 C-6,-12 -3,-16 2,-15 C5,-14.4 6,-12 4.4,-9 C2,-7.4 -2,-7 -4,-8 Z" />
+      <path fill="#7f8692" d="M-5,-9 C-3,-8.4 0,-8.4 3,-9.6 C1,-11 -3,-11 -5,-9 Z" />
+      <path d="M3,-14 C6,-16 4,-19 6,-22" fill="none" stroke="#c9cdd5" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M3,-14 C6,-16 4,-19 6,-22" fill="none" stroke="#7f8692" strokeWidth="0.5" />
+      <circle cx="6.4" cy="-22.4" r="1.4" fill="#d6d9df" className="ink-thin" />
+      <path d="M7.4,-22.6 L11.6,-21.8 L7.4,-21.6 Z" fill="#d3a64a" />
+      <path d="M5.6,-23.4 L3,-23" stroke="#2d2a30" strokeWidth="0.5" />
+    </g>
+  );
+}
+
+function Deer({ x, y }: { x: number; y: number }) {
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <path d="M-4,0 L-4.2,-5 M-2.6,0 L-2.8,-5 M3,0 L3.2,-5 M4.4,0 L4.4,-5" stroke="#6b4a36" strokeWidth="0.8" />
+      <path className="ink-thin" fill="#9b6a47" d="M-5,-5 C-5.6,-8 -3,-9 0,-8.6 C3,-8.4 5.6,-8 5.6,-5.4 C5,-4.2 -4,-4 -5,-5 Z" />
+      <path fill="#f1e2cc" d="M-5.2,-6.8 C-6.4,-6.4 -6.4,-5.2 -5.2,-5.2 Z" />
+      <path className="ink-thin" fill="#9b6a47" d="M4,-7.6 C4.6,-10 5.6,-12 6.6,-13 L8.6,-12.4 C8,-11 7,-9 6,-6.6 Z" />
+      <path className="ink-thin" fill="#9b6a47" d="M6,-13.6 C7.6,-14.4 9.6,-13.6 10.6,-12.4 L9.6,-11.6 C8.4,-12 7,-12 6.4,-12.4 Z" />
+      <path d="M6.6,-14 L5.6,-16 M7.6,-14 L8.4,-16" stroke="#7a5038" strokeWidth="0.8" strokeLinecap="round" />
+      <circle cx="10.4" cy="-12.2" r="0.4" fill="#1c1218" />
+    </g>
+  );
+}
+
+function Robin({ x, y }: { x: number; y: number }) {
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <path d="M-1,0 L-1.4,2.4 M1,0 L1.2,2.4" stroke="#4a3a32" strokeWidth="0.7" />
+      <path className="ink-thin" fill="#8a6a52" d="M-6,-3 C-6,-7 -2,-9 1.6,-8.4 C5,-7.6 5.6,-3.6 4,-1 C1,1 -4,0.6 -6,-3 Z" />
+      <path fill="#e2773f" d="M0.6,-6.6 C3.6,-6.6 5,-4 4,-1.4 C2,-0.4 0,-1.4 -0.4,-3.6 C-0.6,-5 -0.2,-6.2 0.6,-6.6 Z" />
+      <path d="M-6,-3 L-9,-1.4 L-8.6,-3.8 Z" fill="#6f533f" />
+      <circle cx="2.4" cy="-6.6" r="0.5" fill="#140c10" />
+      <path d="M4.4,-6.8 L6,-6.4 L4.4,-6 Z" fill="#3a2d28" />
+    </g>
+  );
+}
+
+function Skater({ x, y }: { x: number; y: number }) {
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <path d="M-1.4,-6 L-3,0 M0.6,-6 L2.4,-0.4" stroke="#2f2a36" strokeWidth="1.2" strokeLinecap="round" />
+      <path d="M-4.4,0.4 L-1.6,0.2 M1.2,0 L4,-0.6" stroke="#cfd6de" strokeWidth="0.8" strokeLinecap="round" />
+      <path className="ink-thin" fill="#3d4a6b" d="M-2.6,-6 C-3,-9 -2,-12 0,-12.4 C2,-12 2.6,-9 2,-6 Z" />
+      <path d="M-3,-10 L-6,-7.4 M2.4,-10 L5,-8" stroke="#3d4a6b" strokeWidth="1.1" strokeLinecap="round" />
+      <path d="M-1.6,-11.6 C0,-11 1.4,-11.4 2,-12 L3.6,-9.4" fill="none" stroke="#c94a5d" strokeWidth="1.2" strokeLinecap="round" />
+      <circle className="ink-thin" cx="0" cy="-14" r="1.8" fill="#f1d3bd" />
+      <path d="M-1.9,-14.6 C-1.6,-16.6 1.6,-16.6 1.9,-14.6 Z" fill="#c94a5d" />
+      <path d="M-4,1.4 C-1,1.8 3,1.6 6,1" fill="none" stroke="#f7fafc" strokeWidth="0.7" opacity="0.8" />
+    </g>
+  );
+}
+
+function Butterfly({ c }: { c: string }) {
+  return (
+    <g className="flutter">
+      <path className="ink-thin" fill={c} d="M0,0 C-3,-5 -7,-5 -6,-1 C-6,1 -3,1.6 0,0 Z M0,0 C3,-5 7,-5 6,-1 C6,1 3,1.6 0,0 Z" />
+      <path className="ink-thin" fill={c} d="M0,0.4 C-2,2 -3.6,4 -2,4.4 C-1,4.6 -0.4,2.6 0,0.4 Z M0,0.4 C2,2 3.6,4 2,4.4 C1,4.6 0.4,2.6 0,0.4 Z" />
+      <path d="M0,-1.6 L0,2" stroke="#3a2a30" strokeWidth="0.8" />
+    </g>
+  );
+}
+
+/**
+ * Who's out by the lake today, decided by the date: ducks on the water in the warm months, a heron
+ * at the reeds, a deer at the forest edge, a robin on the winter branch, someone skating on the ice,
+ * butterflies near the window on sunny days.
+ */
+export function LakeLife({ visitors, fog }: { visitors: Visitors; fog: boolean }) {
+  return (
+    <g>
+      {visitors.deer && <Deer x={124} y={404} />}
+      {visitors.ducks && (
+        <g className="swim" style={{ animationDuration: '90s' }}>
+          <Duck x={232} y={432} drake />
+          <Duck x={246} y={436} drake={false} />
+        </g>
+      )}
+      {visitors.heron && <Heron x={126} y={462} />}
+      {visitors.skater && (
+        <g className="skate">
+          <Skater x={200} y={440} />
+        </g>
+      )}
+      {visitors.robin && <Robin x={124} y={147} />}
+      {visitors.butterflies && (
+        <>
+          <g transform="translate(150 372)">
+            <g className="flit" style={{ animationDuration: '13s' }}>
+              <Butterfly c="#f3b4c6" />
+            </g>
+          </g>
+          <g transform="translate(262 342) scale(0.85)">
+            <g className="flit" style={{ animationDuration: '17s', animationDelay: '-6s' }}>
+              <Butterfly c="#f3d36b" />
+            </g>
+          </g>
+        </>
+      )}
+      {fog && (
+        <g opacity="0.95">
+          <g className="drift" style={{ animationDuration: '70s' }}>
+            <path d="M20,402 C80,394 150,400 210,396 C270,392 330,398 380,394 L380,414 C320,418 260,412 200,416 C140,420 80,414 20,418 Z" fill="#f5f3f0" opacity="0.85" />
+          </g>
+          <g className="drift" style={{ animationDuration: '95s', animationDelay: '-30s' }}>
+            <path d="M20,430 C90,424 160,432 220,426 C280,420 340,428 380,424 L380,446 C320,450 260,444 200,448 C140,452 80,444 20,448 Z" fill="#f7f5f2" opacity="0.75" />
+          </g>
+          <path d="M40,384 L360,384 L360,470 L40,470 Z" fill="#eeebe7" opacity="0.3" />
+          <g className="drift" style={{ animationDuration: '120s', animationDelay: '-50s' }}>
+            <path d="M20,384 C100,378 170,386 230,380 C290,374 340,382 380,378 L380,396 C320,400 250,394 190,398 C130,402 70,396 20,400 Z" fill="#f5f3f0" opacity="0.7" />
+          </g>
+        </g>
+      )}
     </g>
   );
 }

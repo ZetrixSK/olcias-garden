@@ -87,7 +87,7 @@ export function Thorns({ pts }: { pts: Array<[number, number, number]> }) {
   );
 }
 
-export function RosePlant({ stage = 'bloom' }: { stage?: Stage }) {
+export function RosePlant({ stage = 'bloom', label = 'róża' }: { stage?: Stage; label?: string }) {
   if (stage === 'seed') {
     return (
       <g>
@@ -95,7 +95,7 @@ export function RosePlant({ stage = 'bloom' }: { stage?: Stage }) {
         <Stem d="M-1,0 L-2,-28" w={2.6} color="#6b8049" />
         <ellipse className="ink-thin" cx="-2" cy="-28.4" rx="1.6" ry="0.9" fill="#c9b98f" />
         <LeafCluster x={-1.6} y={-20} rot={55} len={9} young />
-        <SeedMarker label="róża" />
+        <SeedMarker label={label} />
       </g>
     );
   }

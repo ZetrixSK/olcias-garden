@@ -53,7 +53,7 @@ import { ease, lapseDuration, LapseClock } from './ui/Clock';
 import { Letter } from './ui/Letter';
 import { PressedBook } from './ui/PressedBook';
 import { pressedToday } from './garden/pressed';
-import { paletteVars } from './theme/palettes';
+import { paletteVars, type Weather } from './theme/palettes';
 import { seasonShown } from './theme/seasons';
 import { isDarkRoom, startingRoom, type OwnRoom } from './theme/ownRoom';
 import { MoveBanner, PlantCard, PlantPicker, StyleSheet, VarietyPicker, WindowChooser } from './ui/Sheets';
@@ -306,7 +306,22 @@ export function App() {
     [wallpaper, wallpaperUrl],
   );
   const settings = garden?.settings;
-  const { weather, status } = useWeather(settings ?? DEFAULT_SETTINGS, now);
+  const { weather: realWeather, status } = useWeather(settings ?? DEFAULT_SETTINGS, now);
+  // ?glow=dawn or ?glow=dusk shows the sky at sunrise or sunset, to see it without waiting
+  const glowPreview = new URLSearchParams(window.location.search).get('glow');
+  const weather: Weather =
+    (glowPreview === 'dawn' || glowPreview === 'dusk') && realWeather.sky !== 'rain'
+      ? { ...realWeather, night: false, twilight: glowPreview }
+      : realWeather;
+
+  // when rain stops by day, a rainbow stays over the lake for a while
+  const lastSky = useRef(weather.sky);
+  const [rainbowUntil, setRainbowUntil] = useState(0);
+  useEffect(() => {
+    if (lastSky.current === 'rain' && weather.sky !== 'rain') setRainbowUntil(Date.now() + 75 * 60_000);
+    lastSky.current = weather.sky;
+  }, [weather.sky]);
+  const rainbow = !weather.night && now < rainbowUntil;
   // her own room shows its colours over the furniture of the room she based it on; while she's
   // painting it, the draft shows instead
   const own = mode.kind === 'roomStudio' ? mode.draft : settings?.useOwn ? settings.own : null;
@@ -490,6 +505,7 @@ export function App() {
             paper={paper}
             photoUrl={garden.decor.photo ? (pictures[garden.decor.photo.img] ?? null) : null}
             onFrame={openDecorate}
+            rainbow={rainbow}
             hideCurtains={import.meta.env.DEV && window.location.search.includes('nocurtains')}
             garden={shown}
             now={shownNow}
@@ -510,6 +526,7 @@ export function App() {
             paper={paper}
             pictures={pictures}
             drawingId={mode.kind === 'drawing' ? mode.id : null}
+            rainbow={rainbow}
             wateringId={wateringId}
             onSlot={onSlot}
           />

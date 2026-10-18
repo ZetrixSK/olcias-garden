@@ -54,14 +54,14 @@ function TulipBud({ x, y, rot, tip }: { x: number; y: number; rot: number; tip: 
   );
 }
 
-export function TulipPlant({ stage = 'bloom' }: { stage?: Stage }) {
+export function TulipPlant({ stage = 'bloom', label = 'tulipan' }: { stage?: Stage; label?: string }) {
   if (stage === 'seed') {
     return (
       <g>
         <path className="ink" fill="#c79e72" d="M-8,1 C-8,-5 -4,-10 0,-14 C4,-10 8,-5 8,1 Z" />
         <path d="M-3,-1 C-3,-6 -1.5,-10 0,-13 M3,-1 C3,-6 1.5,-10 0,-13" fill="none" stroke="#9a7550" strokeWidth="0.9" />
         <path className="ink-thin" fill="#8fb07a" d="M-1.4,-13 C-1.2,-18 1.2,-18 1.4,-13 Z" />
-        <SeedMarker label="tulipan" />
+        <SeedMarker label={label} />
       </g>
     );
   }

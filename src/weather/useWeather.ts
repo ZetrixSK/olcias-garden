@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Settings } from '../garden/state';
 import type { Weather } from '../theme/palettes';
-import { clockWeather, fetchWeather, FRESH_MS, pickWeather, readCache } from './weather';
+import { clockWeather, fetchWeather, FRESH_MS, pickWeather, readCache, withTwilight } from './weather';
 
 export type WeatherStatus = 'clock' | 'live' | 'offline' | 'manual';
 
@@ -41,7 +41,7 @@ export function useWeather(settings: Settings, now: number): { weather: Weather;
 
   if (weatherMode === 'clock') return { weather: clockWeather(new Date(now)), status: 'clock' };
   if (weatherMode === 'live') {
-    if (live) return { weather: live.weather, status: live.ok ? 'live' : 'offline' };
+    if (live) return { weather: withTwilight(live.weather, new Date(now)), status: live.ok ? 'live' : 'offline' };
     return { weather: clockWeather(new Date(now)), status: 'offline' };
   }
   return { weather: manual, status: 'manual' };

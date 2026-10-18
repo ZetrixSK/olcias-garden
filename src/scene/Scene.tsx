@@ -1,4 +1,5 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
+import { outsideKey, outsideNow, type Outside } from '../weather/moments';
 import { WINDOW_SPOTS, type GardenState, type WindowSpot } from '../garden/state';
 import { chooseRoutes, type VineSpot } from '../garden/vines';
 import { POT_HEIGHT } from '../plants/Pots';
@@ -9,7 +10,7 @@ import { DogBed, Dogs } from './Dogs';
 import { dogMood, type DogMood } from './dogMood';
 import { EmptySlot, GardenPlanter } from './GardenPlanter';
 import { FLOOR_Y, SILL_Y, VIEW_H, VIEW_W, WINDOW_OPENING } from './geometry';
-import { Frost, Landscape, Rain, SeasonAir, SeasonBranch } from './Outside';
+import { Frost, LakeLife, Landscape, Rain, SeasonAir, SeasonBranch } from './Outside';
 import { Curtains, Floor, Shelf, Sign, Sill, Wall, WindowFrame } from './Room';
 import { Sky, SkyLights } from './Sky';
 import { moonPhase } from '../weather/moon';
@@ -129,20 +130,21 @@ function layoutFor(viewH: number) {
   return { dy, minY, wallMid, pictureScale };
 }
 
-type Lit = { theme: Theme; sky: Weather['sky']; night: boolean };
+type Lit = { theme: Theme; sky: Weather['sky']; night: boolean; twilight: Weather['twilight'] };
 type Calendar = { season: Season; occasion: Occasion };
 /** The moon's phase, rounded so the lights aren't redrawn every minute for a change nobody could see. */
 const phaseAt = (now: number) => Math.round(moonPhase(now) * 100) / 100;
 
 /** Sky, landscape, wall and window frame: they only change with the theme and the weather. */
-const Backdrop = memo(function Backdrop({ theme, sky, night, season, occasion, paper }: Lit & Calendar & { paper: OwnPaper | null }) {
-  const weather = { sky, night };
+const Backdrop = memo(function Backdrop({ theme, sky, night, twilight, season, occasion, paper, outside }: Lit & Calendar & { paper: OwnPaper | null; outside: Outside }) {
+  const weather = { sky, night, twilight };
   return (
     <>
       <g clipPath="url(#window-clip)">
-        <Sky weather={weather} />
+        <Sky weather={weather} rainbow={outside.rainbow} aurora={outside.aurora} />
         <Landscape weather={weather} season={season} />
         <SeasonBranch season={season} />
+        <LakeLife visitors={outside.visitors} fog={outside.fog} />
         <SeasonAir season={season} weather={weather} />
         {/* outside, so they pass behind the shelf and the plants */}
         {occasion === 'halloween' && night && sky !== 'rain' && <Bats />}
@@ -195,8 +197,8 @@ const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hi
 });
 
 /** The light over everything: night or rain tint, moon and stars, candlelight. */
-const Lights = memo(function Lights({ theme, sky, night, phase, occasion, dy, wallMid }: Lit & { phase: number; occasion: Occasion; dy: number; wallMid: number }) {
-  const weather = { sky, night };
+const Lights = memo(function Lights({ theme, sky, night, twilight, phase, occasion, dy, wallMid }: Lit & { phase: number; occasion: Occasion; dy: number; wallMid: number }) {
+  const weather = { sky, night, twilight };
   const tint = roomTint(weather, theme);
   const [fx, fy] = CANDLE_FLAME[theme];
   return (
@@ -225,7 +227,7 @@ const SillBoard = memo(Sill);
 const Trinket = memo(ShelfTrinket);
 const Candle = memo(SillCandle);
 
-export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, ...rest }: {
+export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, rainbow = false, ...rest }: {
   theme: Theme;
   weather: Weather;
   viewH: number;
@@ -237,6 +239,8 @@ export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains 
   onBook?: () => void;
   /** Her own wallpaper, if she has one. */
   paper?: OwnPaper | null;
+  /** A rainbow over the lake, for a while after rain. */
+  rainbow?: boolean;
   /** Her photo in the frame on the wall; tapping the frame calls onFrame. */
   photoUrl?: string | null;
   onFrame?: () => void;
@@ -245,6 +249,9 @@ export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains 
   const spots = { ...rest, placed };
   const { dy, minY, wallMid, pictureScale } = layoutFor(viewH);
   const cal: Calendar = { season: seasonShown(rest.now), occasion: occasionShown(rest.now) };
+  const key = outsideKey(rest.now, cal.season, weather.night, weather.sky, rainbow);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- the key holds everything that matters
+  const outside = useMemo(() => outsideNow(rest.now, cal.season, weather.night, weather.sky, rainbow), [key]);
   return (
     <svg className="scene" viewBox={`0 ${minY.toFixed(1)} ${VIEW_W} ${viewH.toFixed(1)}`} preserveAspectRatio="xMidYMax slice">
       <defs>
@@ -258,7 +265,16 @@ export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains 
         </radialGradient>
       </defs>
 
-      <Backdrop theme={theme} sky={weather.sky} night={weather.night} season={cal.season} occasion={cal.occasion} paper={paper} />
+      <Backdrop
+        theme={theme}
+        sky={weather.sky}
+        night={weather.night}
+        twilight={weather.twilight ?? null}
+        season={cal.season}
+        occasion={cal.occasion}
+        paper={paper}
+        outside={outside}
+      />
 
       {/* vines climb behind the shelf board, like the ropes, and behind the pots on the sill */}
       <Vines placed={placed} snip={snip} />
@@ -283,7 +299,7 @@ export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains 
         photoUrl={photoUrl}
         onFrame={onFrame}
       />
-      <Lights theme={theme} sky={weather.sky} night={weather.night} phase={phaseAt(rest.now)} occasion={cal.occasion} dy={dy} wallMid={wallMid} />
+      <Lights theme={theme} sky={weather.sky} night={weather.night} twilight={weather.twilight ?? null} phase={phaseAt(rest.now)} occasion={cal.occasion} dy={dy} wallMid={wallMid} />
     </svg>
   );
 }
