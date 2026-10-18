@@ -6,11 +6,13 @@ import {
   catchUpNights,
   DEFAULT_SETTINGS,
   deleteDesign,
+  deleteDiaryEntry,
   drawingAt,
   isHanging,
   moveDrawing,
   newId,
   removeDrawing,
+  saveDiaryEntry,
   setPhoto,
   setPlantName,
   setPressNote,
@@ -52,6 +54,7 @@ import type { Snip, VineSpec } from './scene/Vines';
 import { ease, lapseDuration, LapseClock } from './ui/Clock';
 import { Letter } from './ui/Letter';
 import { PressedBook } from './ui/PressedBook';
+import { DiaryBook } from './ui/Diary';
 import { pressedToday } from './garden/pressed';
 import { paletteVars, type Weather } from './theme/palettes';
 import { seasonShown } from './theme/seasons';
@@ -191,6 +194,7 @@ export function App() {
   const [letterOpen, setLetterOpen] = useState(false);
   const [snip, setSnip] = useState<Snip | null>(null);
   const [bookOpen, setBookOpen] = useState(false);
+  const [diaryOpen, setDiaryOpen] = useState(false);
   const openBook = useCallback(() => setBookOpen(true), []);
   const [pictures, setPictures] = useState<Pictures>({});
   const [adding, setAdding] = useState<'wallpaper' | 'photo' | 'drawing' | null>(null);
@@ -541,6 +545,7 @@ export function App() {
         onLiveWeather={liveWeather}
         locating={locating}
         onLetter={() => setLetterOpen(true)}
+        onDiary={() => setDiaryOpen(true)}
         onBook={openBook}
         onDecorate={openDecorate}
         onOwnRoom={(edit) => {
@@ -756,6 +761,15 @@ export function App() {
       {mode.kind === 'move' && <MoveBanner text="Tap where it should go" onCancel={() => setMode({ kind: 'idle' })} />}
       {mode.kind === 'place' && <MoveBanner text="Tap a place in the window" onCancel={() => setMode({ kind: 'idle' })} />}
       {lapse && <LapseClock lapse={lapse.tl} p={lapse.p} fading={lapse.fading} onSkip={skipLapse} />}
+      {diaryOpen && (
+        <DiaryBook
+          diary={garden.diary}
+          now={now}
+          onSave={(key, mood, text) => update((g) => saveDiaryEntry(g, key, mood, text, Date.now()))}
+          onDelete={(key) => update((g) => deleteDiaryEntry(g, key))}
+          onClose={() => setDiaryOpen(false)}
+        />
+      )}
       {bookOpen && (
         <PressedBook
           pressed={garden.pressed}

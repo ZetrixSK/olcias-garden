@@ -5,6 +5,7 @@ import type { WeatherStatus } from '../weather/useWeather';
 import { CLOCK_ICON } from './Clock';
 import { ENVELOPE_ICON } from './Letter';
 import { BOOK_ICON } from './PressedBook';
+import { DIARY_ICON } from './Diary';
 
 const SUN = (
   <g>
@@ -56,7 +57,7 @@ const STATUS_TEXT: Record<WeatherStatus, string> = {
   manual: 'Chosen by you',
 };
 
-export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onBook, onDecorate, onClock, onStudio, onOwnRoom }: {
+export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onDiary, onBook, onDecorate, onClock, onStudio, onOwnRoom }: {
   settings: Settings;
   weather: Weather;
   status: WeatherStatus;
@@ -64,6 +65,7 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
   onLiveWeather: () => void;
   locating: boolean;
   onLetter: () => void;
+  onDiary: () => void;
   onBook: () => void;
   onDecorate: () => void;
   /** Shows her own room, opening the room painter first if she hasn't made one yet (or to change it). */
@@ -94,6 +96,9 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
           <Icon>{ENVELOPE_ICON}</Icon>
         </button>
       )}
+      <button className={settings.letter !== 'deleted' ? 'fab left third' : 'fab left second'} aria-label="Diary" onClick={onDiary}>
+        <Icon>{DIARY_ICON}</Icon>
+      </button>
       <button className="fab right second" aria-label="While you were away" onClick={onClock}>
         <Icon>{CLOCK_ICON}</Icon>
       </button>

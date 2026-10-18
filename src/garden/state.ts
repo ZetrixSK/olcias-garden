@@ -3,6 +3,7 @@ import { plantedAtForStage, stageAt } from './growth';
 import { MAX_DRAWINGS, NO_DECOR, parseDecor, type Decor, type Drawing, type Photo, type Wallpaper } from './decor';
 import { MAX_NAME, MAX_NOTE, MAX_PRESSED, parsePressed, pressedToday, pressingOf, type Pressing } from './pressed';
 import { parseOwnRoom, type OwnRoom } from '../theme/ownRoom';
+import { parseDiary, withEntry, withoutEntry, type Diary, type Mood } from './diary';
 import { designId, NO_DESIGNS, PANSY_PRESETS, parseDesigns, upsert, type Designs, type PansyDesign, type PotDesign, type PotRef } from './designs';
 import { lastNight, runNights, settleMiddleDir, trimmed, type Vine } from './vines';
 import { POT_KINDS, SPECIES, SPECIES_IDS, type GardenPot, type SpeciesId, type Stage } from './species';
@@ -75,6 +76,8 @@ export type GardenState = {
   pressed: Pressing[];
   /** Her own wallpaper, framed photo and drawings on the shelves. */
   decor: Decor;
+  /** Her diary, one page per day. */
+  diary: Diary;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -126,6 +129,7 @@ export function starterGarden(now: number): GardenState {
     designs: NO_DESIGNS,
     pressed: [],
     decor: NO_DECOR,
+    diary: {},
   };
 }
 
@@ -255,6 +259,15 @@ export function setPlantName(state: GardenState, id: string, name: string): Gard
 /** What she wrote beside a pressed flower. */
 export function setPressNote(state: GardenState, pressId: string, note: string): GardenState {
   return { ...state, pressed: state.pressed.map((p) => (p.id === pressId ? { ...p, note: note.slice(0, MAX_NOTE) } : p)) };
+}
+
+/** Saves a day's diary page; a page with no mood and nothing written is taken out. */
+export function saveDiaryEntry(state: GardenState, key: string, mood: Mood | null, text: string, now: number): GardenState {
+  return { ...state, diary: withEntry(state.diary, key, mood, text, now) };
+}
+
+export function deleteDiaryEntry(state: GardenState, key: string): GardenState {
+  return { ...state, diary: withoutEntry(state.diary, key) };
 }
 
 /** Takes a flower back out of the book. */
@@ -455,6 +468,7 @@ export function parseSave(input: unknown, now = Date.now()): GardenState | null 
     lastSeen,
     designs,
     pressed: parsePressed(raw.pressed),
+    diary: parseDiary(raw.diary),
     decor: parseDecor(raw.decor, (slot) => SLOT_IDS.includes(slot as SlotId) && !isHanging(slot as SlotId) && !taken.has(slot as SlotId)),
   };
 }
