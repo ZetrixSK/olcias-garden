@@ -100,6 +100,10 @@ const skyPalettes: Record<SkyKey, Palette> = {
     cloud: '#fdf9f1',
     'cloud-shade': '#ddd6e6',
     'cloud-deep': '#c5bfd6',
+    lake: '#7fb0cc',
+    'lake-hi': '#cfe5ee',
+    pine: '#4f7560',
+    'pine-shade': '#3e5f4d',
   },
   cloudy: {
     'sky-top': '#a3abb8',
@@ -114,6 +118,10 @@ const skyPalettes: Record<SkyKey, Palette> = {
     cloud: '#eceaea',
     'cloud-shade': '#cdcbd3',
     'cloud-deep': '#b3b2bf',
+    lake: '#8fa3ad',
+    'lake-hi': '#c6d1d5',
+    pine: '#5c6e64',
+    'pine-shade': '#4b5c53',
   },
   rain: {
     'sky-top': '#66717f',
@@ -128,6 +136,10 @@ const skyPalettes: Record<SkyKey, Palette> = {
     cloud: '#9aa2ac',
     'cloud-shade': '#7f8792',
     'cloud-deep': '#69707c',
+    lake: '#6f8088',
+    'lake-hi': '#9eabb0',
+    pine: '#4d5e57',
+    'pine-shade': '#3f4e48',
   },
   night: {
     'sky-top': '#1d2148',
@@ -142,6 +154,10 @@ const skyPalettes: Record<SkyKey, Palette> = {
     cloud: '#45476f',
     'cloud-shade': '#363859',
     'cloud-deep': '#2b2c4a',
+    lake: '#2a2f5a',
+    'lake-hi': '#55578a',
+    pine: '#1a1d3a',
+    'pine-shade': '#141631',
   },
   'night-cloudy': {
     'sky-top': '#2a2e52',
@@ -156,6 +172,10 @@ const skyPalettes: Record<SkyKey, Palette> = {
     cloud: '#5a5c84',
     'cloud-shade': '#4a4c72',
     'cloud-deep': '#3c3e60',
+    lake: '#30365a',
+    'lake-hi': '#4d5277',
+    pine: '#1d2140',
+    'pine-shade': '#171a35',
   },
   'night-rain': {
     'sky-top': '#262b44',
@@ -170,6 +190,10 @@ const skyPalettes: Record<SkyKey, Palette> = {
     cloud: '#4c5270',
     'cloud-shade': '#40465f',
     'cloud-deep': '#343a50',
+    lake: '#2c3349',
+    'lake-hi': '#454c64',
+    pine: '#1d2335',
+    'pine-shade': '#171c2c',
   },
 };
 

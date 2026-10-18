@@ -109,6 +109,16 @@ body {
   100% { transform: rotate(0); }
 }
 
+/* a dog's name, shown for a moment when petted */
+.name-tag {
+  animation: name-tag 1.4s ease-out both;
+}
+@keyframes name-tag {
+  0% { opacity: 0; transform: translateY(6px); }
+  15%, 75% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-4px); }
+}
+
 /* the grey one's morning yawn, every so often */
 .yawn {
   transform-box: fill-box;

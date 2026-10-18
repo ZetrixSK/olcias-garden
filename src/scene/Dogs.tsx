@@ -194,8 +194,8 @@ function WhiteHead({ petted, tilt = -5, clipId = 'white-dog-skull', eyes = 'open
 function WhiteDog({ onPet, petted, watching = false }: { onPet: () => void; petted: boolean; watching?: boolean }) {
   return (
     <g onClick={onPet} className="tappable">
-      <g className={petted ? 'wag-fast' : 'wag'} style={{ transformOrigin: '44px -12px' }}>
-        <path className="ink" fill={W.base} d="M42,-10 C52,-14 58,-24 57,-36 C61,-32 63,-20 55,-8 Z" />
+      <g className={petted ? 'wag-fast' : 'wag'} style={{ transformOrigin: '33px -16px' }}>
+        <path className="ink" fill={W.base} d="M28,-14 C40,-18 47,-28 46,-41 C50,-37 53,-25 45,-11 Z" />
       </g>
       {/* hind legs folded either side: a sitting dog's silhouette */}
       <path className="ink" fill={W.base} d="M-16,-2 C-38,-1 -46,-16 -43,-30 C-40,-42 -28,-46 -19,-40 Z" />
@@ -240,6 +240,23 @@ export function DogBed({ part }: { part: 'back' | 'front' }) {
   );
 }
 
+/** Their names, shown for a moment when one of them is petted. */
+export const DOG_NAMES = { grey: 'Piorun', white: 'Bajzel' } as const;
+
+function NameTag({ x, y, name }: { x: number; y: number; name: string }) {
+  const w = name.length * 7.4 + 14;
+  return (
+    <g transform={`translate(${x} ${y})`} pointerEvents="none">
+      <g className="name-tag">
+        <rect className="ink-thin" x={-w / 2} y="-11" width={w} height="20" rx="9" fill="#fbf4e6" />
+        <text y="4" textAnchor="middle" fontFamily="Kalam, system-ui, sans-serif" fontSize="13" fontWeight="700" fill="#3d2633">
+          {name}
+        </text>
+      </g>
+    </g>
+  );
+}
+
 export function Dogs({ mood }: { mood: DogMood }) {
   const [petted, setPetted] = useState<'grey' | 'white' | null>(null);
   const pet = (who: 'grey' | 'white') => {
@@ -251,6 +268,8 @@ export function Dogs({ mood }: { mood: DogMood }) {
       <g transform="translate(152 824)">
         <GreyDog onPet={() => pet('grey')} petted={petted === 'grey'} awake={mood === 'morning'} />
       </g>
+      {petted === 'grey' && <NameTag x={196} y={mood === 'morning' ? 748 : 758} name={DOG_NAMES.grey} />}
+      {petted === 'white' && <NameTag x={mood === 'asleep' ? 262 : 296} y={mood === 'asleep' ? 770 : 694} name={DOG_NAMES.white} />}
       {mood === 'asleep' ? (
         <g transform="translate(300 826) scale(-0.8 0.8)">
           <WhiteAsleep onPet={() => pet('white')} petted={petted === 'white'} />
@@ -382,7 +401,7 @@ export function PeekingDogs({ bottom, mood }: { bottom: number; mood: DogMood })
   return (
     <g>
       <SofaBack T={T} part="shadow" />
-      <g transform={head(104, 0)} className="tappable" onClick={() => pet('grey')}>
+      <g transform={head(104, 0)} className="tappable" onClick={() => pet('grey')} aria-label={DOG_NAMES.grey}>
         <g className={petted === 'grey' ? 'nuzzle' : 'peek'} style={{ animationDelay: '-2s' }}>
           <GreyFace petted={petted === 'grey'} sleepy={sleepy} />
         </g>
@@ -393,6 +412,8 @@ export function PeekingDogs({ bottom, mood }: { bottom: number; mood: DogMood })
         </g>
       </g>
       <SofaBack T={T} part="sofa" />
+      {petted === 'grey' && <NameTag x={104} y={T - 112 + sink} name={DOG_NAMES.grey} />}
+      {petted === 'white' && <NameTag x={298} y={T - 90 + sink} name={DOG_NAMES.white} />}
       <g transform={head(104, 0)} className="tappable" onClick={() => pet('grey')}>
         <g transform="translate(0 -51)">
           <Paws fill={G.base} shade={G.shade} ticked />

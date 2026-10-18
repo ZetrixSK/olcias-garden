@@ -44,47 +44,135 @@ function Tree({ x, y, r, season = 'summer' }: { x: number; y: number; r: number;
   );
 }
 
-function House({ x, y, w, h, lit }: { x: number; y: number; w: number; h: number; lit: boolean }) {
+/** A fir: three stacked tiers, shaded on the right, with snow resting on each tier in winter. */
+function Pine({ x, y, h, snow }: { x: number; y: number; h: number; snow: boolean }) {
+  const w = h * 0.42;
+  const tier = (top: number, bottom: number, half: number) =>
+    `M0,${top} C${half * 0.3},${top + (bottom - top) * 0.45} ${half * 0.7},${bottom - 2} ${half},${bottom} C${half * 0.4},${bottom - 1.2} ${-half * 0.4},${bottom - 1.2} ${-half},${bottom} C${-half * 0.7},${bottom - 2} ${-half * 0.3},${top + (bottom - top) * 0.45} 0,${top} Z`;
+  const tiers: Array<[number, number, number]> = [
+    [-h, -h * 0.55, w * 0.6],
+    [-h * 0.75, -h * 0.3, w * 0.82],
+    [-h * 0.5, -h * 0.08, w],
+  ];
   return (
-    <g transform={`translate(${x} ${y})`}>
-      <path className="ink-thin" style={fv('house')} d={`M0,0 L0,${-h} L${w},${-h} L${w},0 Z`} />
-      <path className="ink-thin" style={fv('roof')} d={`M-2,${-h} L${w / 2},${-h - w * 0.62} L${w + 2},${-h} Z`} />
-      <rect x={w * 0.35} y={-h * 0.72} width={w * 0.3} height={h * 0.34} fill={lit ? '#f4c66c' : 'var(--roof)'} opacity={lit ? 1 : 0.5} />
+    <g transform={`translate(${x.toFixed(1)} ${y.toFixed(1)})`}>
+      <path d={`M0,0 L0,${(-h * 0.12).toFixed(1)}`} stroke="#5a4637" strokeWidth={Math.max(1, h * 0.07)} />
+      {tiers.map(([t, bt, half], i) => (
+        <g key={i}>
+          <path className="ink-thin" style={fv('pine')} d={tier(t, bt, half)} />
+          <path style={fv('pine-shade')} d={`M0,${t} C${half * 0.3},${t + (bt - t) * 0.45} ${half * 0.7},${bt - 2} ${half},${bt} C${half * 0.5},${bt - 1} ${half * 0.2},${bt - 1} 0,${bt - 0.6} Z`} />
+          {snow && <path d={`M0,${t + 0.6} C${half * 0.25},${t + (bt - t) * 0.4} ${half * 0.5},${bt - 3} ${half * 0.75},${bt - 1.4} C${half * 0.3},${bt - 3.2} ${-half * 0.3},${bt - 3.4} ${-half * 0.75},${bt - 1.4} C${-half * 0.5},${bt - 3} ${-half * 0.25},${t + (bt - t) * 0.4} 0,${t + 0.6} Z`} fill="#eef3f7" />}
+        </g>
+      ))}
     </g>
   );
 }
 
+/** A little log cabin on the far shore; its window is lit at night. */
+function Cabin({ x, y, lit, snow }: { x: number; y: number; lit: boolean; snow: boolean }) {
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <path className="ink-thin" fill="#7a5640" d="M-8,0 L-8,-8 L8,-8 L8,0 Z" />
+      <path d="M-8,-5.4 L8,-5.4 M-8,-2.7 L8,-2.7" stroke="#5e4031" strokeWidth="0.5" />
+      <path className="ink-thin" fill="#4b3a3f" d="M-10,-7.6 L0,-15 L10,-7.6 Z" />
+      {snow && <path d="M-9.4,-8 L0,-14.6 L9.4,-8 L7,-8.6 L0,-13 L-7,-8.6 Z" fill="#eef3f7" />}
+      <path className="ink-thin" fill="#6b5a55" d="M4,-12 L4,-16.4 L6.4,-16.4 L6.4,-10.4 Z" />
+      <rect x="-4.6" y="-6" width="3.6" height="3.2" fill={lit ? '#f4c66c' : '#3e3438'} />
+      <rect x="2" y="-5.6" width="3" height="5.6" fill="#4b3a3f" />
+    </g>
+  );
+}
+
+const forestRnd = seeded(17);
+/** The forest around the far shore: firs mixed with leafy trees, two rows deep. */
+const FAR_FOREST = Array.from({ length: 34 }, (_, i) => {
+  const row = i % 2;
+  return {
+    x: 40 + (i / 34) * 324 + forestRnd() * 6,
+    y: 402 + row * 4 + forestRnd() * 2,
+    h: 17 + forestRnd() * 10 - row * 3,
+    pine: forestRnd() < 0.55,
+  };
+});
+
+const distRnd = seeded(29);
+/** A row of little fir points along the far hills. */
+const DISTANT_TREES = (() => {
+  let d = 'M40,392';
+  for (let x = 40; x < 360; ) {
+    const w = 5 + distRnd() * 4;
+    const top = 376 - distRnd() * 9 - Math.sin(x / 50) * 4;
+    d += ` L${(x + w / 2).toFixed(1)},${top.toFixed(1)} L${(x + w).toFixed(1)},${(388 + distRnd() * 3).toFixed(1)}`;
+    x += w;
+  }
+  return `${d} L360,400 L40,400 Z`;
+})();
+
+const LAKE = 'M60,416 C110,404 290,402 340,414 C352,428 334,448 296,457 C236,469 150,469 104,459 C68,451 50,430 60,416 Z';
+
+/**
+ * The view from the window: a lake in a clearing, ringed by forest, with a cabin on the far
+ * shore. Firs stay green all year and hold snow in winter; the leafy trees follow the seasons,
+ * and in winter the lake freezes over.
+ */
 export function Landscape({ weather, season = 'summer' }: { weather: Weather; season?: Season }) {
-  const lit = weather.night;
+  const winter = season === 'winter';
   return (
     <g>
+      <path className="ink-soft" style={fv('hill-far')} d="M40,384 C80,368 120,374 160,366 C210,358 250,370 290,362 C320,358 344,364 360,370 L360,530 L40,530 Z" />
+      {/* the far side of the forest, as a soft silhouette on the hills */}
       <path
-        className="ink-soft"
-        style={fv('hill-far')}
-        d="M40,446 C92,424 140,436 186,430 C236,424 280,408 360,420 L360,530 L40,530 Z"
+        style={fv('pine')}
+        opacity="0.35"
+        d={DISTANT_TREES}
       />
-      <Tree season={season} x={74} y={444} r={6} />
-      <Tree season={season} x={88} y={440} r={7.5} />
-      <Tree season={season} x={150} y={434} r={6.5} />
-      <Tree season={season} x={318} y={418} r={7} />
-      <Tree season={season} x={332} y={421} r={5.5} />
-      <path
-        className="ink-soft"
-        style={fv('hill-near')}
-        d="M40,476 C86,458 140,462 196,474 C246,484 292,458 360,462 L360,530 L40,530 Z"
-      />
-      {/* a little village on the near hill, with a crooked church spire */}
-      <House x={226} y={474} w={13} h={10} lit={lit} />
-      <House x={243} y={471} w={11} h={12} lit={false} />
-      <g transform="translate(262 468)">
-        <path className="ink-thin" style={fv('house')} d="M0,0 L0,-20 L10,-20 L10,0 Z" />
-        <path className="ink-thin" style={fv('roof')} d="M-1,-20 L5.5,-46 L11,-20 Z" />
-        <rect x="3.5" y="-15" width="3" height="5" fill={lit ? '#f4c66c' : 'var(--roof)'} opacity={lit ? 1 : 0.5} />
+      {FAR_FOREST.filter((t) => t.y < 404).map((t, i) =>
+        t.pine ? <Pine key={i} x={t.x} y={t.y} h={t.h} snow={winter} /> : <Tree key={i} season={season} x={t.x} y={t.y} r={t.h * 0.34} />,
+      )}
+      <path className="ink-soft" style={fv('hill-near')} d="M40,404 C90,398 150,402 200,400 C260,398 310,402 360,398 L360,530 L40,530 Z" />
+      {FAR_FOREST.filter((t) => t.y >= 404).map((t, i) =>
+        t.pine ? <Pine key={i} x={t.x} y={t.y} h={t.h} snow={winter} /> : <Tree key={i} season={season} x={t.x} y={t.y} r={t.h * 0.34} />,
+      )}
+      <Cabin x={258} y={410} lit={weather.night} snow={winter} />
+
+      {/* the lake, with the far shore mirrored in it */}
+      <path className="ink-soft" style={fv('lake')} d={LAKE} />
+      <defs>
+        <clipPath id="lake-clip">
+          <path d={LAKE} />
+        </clipPath>
+      </defs>
+      <g clipPath="url(#lake-clip)">
+        {winter ? (
+          <g fill="none" strokeLinecap="round">
+            {/* frozen: snow drifted across the ice, and a few cracks */}
+            <path d="M70,424 C100,416 130,420 150,416 C140,424 110,428 70,430 Z M250,446 C276,440 300,442 322,434 C312,446 290,452 258,454 Z" fill="#f4f7fa" stroke="none" />
+            <path d="M120,440 L140,436 L152,442 L170,438 M210,428 L226,432 L236,428 M168,452 L182,448 L196,452" style={{ stroke: 'var(--lake-hi)' }} strokeWidth="0.9" />
+            <path d="M140,436 L136,430 M226,432 L228,438" style={{ stroke: 'var(--lake-hi)' }} strokeWidth="0.7" />
+          </g>
+        ) : (
+          <g>
+            <path d="M40,410 C100,412 160,409 200,411 C260,413 320,410 360,412 L360,418 C300,417 240,419 200,417 C150,415 100,419 40,417 Z" style={fv('pine-shade')} opacity="0.35" />
+            <g style={{ stroke: 'var(--lake-hi)' }} strokeWidth="1" strokeLinecap="round" opacity="0.8">
+              <path d="M96,428 L118,428 M150,436 L164,436 M226,432 L250,432 M276,442 L292,442 M126,448 L140,448 M200,452 L214,452" />
+            </g>
+          </g>
+        )}
       </g>
-      <House x={278} y={466} w={14} h={11} lit={lit} />
-      <Tree season={season} x={300} y={464} r={6} />
-      <Tree season={season} x={60} y={474} r={8} />
-      <Tree season={season} x={118} y={466} r={6} />
+
+      {/* the near shore: firs and a leafy tree on either bank, and reeds at the water's edge */}
+      <Pine x={58} y={462} h={40} snow={winter} />
+      <Pine x={80} y={456} h={30} snow={winter} />
+      <Tree season={season} x={100} y={470} r={9} />
+      <Pine x={340} y={460} h={42} snow={winter} />
+      <Pine x={318} y={452} h={28} snow={winter} />
+      <Tree season={season} x={296} y={470} r={8} />
+      {!winter && (
+        <g stroke="#6f7f4f" strokeWidth="1" strokeLinecap="round" fill="none">
+          <path d="M150,470 L148,458 M154,470 L155,455 M158,470 L161,460 M236,472 L234,460 M240,472 L242,457" />
+          <path d="M154,456 L155,452 M241,458 L242,454" stroke="#7a5a3a" strokeWidth="2.2" />
+        </g>
+      )}
     </g>
   );
 }

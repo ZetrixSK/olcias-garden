@@ -142,23 +142,8 @@ export function CornerPiece({ theme }: { theme: Theme }) {
       </g>
     );
   }
-  return (
-    <g>
-      {/* a woven basket with yarn and a throw */}
-      <path className="ink" fill="#c9a26e" d="M338,770 L398,770 L394,836 C380,840 356,840 342,836 Z" />
-      {[784, 798, 812, 826].map((y) => (
-        <path key={y} d={`M340,${y} L396,${y}`} stroke="#a47f4e" strokeWidth="1.2" />
-      ))}
-      {[350, 362, 374, 386].map((x, i) => (
-        <path key={x} d={`M${x},771 L${x - 1 + i * 0.6},838`} stroke="#a47f4e" strokeWidth="1" />
-      ))}
-      <path className="ink" fill="#dfa0a6" d="M340,772 C340,752 352,744 362,748 C370,738 386,742 388,756 C396,758 400,766 398,772 Z" />
-      <path d="M346,768 C350,758 358,752 366,754 M366,754 C372,748 380,750 384,758" fill="none" stroke="#c27f88" strokeWidth="1.3" />
-      <circle className="ink" cx="383" cy="764" r="9" fill="#a8b79a" />
-      <path d="M376,760 C380,764 386,766 390,764 M376,766 C380,770 386,771 390,768" fill="none" stroke="#86977a" strokeWidth="1" />
-      <path d="M379,756 L392,740 M384,757 L398,744" className="ink" />
-    </g>
-  );
+  // the cozy room leaves its corner clear: anything on the floor there would sit behind the dog bed
+  return null;
 }
 
 export function Ball() {

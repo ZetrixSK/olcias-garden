@@ -48,7 +48,11 @@ const SEASON_LAND: Record<Season, Record<string, string> | null> = {
   summer: null,
   spring: { 'hill-far': '#b2cbb3', 'hill-near': '#9fc28c', tree: '#88b277', 'tree-shade': '#6c9760' },
   autumn: { 'hill-far': '#bdb795', 'hill-near': '#a8a46c', tree: '#cf7d43', 'tree-shade': '#a85a34' },
-  winter: { 'hill-far': '#dfe5ec', 'hill-near': '#eef1f4', tree: '#6d6266', 'tree-shade': '#574c51', roof: '#e9ecf1' },
+  // winter: snow on the ground and the lake frozen over
+  winter: {
+    'hill-far': '#dfe5ec', 'hill-near': '#eef1f4', tree: '#6d6266', 'tree-shade': '#574c51', roof: '#e9ecf1',
+    lake: '#d5e2ea', 'lake-hi': '#f4f8fb',
+  },
 };
 
 /**
