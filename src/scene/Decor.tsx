@@ -193,3 +193,34 @@ export function WallDecor({ theme, cy, scale, phase, onBook, photoUrl = null, on
     </g>
   );
 }
+
+const SPARKLE = 'M0,-6 C0.7,-1.6 1.6,-0.7 6,0 C1.6,0.7 0.7,1.6 0,6 C-0.7,1.6 -1.6,0.7 -6,0 C-1.6,-0.7 -0.7,-1.6 0,-6 Z';
+
+/**
+ * A few of the witchy wallpaper's stars catch the light and twinkle. Positions are given around
+ * a centre line, so they follow the wall wherever the screen puts it.
+ */
+export function WallSparkles({ points, cy = 0, night }: { points: ReadonlyArray<readonly [number, number, number]>; cy?: number; night: boolean }) {
+  return (
+    <g pointerEvents="none">
+      {points.map(([x, y, s], i) => (
+        <g key={i} transform={`translate(${x} ${cy + y}) scale(${s})`}>
+          <circle r="7" fill="#f2d48e" opacity={night ? 0.16 : 0.1} />
+          <path className="twinkle" style={{ animationDelay: `${(i * 1.37) % 4}s`, animationDuration: `${3 + (i % 3)}s` }} d={SPARKLE} fill="#f2d48e" opacity={night ? 0.85 : 0.7} />
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/** Where they twinkle in the room: the band of wall between the sill and the floor, clear of the pictures and sign. */
+export const ROOM_SPARKLES = [
+  [22, -62, 0.8], [378, -58, 0.9], [104, -70, 0.6], [292, 46, 0.7], [118, 58, 0.8],
+  [204, 40, 0.6], [26, 62, 0.7], [372, 58, 0.75], [258, 8, 0.55], [150, 4, 0.5],
+] as const;
+
+/** And on the shelf wall, around the window and between the shelves. */
+export const SHELF_SPARKLES = [
+  [40, 96, 0.8], [360, 112, 0.9], [26, 330, 0.7], [376, 352, 0.75], [200, 372, 0.6],
+  [124, 548, 0.7], [292, 536, 0.8], [64, 690, 0.6], [338, 684, 0.7], [210, 512, 0.5], [90, 20, 0.6], [314, 10, 0.55],
+] as const;

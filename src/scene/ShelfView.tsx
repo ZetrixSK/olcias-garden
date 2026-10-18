@@ -2,7 +2,7 @@ import { SLOT_IDS, type GardenState, type SlotId } from '../garden/state';
 import { POT_HEIGHT } from '../plants/Pots';
 import { plantLook } from '../plants/looks';
 import { candleLit as isCandleLit, roomTint, type Theme, type Weather } from '../theme/palettes';
-import { CANDLE_FLAME, Flame, SillCandle } from './Decor';
+import { CANDLE_FLAME, Flame, SHELF_SPARKLES, SillCandle, WallSparkles } from './Decor';
 import { PeekingDogs } from './Dogs';
 import { dogMood } from './dogMood';
 import { EmptySlot, GardenPlanter } from './GardenPlanter';
@@ -221,6 +221,7 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
           <SkyLights weather={weather} phase={Math.round(moonPhase(now) * 100) / 100} />
         </g>
       </g>
+      {theme === 'witchy' && <WallSparkles points={SHELF_SPARKLES} night={weather.night} />}
       {occasion === 'halloween' && candleLit && <LanternLight {...lantern} glow="shelf-candle-glow" />}
       {candleLit && (
         <>

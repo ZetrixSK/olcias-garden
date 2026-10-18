@@ -294,6 +294,59 @@ body {
   }
 }
 
+/*
+ * The witchy room is dark, so its buttons, menus and sheets get their own colours: pale writing on
+ * a plum panel edged in gold, with a faint starry shimmer. --ink and --wall are redefined only for
+ * the interface; drawings inside a sheet get the room's own dark ink back so they keep their lines.
+ */
+.theme-witchy :is(.fab, .weather-menu, .sheet, .banner) {
+  --ink: #f4e9f1;
+  --wall: #34263a;
+  --gold: #d9b46a;
+}
+.theme-witchy :is(.weather-menu, .sheet, .banner) {
+  background:
+    radial-gradient(circle at 12% 18%, rgba(242, 212, 142, 0.16) 0 1.2px, transparent 2px) 0 0 / 46px 52px,
+    radial-gradient(circle at 70% 64%, rgba(242, 212, 142, 0.12) 0 1px, transparent 1.8px) 0 0 / 38px 34px,
+    linear-gradient(160deg, #3d2c44, #2b1f31);
+  border-color: var(--gold);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(217, 180, 106, 0.25), 0 0 22px rgba(217, 180, 106, 0.18);
+}
+.theme-witchy .fab {
+  background: rgba(52, 38, 58, 0.88);
+  border-color: var(--gold);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3), 0 0 12px rgba(217, 180, 106, 0.22);
+}
+.theme-witchy :is(.weather-menu, .sheet, .banner) button {
+  border-color: rgba(217, 180, 106, 0.42);
+}
+.theme-witchy :is(.weather-menu, .sheet) button[aria-pressed='true'] {
+  background: rgba(217, 180, 106, 0.2);
+  border-color: var(--gold);
+}
+.theme-witchy :is(.weather-menu, .sheet) .hint,
+.theme-witchy .sheet h3 {
+  color: #e8cf98;
+  opacity: 1;
+}
+/* drawings inside the sheets keep their dark outlines, on a soft parchment ground */
+.theme-witchy .sheet :is(svg:not(.actions svg):not(.press-row svg), .studio-preview) {
+  --ink: #1c1219;
+}
+.theme-witchy .sheet :is(.picker button, .tile > button:first-child, .options button) {
+  background: rgba(244, 233, 241, 0.1);
+}
+.theme-witchy .studio-preview {
+  background: #efe4d6;
+}
+.theme-witchy .studio-name {
+  background: rgba(244, 233, 241, 0.1);
+  border-color: rgba(217, 180, 106, 0.5);
+}
+.theme-witchy .studio-name::placeholder {
+  color: rgba(244, 233, 241, 0.55);
+}
+
 /* two round buttons in the top corners, small enough to stay out of the art */
 .fab {
   position: fixed;

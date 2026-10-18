@@ -464,7 +464,7 @@ export function App() {
   const studioPlant = mode.kind === 'potStudio' && mode.forPlant ? garden.plants.find((p) => p.id === mode.forPlant) : undefined;
 
   return (
-    <div className={`garden${weather.night ? ' night' : ''}${lapse ? ' replaying' : ''}`} style={paletteVars(theme, weather, seasonShown(now))}>
+    <div className={`garden theme-${theme}${weather.night ? ' night' : ''}${lapse ? ' replaying' : ''}`} style={paletteVars(theme, weather, seasonShown(now))}>
       <div className="view" key={settings.view}>
         {settings.view === 'room' ? (
           <Scene

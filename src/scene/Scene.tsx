@@ -4,7 +4,7 @@ import { chooseRoutes, type VineSpot } from '../garden/vines';
 import { POT_HEIGHT } from '../plants/Pots';
 import { plantLook } from '../plants/looks';
 import { candleLit as isCandleLit, roomTint, type Theme, type Weather } from '../theme/palettes';
-import { Ball, CANDLE_FLAME, CornerPiece, Flame, ShelfTrinket, SillCandle, WallDecor } from './Decor';
+import { Ball, CANDLE_FLAME, CornerPiece, Flame, ROOM_SPARKLES, ShelfTrinket, SillCandle, WallDecor, WallSparkles } from './Decor';
 import { DogBed, Dogs } from './Dogs';
 import { dogMood, type DogMood } from './dogMood';
 import { EmptySlot, GardenPlanter } from './GardenPlanter';
@@ -195,7 +195,7 @@ const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hi
 });
 
 /** The light over everything: night or rain tint, moon and stars, candlelight. */
-const Lights = memo(function Lights({ theme, sky, night, phase, occasion, dy }: Lit & { phase: number; occasion: Occasion; dy: number }) {
+const Lights = memo(function Lights({ theme, sky, night, phase, occasion, dy, wallMid }: Lit & { phase: number; occasion: Occasion; dy: number; wallMid: number }) {
   const weather = { sky, night };
   const tint = roomTint(weather, theme);
   const [fx, fy] = CANDLE_FLAME[theme];
@@ -204,6 +204,7 @@ const Lights = memo(function Lights({ theme, sky, night, phase, occasion, dy }: 
       {/* one tint for the whole scene keeps sky and room in the same light */}
       {tint && <rect className="tint" x="0" y="-300" width={VIEW_W} height={VIEW_H + 600} fill={tint.color} opacity={tint.opacity} />}
       <SkyLights weather={weather} phase={phase} />
+      {theme === 'witchy' && <WallSparkles points={ROOM_SPARKLES} cy={wallMid} night={night} />}
       {occasion === 'halloween' && isCandleLit(weather) && (
         <g transform={`translate(0 ${dy})`}>
           <LanternLight {...ROOM_LANTERN} />
@@ -282,7 +283,7 @@ export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains 
         photoUrl={photoUrl}
         onFrame={onFrame}
       />
-      <Lights theme={theme} sky={weather.sky} night={weather.night} phase={phaseAt(rest.now)} occasion={cal.occasion} dy={dy} />
+      <Lights theme={theme} sky={weather.sky} night={weather.night} phase={phaseAt(rest.now)} occasion={cal.occasion} dy={dy} wallMid={wallMid} />
     </svg>
   );
 }

@@ -15,7 +15,7 @@ export function WallMotifs() {
         </g>
       </pattern>
       <pattern id="motif-witchy" width="44" height="48" patternUnits="userSpaceOnUse">
-        <g style={fv('wall-motif')} opacity="0.4">
+        <g style={fv('wall-motif')} opacity="0.5">
           <path d="M11,7 C11.4,10 12,10.6 15,11 C12,11.4 11.4,12 11,15 C10.6,12 10,11.4 7,11 C10,10.6 10.6,10 11,7 Z" />
           <path d="M33,30 A6,6 0 1 0 33,42 A4.2,6 0 1 1 33,30 Z" />
           <circle cx="34" cy="10" r="0.9" />
