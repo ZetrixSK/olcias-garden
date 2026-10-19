@@ -295,7 +295,13 @@ export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains 
 
       <SillBoard />
       <WindowRow row="sill" {...spots} />
-      <g className="tappable" role="button" aria-label={candleOn ? 'Blow out the candle' : 'Light the candle'} onClick={onCandle}>
+      <g
+        className="tappable"
+        role="button"
+        aria-label={candleOn ? 'Blow out the candle' : 'Light the candle'}
+        data-sound={candleOn ? 'blow' : 'light'}
+        onClick={onCandle}
+      >
         <Candle theme={theme} look={candle} />
         <rect x="314" y="456" width="46" height="64" fill="transparent" />
       </g>

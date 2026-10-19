@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { ambience, ambienceIfMade } from './ambience';
+import { ambience, ambienceIfMade, EFFECTS, type Effect } from './ambience';
 import type { Mix } from './mix';
 
 /**
@@ -17,11 +17,19 @@ export function useAmbience(on: boolean, mix: Mix) {
     };
     const onVisibility = () => (document.visibilityState === 'visible' ? resume() : ambience()?.stop());
     resume();
-    window.addEventListener('click', resume);
+    // a sound for every tap on something tappable; `data-sound` picks a special one
+    const onTap = (e: MouseEvent) => {
+      resume();
+      const el = (e.target as Element | null)?.closest?.('button, [role=button], [role=radio], .tappable, [data-sound]');
+      if (!el || (el as HTMLButtonElement).disabled) return;
+      const kind = el.getAttribute('data-sound');
+      ambience()?.effect(EFFECTS.includes(kind as Effect) ? (kind as Effect) : 'tap');
+    };
+    window.addEventListener('click', onTap, true);
     window.addEventListener('touchend', resume);
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
-      window.removeEventListener('click', resume);
+      window.removeEventListener('click', onTap, true);
       window.removeEventListener('touchend', resume);
       document.removeEventListener('visibilitychange', onVisibility);
     };

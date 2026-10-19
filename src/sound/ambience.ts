@@ -8,30 +8,41 @@ import type { Layer, Mix } from './mix';
 
 /** How loud each sound is at full strength, before the mix. */
 const LEVEL: Record<Layer, number> = { rain: 0.9, wind: 0.45, birds: 0.7, crickets: 0.55, crackle: 0.75 };
-const LOOKAHEAD = 0.3;
+/** Small sounds are scheduled this far ahead, so a busy moment on the phone doesn't leave a gap. */
+const LOOKAHEAD = 0.8;
 
 type Events = 'drops' | 'birds' | 'crickets-l' | 'crickets-r' | 'crackle';
 const LAYER_OF: Record<Events, Layer> = { drops: 'rain', birds: 'birds', 'crickets-l': 'crickets', 'crickets-r': 'crickets', crackle: 'crackle' };
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
+/** The small sounds of touching things: a button, watering, the candle, paper, soil. */
+export const EFFECTS = ['tap', 'water', 'light', 'blow', 'page', 'soil'] as const;
+export type Effect = (typeof EFFECTS)[number];
+
+/**
+ * A stretch of noise that loops without a seam: its tail is blended into its head (and then left
+ * off), so the join is neither a click nor a dip in the sound.
+ */
 function noise(ctx: AudioContext, seconds: number, brown: boolean): AudioBuffer {
-  const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * seconds), ctx.sampleRate);
-  const d = buf.getChannelData(0);
+  const fade = Math.floor(ctx.sampleRate * 0.25);
+  const len = Math.floor(ctx.sampleRate * seconds);
+  const raw = new Float32Array(len + fade);
   let last = 0;
-  for (let i = 0; i < d.length; i++) {
+  for (let i = 0; i < raw.length; i++) {
     const white = Math.random() * 2 - 1;
     if (brown) {
       last = (last + 0.02 * white) / 1.02;
-      d[i] = last * 3.5;
-    } else d[i] = white;
+      raw[i] = last * 3.5;
+    } else raw[i] = white;
   }
-  // fade the ends together so the loop has no click
-  const fade = Math.floor(ctx.sampleRate * 0.05);
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  d.set(raw.subarray(0, len));
+  // equal-power blend keeps the loudness steady through the join
   for (let i = 0; i < fade; i++) {
     const k = i / fade;
-    d[i]! *= k;
-    d[d.length - 1 - i]! *= k;
+    d[i] = raw[i]! * Math.sin((k * Math.PI) / 2) + raw[len + i]! * Math.cos((k * Math.PI) / 2);
   }
   return buf;
 }
@@ -45,6 +56,8 @@ export class Ambience {
   private white: AudioBuffer;
   private timer: number | null = null;
   private playing = false;
+  /** Taps and touches go straight out, not through the room's fades. */
+  private fx: GainNode;
 
   constructor() {
     const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -59,6 +72,9 @@ export class Ambience {
       g.connect(this.master);
       this.layers[l] = g;
     }
+    this.fx = this.ctx.createGain();
+    this.fx.gain.value = 0.7;
+    this.fx.connect(this.ctx.destination);
     this.white = noise(this.ctx, 2, false);
     const brown = noise(this.ctx, 6, true);
     this.rainBed(brown);
@@ -111,7 +127,7 @@ export class Ambience {
       o.start();
     };
     lfo(0.047, 160, lp.frequency);
-    lfo(0.031, 0.3, swell.gain);
+    lfo(0.031, 0.18, swell.gain);
   }
 
   private pan(at: number, node: AudioNode, x: number): AudioNode {
@@ -196,10 +212,93 @@ export class Ambience {
     }
   }
 
+  /** A burst of noise shaped by a filter and an envelope of [time, level] points, for effects. */
+  private hush(at: number, type: BiquadFilterType, freq: number, Q: number, env: Array<[number, number]>, sweepTo?: number) {
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.white;
+    const f = this.filter(type, freq, Q);
+    const end = env[env.length - 1]![0];
+    if (sweepTo) f.frequency.exponentialRampToValueAtTime(sweepTo, at + end);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0, at);
+    for (const [t, v] of env) g.gain.linearRampToValueAtTime(v, at + t);
+    src.connect(f).connect(g).connect(this.fx);
+    src.start(at, rand(0, 1), end + 0.05);
+  }
+
+  private fxNote(at: number, f0: number, f1: number, len: number, peak: number) {
+    const o = this.ctx.createOscillator();
+    o.frequency.setValueAtTime(f0, at);
+    o.frequency.exponentialRampToValueAtTime(f1, at + len);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0, at);
+    g.gain.linearRampToValueAtTime(peak, at + 0.003);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + len);
+    o.connect(g).connect(this.fx);
+    o.start(at);
+    o.stop(at + len + 0.02);
+  }
+
+  /** Plays the sound of something she touched. */
+  effect(kind: Effect) {
+    if (!this.playing || this.ctx.state !== 'running') return;
+    const at = this.ctx.currentTime + 0.005;
+    switch (kind) {
+      case 'tap': {
+        // a soft wooden tock, never quite the same twice
+        const p = rand(0.94, 1.06);
+        this.fxNote(at, 560 * p, 400 * p, 0.07, 0.13);
+        this.hush(at, 'bandpass', 2600 * p, 1.2, [[0.002, 0.05], [0.014, 0]]);
+        break;
+      }
+      case 'water': {
+        // a pour, gurgling a little, then the last drops
+        const src = this.ctx.createBufferSource();
+        src.buffer = this.white;
+        const f = this.filter('bandpass', 900, 1.4);
+        for (let t = 0; t < 1.2; t += 0.07) f.frequency.setValueAtTime(rand(650, 1500), at + t);
+        const g = this.ctx.createGain();
+        g.gain.setValueAtTime(0, at);
+        g.gain.linearRampToValueAtTime(0.16, at + 0.18);
+        g.gain.setValueAtTime(0.16, at + 0.95);
+        g.gain.linearRampToValueAtTime(0, at + 1.35);
+        src.connect(f).connect(g).connect(this.fx);
+        src.start(at, 0, 1.4);
+        for (let i = 0; i < 9; i++) {
+          const t = at + rand(0.25, 1.7);
+          this.fxNote(t, rand(1300, 2200), rand(2400, 3400), 0.05, rand(0.03, 0.07));
+        }
+        break;
+      }
+      case 'light':
+        // the strike of a match, then the flame taking
+        this.hush(at, 'highpass', 2200, 0.7, [[0.004, 0.22], [0.05, 0.08], [0.13, 0]]);
+        this.hush(at + 0.08, 'lowpass', 900, 0.7, [[0.12, 0.1], [0.6, 0]]);
+        break;
+      case 'blow':
+        // a soft breath
+        this.hush(at, 'lowpass', 1100, 0.6, [[0.12, 0.2], [0.3, 0.12], [0.55, 0]], 380);
+        break;
+      case 'page':
+        // paper: a few quick rustles
+        for (let i = 0; i < 7; i++) {
+          const t = i * rand(0.03, 0.055);
+          this.hush(at + t, 'bandpass', rand(3000, 6000), 0.9, [[0.004, rand(0.03, 0.07)], [0.04, 0]]);
+        }
+        break;
+      case 'soil':
+        // a pot set down, a little earth
+        this.fxNote(at, 150, 70, 0.18, 0.22);
+        this.hush(at, 'lowpass', 600, 0.7, [[0.01, 0.08], [0.16, 0]]);
+        break;
+    }
+  }
+
   private schedule = () => {
     const now = this.ctx.currentTime;
     for (const kind of Object.keys(this.next) as Events[]) {
-      if (this.next[kind] < now) this.next[kind] = now + rand(0.05, 0.6);
+      // fell behind (the phone was busy): carry on straight away rather than leave a gap
+      if (this.next[kind] < now) this.next[kind] = now + 0.02;
       while (this.next[kind] < now + LOOKAHEAD) {
         const at = this.next[kind];
         this.next[kind] += this.mix[LAYER_OF[kind]] > 0.01 ? this.play(kind, at) : 0.5;
@@ -221,7 +320,7 @@ export class Ambience {
     this.playing = true;
     this.master.gain.cancelScheduledValues(this.ctx.currentTime);
     this.master.gain.setTargetAtTime(0.8, this.ctx.currentTime, 0.8);
-    this.timer ??= window.setInterval(this.schedule, 80);
+    this.timer ??= window.setInterval(this.schedule, 120);
   }
 
   /** Fades out and goes quiet, so a closed or hidden garden uses no power for sound. */

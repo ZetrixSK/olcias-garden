@@ -103,7 +103,7 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
           <Icon>{ENVELOPE_ICON}</Icon>
         </button>
       )}
-      <button className={settings.letter !== 'deleted' ? 'fab left third' : 'fab left second'} aria-label="Diary" onClick={onDiary}>
+      <button className={settings.letter !== 'deleted' ? 'fab left third' : 'fab left second'} aria-label="Diary" data-sound="page" onClick={onDiary}>
         <Icon>{DIARY_ICON}</Icon>
         {memory && <span className="memory-dot" />}
       </button>

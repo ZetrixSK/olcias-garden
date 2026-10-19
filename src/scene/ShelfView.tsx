@@ -175,6 +175,7 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
         className="tappable"
         role="button"
         aria-label={candleOn ? 'Blow out the candle' : 'Light the candle'}
+        data-sound={candleOn ? 'blow' : 'light'}
         transform={`translate(${candleShift.x} ${candleShift.y})`}
         onClick={onCandle}
       >

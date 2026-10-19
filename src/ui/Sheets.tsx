@@ -181,7 +181,7 @@ export function PlantPicker({ onPick, onDrawing, busy, error, onClose }: {
       </div>
       <div className="picker">
         {SPECIES_IDS.map((s) => (
-          <button key={s} onClick={() => onPick(s)}>
+          <button key={s} data-sound="soil" onClick={() => onPick(s)}>
             <Preview species={s} />
             <span className="pl" style={SPECIES[s].polish.length > 9 ? { fontSize: '0.82em' } : undefined}>
               {SPECIES[s].polish}
@@ -376,7 +376,7 @@ export function PlantCard({ plant, now, inWindowView, onWater, onMove, onWindow,
         <span>{growthText(plant, now)}</span>
       </p>
       <div className={!inWindowView || (inWindowView && onTrim) ? 'actions five' : 'actions'}>
-        <button onClick={onWater}>
+        <button data-sound="water" onClick={onWater}>
           <svg viewBox="-14 -14 28 28" aria-hidden="true">
             <path d="M-2,8 L-1,-3 C-1,-5 9,-5 9,-3 L10,8 Z M-1,0 L-11,-8 M-13,-10 L-9,-6 M9,-2 C14,-3 14,5 9.6,5" />
           </svg>
@@ -427,7 +427,7 @@ export function PlantCard({ plant, now, inWindowView, onWater, onMove, onWindow,
       {(onPress || pressedToday) && (
         <div className="press-row">
           {onPress ? (
-            <button onClick={onPress}>
+            <button data-sound="page" onClick={onPress}>
               <svg viewBox="-14 -14 28 28" aria-hidden="true">{PRESS_ICON}</svg>
               Press a flower for the book
             </button>

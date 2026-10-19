@@ -121,7 +121,7 @@ function DayPage({ day, entry, onSave, onDelete, onBack }: {
           <>
             <button className="quiet" onClick={() => (dirty ? setAsking('leave') : onBack())}>Back</button>
             {entry && <button className="quiet" onClick={() => setAsking('delete')}>Delete</button>}
-            <button disabled={!dirty || (empty && !entry)} onClick={() => onSave(mood, text)}>Save</button>
+            <button data-sound="page" disabled={!dirty || (empty && !entry)} onClick={() => onSave(mood, text)}>Save</button>
           </>
         )}
       </div>
