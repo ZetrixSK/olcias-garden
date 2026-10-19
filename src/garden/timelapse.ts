@@ -1,7 +1,5 @@
-import { growthHours, stageAt } from './growth';
-import { SPECIES } from './species';
 import type { GardenState, Plant } from './state';
-import { lastNight, nightsBetween, runNights } from './vines';
+import { nightsBetween, runNights } from './vines';
 
 /**
  * What happened while she was away, as keyframes: the garden as she left it, then after each 3:00.
@@ -72,17 +70,14 @@ export function parseAway(v: string | null): number | null {
 }
 
 /**
- * For the `?away` preview: her garden rewound so each plant has only just reached the stage it
- * shows now (a seed has just sprouted), so in any replay every plant visibly grows. Vines get the
- * nights of the time away to grow in. Never saved.
+ * For the `?away` preview: her garden moved back in time by `away`, so replaying from `now - away`
+ * to now starts with the garden exactly as it is and ends with how it will look after that long.
+ * With `water`, every plant is watered each evening at 18:00 in between, as vines only outgrow
+ * their pots after a watering. Never saved.
  */
-export function awayDemo(g: GardenState, away: number, now: number): GardenState {
-  const plants = g.plants.map((p) => {
-    const [seedling, bud, bloom] = SPECIES[p.species].hours;
-    const stage = stageAt(p.species, p, now);
-    const reached = { seed: seedling, seedling, bud, bloom }[stage];
-    const hours = Math.min(growthHours(p, now), reached + 0.5);
-    return { ...p, plantedAt: now - Math.max(reached, hours) * HOUR, waterings: [] };
-  });
-  return { ...g, plants, vinesCheckedAt: lastNight(now - away) };
+export function awayDemo(g: GardenState, away: number, now: number, water = true): GardenState {
+  const from = now - away;
+  const evenings = water ? nightsBetween(from - 24 * HOUR, now + 24 * HOUR).map((n) => n + 15 * HOUR).filter((t) => t > from && t <= now) : [];
+  const plants = g.plants.map((p) => ({ ...p, plantedAt: p.plantedAt - away, waterings: [...p.waterings.map((t) => t - away), ...evenings] }));
+  return { ...g, plants, vinesCheckedAt: from, lastSeen: from };
 }

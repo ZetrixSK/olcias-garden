@@ -9,7 +9,7 @@ export const ease = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) *
 /** How long the hands take to sweep: longer absences take a little longer, never tediously. */
 export function lapseDuration(lapse: Timelapse): number {
   const hours = (lapse.to - lapse.from) / HOUR;
-  return Math.min(6500, Math.max(2600, 2200 + 900 * Math.log2(1 + hours)));
+  return Math.min(8500, Math.max(3000, 2400 + 1100 * Math.log2(1 + hours)));
 }
 
 /**

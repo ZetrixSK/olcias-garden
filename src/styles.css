@@ -119,19 +119,38 @@ body {
   animation: bloom-in 2.8s cubic-bezier(0.2, 0.8, 0.3, 1) both;
 }
 @keyframes unfold {
-  0% { transform: scale(0.86, 0.78); opacity: 0.55; }
+  0% { transform: scale(0.86, 0.78); opacity: 0.15; }
   55% { transform: scale(1.03, 1.05); opacity: 1; }
   100% { transform: none; }
 }
 @keyframes bloom-in {
-  0% { transform: scale(0.8, 0.7) rotate(-2deg); opacity: 0.4; }
+  0% { transform: scale(0.8, 0.7) rotate(-2deg); opacity: 0.1; }
   35% { transform: scale(0.95, 1.02) rotate(1.5deg); opacity: 1; }
   65% { transform: scale(1.04, 1.03) rotate(-0.8deg); }
   100% { transform: none; }
 }
-/* during the clock's replay plants change too quickly to unfold each time */
-.garden.replaying .unfold {
-  animation: none;
+/* the stage it grew out of, fading away underneath */
+.outgrown {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: outgrown 1.1s ease-in both;
+}
+@keyframes outgrown {
+  0% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.04, 1.08); }
+}
+/* during the clock's replay stages come quicker, so each one grows in a little faster */
+.garden.replaying .unfold,
+.garden.replaying .unfold.bloom-in {
+  animation-duration: 1.2s;
+}
+.garden.replaying .outgrown {
+  animation-duration: 0.8s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .outgrown {
+    display: none;
+  }
 }
 
 /* a dog's name, shown for a moment when petted */

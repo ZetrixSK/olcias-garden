@@ -69,17 +69,21 @@ describe('the ?away preview', () => {
     expect(parseAway(null)).toBeNull();
   });
 
-  it('rewinds every plant so it grows during the time away, ending where it is now', () => {
+  it('starts from the garden as it is and ends as it will be after that long', () => {
     const g = starterGarden(T);
-    for (const away of [1 * H, 8 * H, 48 * H]) {
-      const demo = awayDemo(g, away, T);
-      for (const p of demo.plants) {
-        const real = g.plants.find((q) => q.id === p.id)!;
-        const now = stageAt(p.species, p, T);
-        expect(now === stageAt(real.species, real, T) || stageAt(real.species, real, T) === 'seed').toBe(true);
-        expect(stageAt(p.species, p, T - away)).not.toBe(now);
-      }
-      expect(somethingGrew(buildTimelapse(demo, T - away, T), (p, t) => stageAt(p.species, p, t))).toBe(true);
-    }
+    const demo = awayDemo(g, 48 * H, T, false);
+    const tl = buildTimelapse(demo, T - 48 * H, T);
+    const at = (plants: Plant[], t: number) => plants.map((p) => stageAt(p.species, p, t));
+    expect(at(gardenAt(tl, T - 48 * H).plants, T - 48 * H)).toEqual(at(g.plants, T));
+    expect(at(gardenAt(tl, T).plants, T)).toEqual(at(g.plants, T + 48 * H));
+    expect(somethingGrew(tl, (p, t) => stageAt(p.species, p, t))).toBe(true);
+  });
+
+
+  it('grows vines over the time away only when the plants are watered', () => {
+    const g = starterGarden(T);
+    const vines = (water: boolean) => catchUpNights(awayDemo(g, 14 * 24 * H, T, water), T).plants.filter((p) => p.vine).length;
+    expect(vines(true)).toBeGreaterThan(0);
+    expect(vines(false)).toBe(0);
   });
 });

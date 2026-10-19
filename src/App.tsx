@@ -132,6 +132,8 @@ function devVines(): VineSpec[] {
  * in it. Nothing is saved while it's on, so the real garden is never touched.
  */
 const AWAY = parseAway(new URLSearchParams(window.location.search).get('away'));
+/** With &nowater the preview leaves the plants unwatered all that time, so nothing outgrows its pot. */
+const AWAY_WATER = !new URLSearchParams(window.location.search).has('nowater');
 
 const prefersStill = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
@@ -232,7 +234,7 @@ export function App() {
       const t = Date.now();
       void loadPictures(g.decor).then(setPictures);
       if (AWAY) {
-        const demo = awayDemo(g, AWAY, t);
+        const demo = awayDemo(g, AWAY, t, AWAY_WATER);
         opened.current = { at: t, garden: demo };
         setGarden(catchUpNights(demo, t));
         playLapse(buildTimelapse(demo, t - AWAY, t), false);
@@ -820,7 +822,7 @@ export function App() {
       {mode.kind === 'place' && <MoveBanner text="Tap a place in the window" onCancel={() => setMode({ kind: 'idle' })} />}
       {AWAY && !lapse && mode.kind === 'idle' && (
         <div className="banner" role="status">
-          <span>Demo · nothing is saved</span>
+          <span>{AWAY_WATER ? 'Demo · watered daily' : 'Demo · never watered'}</span>
           <button onClick={() => opened.current && playLapse(buildTimelapse(opened.current.garden, opened.current.at - AWAY, opened.current.at), false)}>
             Again
           </button>
