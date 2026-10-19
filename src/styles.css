@@ -796,6 +796,11 @@ body {
 .garden.replaying .scene * {
   animation-play-state: paused !important;
 }
+/* except the plants growing into their next stage, which is what the replay is for */
+.garden.replaying .scene .unfold,
+.garden.replaying .scene .outgrown {
+  animation-play-state: running !important;
+}
 .lapse {
   position: fixed;
   inset: 0;
