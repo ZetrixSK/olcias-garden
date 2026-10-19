@@ -76,6 +76,17 @@ export async function saveGarden(state: GardenState): Promise<void> {
   }
 }
 
+/**
+ * Puts a backup in place of the garden. The garden as it was is kept aside first, never thrown
+ * away; the pictures go in before the save that uses them. Throws if it couldn't be stored.
+ */
+export async function restoreGarden(state: GardenState, images: Record<string, Blob>, now = Date.now()): Promise<void> {
+  const current = await run('readonly', (s) => s.get(KEY));
+  if (current !== undefined) await run('readwrite', (s) => s.put(current, `before-restore-${now}`));
+  for (const [key, blob] of Object.entries(images)) await putImage(key, blob);
+  await run('readwrite', (s) => s.put(state, KEY));
+}
+
 /** Keeps one of her pictures. Throws if it can't be stored, so she can be told rather than lose it quietly. */
 export async function putImage(key: string, blob: Blob): Promise<void> {
   await run('readwrite', (s) => s.put(blob, key), IMAGES);

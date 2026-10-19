@@ -76,6 +76,7 @@ describe('garden state', () => {
       letter: 'unread',
       own: null,
       useOwn: false,
+      installHint: false,
     });
   });
 

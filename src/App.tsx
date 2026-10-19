@@ -37,12 +37,12 @@ import {
   type SlotId,
   type WindowSpot,
 } from './garden/state';
-import { deleteImage, getImage, loadGarden, persistStorage, putImage, saveGarden, tidyImages } from './garden/storage';
+import { deleteImage, getImage, loadGarden, persistStorage, putImage, restoreGarden, saveGarden, tidyImages } from './garden/storage';
 import { imagesInUse, MAX_PIXELS, type Decor, type WallpaperSize } from './garden/decor';
 import type { OwnPaper } from './scene/OwnDecor';
 import { DecorateSheet, DrawingCard } from './ui/Decorate';
 import { chooseImage, prepareImage } from './ui/upload';
-import { buildTimelapse, gardenAt, LAPSE_MIN_GAP, somethingGrew, type Timelapse } from './garden/timelapse';
+import { awayDemo, buildTimelapse, gardenAt, LAPSE_MIN_GAP, parseAway, somethingGrew, type Timelapse } from './garden/timelapse';
 import { stageAt } from './garden/growth';
 import { isVineSpecies, isVineSpot } from './garden/vines';
 import { pansyPalette } from './plants/looks';
@@ -55,6 +55,10 @@ import { ease, lapseDuration, LapseClock } from './ui/Clock';
 import { Letter } from './ui/Letter';
 import { PressedBook } from './ui/PressedBook';
 import { DiaryBook } from './ui/Diary';
+import { BackupSheet } from './ui/Backup';
+import { canAddToHomeScreen, InstallHint } from './ui/InstallHint';
+import { dayKey, onThisDay } from './garden/diary';
+import type { Restored } from './garden/backup';
 import { pressedToday } from './garden/pressed';
 import { paletteVars, type Weather } from './theme/palettes';
 import { seasonShown } from './theme/seasons';
@@ -123,6 +127,12 @@ function devVines(): VineSpec[] {
   });
 }
 
+/**
+ * ?away=8h (or 30m, 2d, 1w) replays that much time away, with her plants rewound so they all grow
+ * in it. Nothing is saved while it's on, so the real garden is never touched.
+ */
+const AWAY = parseAway(new URLSearchParams(window.location.search).get('away'));
+
 const prefersStill = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
 /**
@@ -158,7 +168,9 @@ type Mode =
   /** one of her drawings on the shelves */
   | { kind: 'drawing'; id: string }
   /** painting her own room; `draft` shows in the room until she saves or closes */
-  | { kind: 'roomStudio'; draft: OwnRoom; editing: boolean };
+  | { kind: 'roomStudio'; draft: OwnRoom; editing: boolean }
+  /** saving the garden to a file, or bringing one back */
+  | { kind: 'backup' };
 
 /** Her pictures, as addresses the drawing can use, keyed by the image's name in storage. */
 type Pictures = Record<string, string>;
@@ -195,6 +207,11 @@ export function App() {
   const [snip, setSnip] = useState<Snip | null>(null);
   const [bookOpen, setBookOpen] = useState(false);
   const [diaryOpen, setDiaryOpen] = useState(false);
+  /** The day she last opened the diary, so its "on this day" mark goes once she's seen it. */
+  const [diarySeenOn, setDiarySeenOn] = useState<string | null>(null);
+  // ?installhint shows the iPhone Home Screen note on any phone, to see how it looks
+  const installPreview = useMemo(() => new URLSearchParams(window.location.search).has('installhint'), []);
+  const [installHidden, setInstallHidden] = useState(false);
   const openBook = useCallback(() => setBookOpen(true), []);
   const [pictures, setPictures] = useState<Pictures>({});
   const [adding, setAdding] = useState<'wallpaper' | 'photo' | 'drawing' | null>(null);
@@ -213,9 +230,16 @@ export function App() {
     loadGarden().then((g) => {
       loaded.current = true;
       const t = Date.now();
+      void loadPictures(g.decor).then(setPictures);
+      if (AWAY) {
+        const demo = awayDemo(g, AWAY, t);
+        opened.current = { at: t, garden: demo };
+        setGarden(catchUpNights(demo, t));
+        playLapse(buildTimelapse(demo, t - AWAY, t), false);
+        return;
+      }
       opened.current = { at: t, garden: g };
       const caughtUp = catchUpNights(g, t);
-      void loadPictures(g.decor).then(setPictures);
       setGarden(import.meta.env.DEV ? devOverrides(caughtUp) : caughtUp);
       if (t - g.lastSeen >= LAPSE_MIN_GAP) playLapse(buildTimelapse(g, g.lastSeen, t), true);
       void persistStorage();
@@ -224,7 +248,7 @@ export function App() {
 
   // save shortly after every change, noting the time so the next visit knows how long she was away
   useEffect(() => {
-    if (!garden || !loaded.current) return;
+    if (!garden || !loaded.current || AWAY) return;
     const t = window.setTimeout(() => void saveGarden({ ...garden, lastSeen: Date.now() }), 250);
     return () => window.clearTimeout(t);
   }, [garden]);
@@ -232,7 +256,7 @@ export function App() {
   // the nightly 3:00 check, also when the app stays open across it; and a fresh "last seen" each minute
   useEffect(() => {
     setGarden((g) => (g ? catchUpNights(g, now) : g));
-    if (gardenRef.current && loaded.current) void saveGarden({ ...gardenRef.current, lastSeen: now });
+    if (gardenRef.current && loaded.current && !AWAY) void saveGarden({ ...gardenRef.current, lastSeen: now });
   }, [now]);
 
   // leaving and coming back: on return after a while, replay what happened in between
@@ -240,7 +264,7 @@ export function App() {
     let hiddenAt: number | null = null;
     const onVisibility = () => {
       const g = gardenRef.current;
-      if (!g || !loaded.current) return;
+      if (!g || !loaded.current || AWAY) return;
       if (document.visibilityState === 'hidden') {
         hiddenAt = Date.now();
         void saveGarden({ ...g, lastSeen: hiddenAt });
@@ -291,14 +315,18 @@ export function App() {
     window.setTimeout(() => setLapse((l) => (l?.skipped ? null : l)), 900);
   };
 
+  // in Safari on iPhone, a note on keeping the garden on the Home Screen comes first, once
+  const offerInstall =
+    !!garden && !installHidden && lapse === null && (installPreview || (!garden.settings.installHint && canAddToHomeScreen()));
+
   // the letter opens by itself the first time, once any replay has finished
   const letterUnread = garden?.settings.letter === 'unread';
   const replaying = lapse !== null;
   useEffect(() => {
-    if (!letterUnread || replaying) return;
+    if (!letterUnread || replaying || offerInstall) return;
     const t = window.setTimeout(() => setLetterOpen(true), 700);
     return () => window.clearTimeout(t);
-  }, [letterUnread, replaying]);
+  }, [letterUnread, replaying, offerInstall]);
 
   const update = useCallback((fn: (g: GardenState) => GardenState) => setGarden((g) => (g ? fn(g) : g)), []);
 
@@ -352,6 +380,22 @@ export function App() {
       .catch(() => setSettings({ weatherMode: 'clock' }))
       .finally(() => setLocating(false));
   };
+
+  /** Puts a backup in place of the garden, pictures and all, and shows it straight away. */
+  const restore = async (r: Restored) => {
+    const t = Date.now();
+    await restoreGarden({ ...r.garden, lastSeen: t }, r.images, t);
+    Object.values(pictures).forEach((url) => URL.revokeObjectURL(url));
+    const caughtUp = catchUpNights(r.garden, t);
+    opened.current = { at: t, garden: caughtUp };
+    lastLapse.current = null;
+    setPictures(await loadPictures(caughtUp.decor));
+    setGarden(caughtUp);
+    setMode({ kind: 'idle' });
+  };
+
+  const today = dayKey(new Date(now));
+  const memory = diarySeenOn !== today && onThisDay(garden.diary, today).length > 0;
 
   const onSlot = (slot: SlotId) => {
     const here = plantAt(garden, slot);
@@ -545,7 +589,12 @@ export function App() {
         onLiveWeather={liveWeather}
         locating={locating}
         onLetter={() => setLetterOpen(true)}
-        onDiary={() => setDiaryOpen(true)}
+        onDiary={() => {
+          setDiaryOpen(true);
+          setDiarySeenOn(today);
+        }}
+        memory={memory}
+        onBackup={() => setMode({ kind: 'backup' })}
         onBook={openBook}
         onDecorate={openDecorate}
         onOwnRoom={(edit) => {
@@ -599,6 +648,15 @@ export function App() {
           onClose={() => {
             setPictureError(null);
             setMode({ kind: 'idle' });
+          }}
+        />
+      )}
+      {mode.kind === 'backup' && <BackupSheet garden={garden} onRestore={restore} onClose={() => setMode({ kind: 'idle' })} />}
+      {offerInstall && (
+        <InstallHint
+          onDone={() => {
+            setInstallHidden(true);
+            setSettings({ installHint: true });
           }}
         />
       )}
@@ -760,6 +818,15 @@ export function App() {
       )}
       {mode.kind === 'move' && <MoveBanner text="Tap where it should go" onCancel={() => setMode({ kind: 'idle' })} />}
       {mode.kind === 'place' && <MoveBanner text="Tap a place in the window" onCancel={() => setMode({ kind: 'idle' })} />}
+      {AWAY && !lapse && mode.kind === 'idle' && (
+        <div className="banner" role="status">
+          <span>Demo · nothing is saved</span>
+          <button onClick={() => opened.current && playLapse(buildTimelapse(opened.current.garden, opened.current.at - AWAY, opened.current.at), false)}>
+            Again
+          </button>
+          <button onClick={() => window.location.assign(window.location.pathname)}>Leave</button>
+        </div>
+      )}
       {lapse && <LapseClock lapse={lapse.tl} p={lapse.p} fading={lapse.fading} onSkip={skipLapse} />}
       {diaryOpen && (
         <DiaryBook

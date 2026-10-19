@@ -6,6 +6,7 @@ import { CLOCK_ICON } from './Clock';
 import { ENVELOPE_ICON } from './Letter';
 import { BOOK_ICON } from './PressedBook';
 import { DIARY_ICON } from './Diary';
+import { BACKUP_ICON } from './Backup';
 
 const SUN = (
   <g>
@@ -57,7 +58,7 @@ const STATUS_TEXT: Record<WeatherStatus, string> = {
   manual: 'Chosen by you',
 };
 
-export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onDiary, onBook, onDecorate, onClock, onStudio, onOwnRoom }: {
+export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onDiary, memory, onBook, onBackup, onDecorate, onClock, onStudio, onOwnRoom }: {
   settings: Settings;
   weather: Weather;
   status: WeatherStatus;
@@ -66,6 +67,9 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
   locating: boolean;
   onLetter: () => void;
   onDiary: () => void;
+  /** Whether the diary has a page from this day in an earlier year. */
+  memory: boolean;
+  onBackup: () => void;
   onBook: () => void;
   onDecorate: () => void;
   /** Shows her own room, opening the room painter first if she hasn't made one yet (or to change it). */
@@ -98,6 +102,7 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
       )}
       <button className={settings.letter !== 'deleted' ? 'fab left third' : 'fab left second'} aria-label="Diary" onClick={onDiary}>
         <Icon>{DIARY_ICON}</Icon>
+        {memory && <span className="memory-dot" />}
       </button>
       <button className="fab right second" aria-label="While you were away" onClick={onClock}>
         <Icon>{CLOCK_ICON}</Icon>
@@ -216,6 +221,17 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
                 Change my room's colours
               </button>
             )}
+            <p className="hint">Keep it safe</p>
+            <button
+              className="wide with-icon"
+              onClick={() => {
+                setMenu(false);
+                onBackup();
+              }}
+            >
+              <Icon>{BACKUP_ICON}</Icon>
+              Backup · save or restore
+            </button>
           </div>
         </>
       )}

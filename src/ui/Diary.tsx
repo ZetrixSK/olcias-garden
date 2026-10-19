@@ -1,10 +1,15 @@
 import { useState } from 'react';
-import { dateOfKey, dayKey, MAX_ENTRY, monthGrid, MOOD_NAMES, MOODS, type Diary, type Mood } from '../garden/diary';
+import { dateOfKey, dayKey, MAX_ENTRY, monthGrid, MOOD_NAMES, MOODS, onThisDay, type Diary, type Mood } from '../garden/diary';
 import { MoodFace } from './Moods';
 
 const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 const monthTitle = (y: number, m: number) => new Date(y, m, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-const dayTitle = (key: string) => dateOfKey(key).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+/** The day's name; a page from an earlier year says which year too. */
+const dayTitle = (key: string) => {
+  const d = dateOfKey(key);
+  const year = d.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined;
+  return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year });
+};
 
 /** The month on one page: each day she wrote shows her mood face, or a little ink mark if she chose none. */
 function Calendar({ diary, today, onOpen, onClose }: { diary: Diary; today: string; onOpen: (key: string) => void; onClose: () => void }) {
@@ -13,9 +18,19 @@ function Calendar({ diary, today, onOpen, onClose }: { diary: Diary; today: stri
   const turn = (by: number) => setShown(({ y, m }) => ({ y: m + by < 0 ? y - 1 : m + by > 11 ? y + 1 : y, m: (m + by + 12) % 12 }));
   const atToday = shown.y === t.getFullYear() && shown.m === t.getMonth();
   const written = Object.keys(diary).filter((k) => k.startsWith(`${shown.y}-${String(shown.m + 1).padStart(2, '0')}`)).length;
+  const memories = onThisDay(diary, today);
   return (
     <>
       <div className="book-page diary-page">
+        {memories.map((m) => (
+          <button key={m.key} className="diary-memory" onClick={() => onOpen(m.key)}>
+            <span className="diary-memory-head">
+              {m.entry.mood && <MoodFace mood={m.entry.mood} size={22} />}
+              {m.yearsAgo === 1 ? 'A year ago today' : `${m.yearsAgo} years ago today`}
+            </span>
+            <span className="diary-memory-text">{m.entry.text.trim() || (m.entry.mood ? MOOD_NAMES[m.entry.mood] : '')}</span>
+          </button>
+        ))}
         <div className="diary-month">
           <button aria-label="Previous month" onClick={() => turn(-1)}>‹</button>
           <h2>{monthTitle(shown.y, shown.m)}</h2>

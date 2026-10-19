@@ -60,6 +60,19 @@ export function parseDiary(v: unknown): Diary {
   return out;
 }
 
+export type Memory = { key: string; yearsAgo: number; entry: DiaryEntry };
+
+/** Pages she wrote on this same day in earlier years, the most recent first. */
+export function onThisDay(diary: Diary, today: string): Memory[] {
+  const year = Number(today.slice(0, 4));
+  const day = today.slice(4);
+  return Object.keys(diary)
+    .filter((k) => k.slice(4) === day && Number(k.slice(0, 4)) < year)
+    .sort()
+    .reverse()
+    .map((key) => ({ key, yearsAgo: year - Number(key.slice(0, 4)), entry: diary[key]! }));
+}
+
 /** The weeks of a month for the calendar, Monday first; days outside the month are null. */
 export function monthGrid(year: number, month: number): Array<Array<Date | null>> {
   const first = new Date(year, month, 1);

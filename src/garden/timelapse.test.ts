@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { stageAt } from './growth';
 import { catchUpNights, starterGarden, type GardenState, type Plant } from './state';
-import { buildTimelapse, gardenAt, somethingGrew } from './timelapse';
+import { awayDemo, buildTimelapse, gardenAt, parseAway, somethingGrew } from './timelapse';
 
 const at = (day: number, hour: number) => new Date(2026, 9, day, hour).getTime();
 
@@ -52,5 +52,34 @@ describe('the replay of what happened while she was away', () => {
     const settled = catchUpNights(g, at(20, 10)).plants;
     expect(gardenAt(lapse, at(20, 10)).plants).toEqual(settled);
     expect(somethingGrew(lapse, (p, t) => stageAt(p.species, p, t))).toBe(false);
+  });
+});
+
+describe('the ?away preview', () => {
+  const T = new Date(2026, 9, 19, 20, 0).getTime();
+  const H = 3_600_000;
+
+  it('reads 30m, 8h, 2d and 1w, and nothing else', () => {
+    expect(parseAway('30m')).toBe(30 * 60_000);
+    expect(parseAway('8h')).toBe(8 * H);
+    expect(parseAway('2d')).toBe(48 * H);
+    expect(parseAway('1w')).toBe(168 * H);
+    expect(parseAway('8')).toBeNull();
+    expect(parseAway('-2d')).toBeNull();
+    expect(parseAway(null)).toBeNull();
+  });
+
+  it('rewinds every plant so it grows during the time away, ending where it is now', () => {
+    const g = starterGarden(T);
+    for (const away of [1 * H, 8 * H, 48 * H]) {
+      const demo = awayDemo(g, away, T);
+      for (const p of demo.plants) {
+        const real = g.plants.find((q) => q.id === p.id)!;
+        const now = stageAt(p.species, p, T);
+        expect(now === stageAt(real.species, real, T) || stageAt(real.species, real, T) === 'seed').toBe(true);
+        expect(stageAt(p.species, p, T - away)).not.toBe(now);
+      }
+      expect(somethingGrew(buildTimelapse(demo, T - away, T), (p, t) => stageAt(p.species, p, t))).toBe(true);
+    }
   });
 });

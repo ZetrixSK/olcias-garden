@@ -58,6 +58,8 @@ export type Settings = {
   own: OwnRoom | null;
   /** Whether her own room is the one showing. */
   useOwn: boolean;
+  /** Whether the iPhone "Add to Home Screen" note has been shown and put away. */
+  installHint: boolean;
 };
 
 export const SAVE_VERSION = 4;
@@ -90,6 +92,7 @@ export const DEFAULT_SETTINGS: Settings = {
   letter: 'unread',
   own: null,
   useOwn: false,
+  installHint: false,
 };
 
 export function newId(): string {
@@ -395,6 +398,7 @@ function parseSettings(v: unknown): Settings {
     letter: s.letter === 'kept' || s.letter === 'deleted' ? s.letter : 'unread',
     own: parseOwnRoom(s.own),
     useOwn: s.useOwn === true && parseOwnRoom(s.own) !== null,
+    installHint: s.installHint === true,
   };
 }
 
