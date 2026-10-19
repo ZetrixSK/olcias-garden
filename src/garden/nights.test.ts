@@ -58,23 +58,17 @@ describe('growing vines night by night', () => {
     expect(one.checkedAt).toBe(at(30, 3));
   });
 
-  it('gives roughly every other qualifying night a vine, at most two plants a night', () => {
-    let plants = garden();
+  it('gives most qualifying nights a vine, at most two plants a night', () => {
     let nightsWithGrowth = 0;
     for (let day = 3; day <= 42; day++) {
-      const before = plants;
-      plants = runNights(plants, at(day - 1, 12), at(day, 12), true).plants;
-      const grew = plants.filter((p, i) => {
-        const prev = before[i]!.vine?.length ?? 0;
-        const step = p.species === 'rose' ? ROSE_CREEP : 0;
-        return (p.vine?.length ?? 0) > prev + step + 1e-9 || (prev === 0 && p.vine !== null);
-      });
+      // each night from a garden with room to grow, so full vines don't hide a night's luck
+      const grew = runNights(garden(), at(day - 1, 12), at(day, 12), true).plants.filter((p) => p.vine);
       expect(grew.length).toBeLessThanOrEqual(2);
+      expect(grew.some((p) => p.id === 'd')).toBe(false);
       if (grew.length) nightsWithGrowth++;
     }
-    expect(nightsWithGrowth).toBeGreaterThan(10);
-    expect(nightsWithGrowth).toBeLessThan(30);
-    expect(plants.find((p) => p.id === 'd')?.vine).toBeNull();
+    expect(nightsWithGrowth).toBeGreaterThan(20);
+    expect(nightsWithGrowth).toBeLessThan(38);
   });
 
   it('settles a direction for a middle vine', () => {

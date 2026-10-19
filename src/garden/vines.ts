@@ -54,13 +54,13 @@ export type Vine = { length: number; dir?: MiddleDir };
 /** The nightly check happens at this local hour. */
 export const NIGHT_HOUR = 3;
 /** Chance of anything outgrowing on a night when at least one plant qualifies. */
-export const VINE_CHANCE = 0.5;
+export const VINE_CHANCE = 0.75;
 /** When two or more qualify and something happens, the chance it is two plants instead of one. */
-export const TWO_CHANCE = 0.35;
+export const TWO_CHANCE = 0.5;
 /** How much a vine grows on a night it is picked: pansies leap, roses take their time. */
-export const VINE_STEP: Record<VineSpecies, number> = { pansy: 0.18, rose: 0.1 };
+export const VINE_STEP: Record<VineSpecies, number> = { pansy: 0.22, rose: 0.16 };
 /** Once a rose has started climbing it creeps on by itself every night. */
-export const ROSE_CREEP = 0.03;
+export const ROSE_CREEP = 0.05;
 /** One tap of Trim cuts this much off; a vine shorter than MIN_VINE is gone. */
 export const TRIM_STEP = 0.15;
 export const MIN_VINE = 0.03;
