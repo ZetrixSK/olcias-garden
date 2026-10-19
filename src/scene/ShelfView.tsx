@@ -2,7 +2,8 @@ import { SLOT_IDS, type GardenState, type SlotId } from '../garden/state';
 import { POT_HEIGHT } from '../plants/Pots';
 import { plantLook } from '../plants/looks';
 import { candleLit as isCandleLit, roomTint, type Theme, type Weather } from '../theme/palettes';
-import { CANDLE_FLAME, Flame, SHELF_SPARKLES, SillCandle, WallSparkles } from './Decor';
+import { CandleLight, candleFlame, SHELF_SPARKLES, SillCandle, WallSparkles } from './Decor';
+import type { CandleLook } from '../garden/candle';
 import { PeekingDogs } from './Dogs';
 import { dogMood } from './dogMood';
 import { EmptySlot, GardenPlanter } from './GardenPlanter';
@@ -96,7 +97,7 @@ function Hanger({ x, rimY }: { x: number; rimY: number }) {
   );
 }
 
-export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movingId, wateringId, onSlot, paper = null, pictures = {}, drawingId = null, rainbow = false }: {
+export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movingId, wateringId, onSlot, paper = null, pictures = {}, drawingId = null, rainbow = false, candle = null, candleOn, onCandle }: {
   theme: Theme;
   weather: Weather;
   viewH: number;
@@ -112,6 +113,10 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
   /** The drawing whose card is open. */
   drawingId?: string | null;
   rainbow?: boolean;
+  /** Her own candle, or null for the room's own. */
+  candle?: CandleLook | null;
+  candleOn: boolean;
+  onCandle?: () => void;
 }) {
   // short screens (Safari with its bars) see the whole wall slightly smaller, with wallpaper at the sides
   const h = Math.max(viewH, CORE_H);
@@ -119,7 +124,7 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
   const bottom = minY + h;
   const tint = roomTint(weather, theme);
   const candleLit = isCandleLit(weather);
-  const [fx, fy] = CANDLE_FLAME[theme];
+  const [fx, fy] = candleFlame(theme, candle);
   const candleShift = { x: 200 - 335, y: 277 - 517 };
   const bySlot = new Map(garden.plants.map((p) => [p.slot, p]));
   const season = seasonShown(now);
@@ -166,8 +171,15 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
       <Board x0={10} x1={390} y={446} />
       <Board x0={10} x1={390} y={618} />
 
-      <g transform={`translate(${candleShift.x} ${candleShift.y})`}>
-        <SillCandle theme={theme} />
+      <g
+        className="tappable"
+        role="button"
+        aria-label={candleOn ? 'Blow out the candle' : 'Light the candle'}
+        transform={`translate(${candleShift.x} ${candleShift.y})`}
+        onClick={onCandle}
+      >
+        <SillCandle theme={theme} look={candle} />
+        <rect x="314" y="456" width="46" height="64" fill="transparent" />
       </g>
 
       {SLOT_IDS.map((slot) => {
@@ -232,12 +244,7 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
       </g>
       {theme === 'witchy' && <WallSparkles points={SHELF_SPARKLES} night={weather.night} />}
       {occasion === 'halloween' && candleLit && <LanternLight {...lantern} glow="shelf-candle-glow" />}
-      {candleLit && (
-        <>
-          <circle className="glow" cx={fx + candleShift.x} cy={fy + candleShift.y} r={weather.night ? 240 : 160} fill="url(#shelf-candle-glow)" />
-          <Flame x={fx + candleShift.x} y={fy + candleShift.y} />
-        </>
-      )}
+      <CandleLight x={fx + candleShift.x} y={fy + candleShift.y} lit={candleOn} glow="shelf-candle-glow" r={weather.night ? 240 : 160} />
     </svg>
   );
 }

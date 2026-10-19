@@ -7,6 +7,8 @@ import { ENVELOPE_ICON } from './Letter';
 import { BOOK_ICON } from './PressedBook';
 import { DIARY_ICON } from './Diary';
 import { BACKUP_ICON } from './Backup';
+import { CAMERA_ICON } from './Picture';
+import { ambience } from '../sound/ambience';
 
 const SUN = (
   <g>
@@ -58,7 +60,7 @@ const STATUS_TEXT: Record<WeatherStatus, string> = {
   manual: 'Chosen by you',
 };
 
-export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onDiary, memory, onBook, onBackup, onDecorate, onClock, onStudio, onOwnRoom }: {
+export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onDiary, memory, onBook, onBackup, onPicture, onDecorate, onClock, onStudio, onOwnRoom }: {
   settings: Settings;
   weather: Weather;
   status: WeatherStatus;
@@ -70,12 +72,13 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
   /** Whether the diary has a page from this day in an earlier year. */
   memory: boolean;
   onBackup: () => void;
+  onPicture: () => void;
   onBook: () => void;
   onDecorate: () => void;
   /** Shows her own room, opening the room painter first if she hasn't made one yet (or to change it). */
   onOwnRoom: (edit: boolean) => void;
   onClock: () => void;
-  onStudio: (what: 'pot' | 'pansy') => void;
+  onStudio: (what: 'pot' | 'pansy' | 'candle') => void;
 }) {
   const [menu, setMenu] = useState(false);
   const other: View = settings.view === 'room' ? 'shelves' : 'room';
@@ -155,32 +158,60 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
               <Icon>{BOOK_ICON}</Icon>
               Pressed flowers
             </button>
+            <button
+              className="wide with-icon"
+              onClick={() => {
+                setMenu(false);
+                onPicture();
+              }}
+            >
+              <Icon>{CAMERA_ICON}</Icon>
+              Save a picture
+            </button>
             <p className="hint">Make your own</p>
             <button
-              className="wide"
+              className="wide two-line"
               onClick={() => {
                 setMenu(false);
                 onDecorate();
               }}
             >
-              Decorate · wallpaper, photo, drawings
+              Decorate
+              <small>wallpaper, photo, drawings</small>
             </button>
+            <div className="row three">
+              {(
+                [
+                  ['pansy', 'Bratek'],
+                  ['pot', 'Pot'],
+                  ['candle', 'Candle'],
+                ] as const
+              ).map(([what, name]) => (
+                <button
+                  key={what}
+                  onClick={() => {
+                    setMenu(false);
+                    onStudio(what);
+                  }}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+            <p className="hint">Sounds</p>
             <div className="row two">
               <button
+                aria-pressed={settings.sound}
                 onClick={() => {
-                  setMenu(false);
-                  onStudio('pansy');
+                  // a phone only lets sound start straight from a tap
+                  ambience()?.start();
+                  onSettings({ sound: true });
                 }}
               >
-                Bratek
+                On
               </button>
-              <button
-                onClick={() => {
-                  setMenu(false);
-                  onStudio('pot');
-                }}
-              >
-                Pot
+              <button aria-pressed={!settings.sound} onClick={() => onSettings({ sound: false })}>
+                Off
               </button>
             </div>
             <p className="hint">Climbing vines</p>

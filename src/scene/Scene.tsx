@@ -5,7 +5,8 @@ import { chooseRoutes, type VineSpot } from '../garden/vines';
 import { POT_HEIGHT } from '../plants/Pots';
 import { plantLook } from '../plants/looks';
 import { candleLit as isCandleLit, roomTint, type Theme, type Weather } from '../theme/palettes';
-import { Ball, CANDLE_FLAME, CornerPiece, Flame, ROOM_SPARKLES, ShelfTrinket, SillCandle, WallDecor, WallSparkles } from './Decor';
+import { Ball, CandleLight, candleFlame, CornerPiece, ROOM_SPARKLES, ShelfTrinket, SillCandle, WallDecor, WallSparkles } from './Decor';
+import type { CandleLook } from '../garden/candle';
 import { DogBed, Dogs } from './Dogs';
 import { dogMood, type DogMood } from './dogMood';
 import { EmptySlot, GardenPlanter } from './GardenPlanter';
@@ -200,10 +201,17 @@ const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hi
 });
 
 /** The light over everything: night or rain tint, moon and stars, candlelight. */
-const Lights = memo(function Lights({ theme, sky, night, twilight, phase, occasion, dy, wallMid }: Lit & { phase: number; occasion: Occasion; dy: number; wallMid: number }) {
+const Lights = memo(function Lights({ theme, sky, night, twilight, phase, occasion, dy, wallMid, fx, fy, candleOn }: Lit & {
+  phase: number;
+  occasion: Occasion;
+  dy: number;
+  wallMid: number;
+  fx: number;
+  fy: number;
+  candleOn: boolean;
+}) {
   const weather = { sky, night, twilight };
   const tint = roomTint(weather, theme);
-  const [fx, fy] = CANDLE_FLAME[theme];
   return (
     <>
       {/* one tint for the whole scene keeps sky and room in the same light */}
@@ -215,12 +223,7 @@ const Lights = memo(function Lights({ theme, sky, night, twilight, phase, occasi
           <LanternLight {...ROOM_LANTERN} />
         </g>
       )}
-      {isCandleLit(weather) && (
-        <>
-          <circle className="glow" cx={fx} cy={fy} r={night ? 250 : 170} fill="url(#candle-glow)" />
-          <Flame x={fx} y={fy} />
-        </>
-      )}
+      <CandleLight x={fx} y={fy} lit={candleOn} glow="candle-glow" r={night ? 250 : 170} />
     </>
   );
 });
@@ -230,7 +233,7 @@ const SillBoard = memo(Sill);
 const Trinket = memo(ShelfTrinket);
 const Candle = memo(SillCandle);
 
-export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, rainbow = false, ...rest }: {
+export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, rainbow = false, candle = null, candleOn, onCandle, ...rest }: {
   theme: Theme;
   weather: Weather;
   viewH: number;
@@ -247,6 +250,11 @@ export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains 
   /** Her photo in the frame on the wall; tapping the frame calls onFrame. */
   photoUrl?: string | null;
   onFrame?: () => void;
+  /** Her own candle, or null for the room's own. */
+  candle?: CandleLook | null;
+  candleOn: boolean;
+  /** Tapping the candle lights it or blows it out. */
+  onCandle?: () => void;
 } & Omit<SpotProps, 'placed'>) {
   const placed = placeVines(vines, rest.garden);
   const spots = { ...rest, placed };
@@ -287,7 +295,10 @@ export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains 
 
       <SillBoard />
       <WindowRow row="sill" {...spots} />
-      <Candle theme={theme} />
+      <g className="tappable" role="button" aria-label={candleOn ? 'Blow out the candle' : 'Light the candle'} onClick={onCandle}>
+        <Candle theme={theme} look={candle} />
+        <rect x="314" y="456" width="46" height="64" fill="transparent" />
+      </g>
 
       <RoomFront
         theme={theme}
@@ -302,7 +313,7 @@ export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains 
         photoUrl={photoUrl}
         onFrame={onFrame}
       />
-      <Lights theme={theme} sky={weather.sky} night={weather.night} twilight={weather.twilight ?? null} phase={phaseAt(rest.now)} occasion={cal.occasion} dy={dy} wallMid={wallMid} />
+      <Lights theme={theme} sky={weather.sky} night={weather.night} twilight={weather.twilight ?? null} phase={phaseAt(rest.now)} occasion={cal.occasion} dy={dy} wallMid={wallMid} fx={candleFlame(theme, candle)[0]} fy={candleFlame(theme, candle)[1]} candleOn={candleOn} />
     </svg>
   );
 }

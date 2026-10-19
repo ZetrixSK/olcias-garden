@@ -3,6 +3,7 @@ import { plantedAtForStage, stageAt } from './growth';
 import { MAX_DRAWINGS, NO_DECOR, parseDecor, type Decor, type Drawing, type Photo, type Wallpaper } from './decor';
 import { MAX_NAME, MAX_NOTE, MAX_PRESSED, parsePressed, pressedToday, pressingOf, type Pressing } from './pressed';
 import { parseOwnRoom, type OwnRoom } from '../theme/ownRoom';
+import { parseCandle, parseCandleLit, type CandleLit, type CandleLook } from './candle';
 import { parseDiary, withEntry, withoutEntry, type Diary, type Mood } from './diary';
 import { designId, NO_DESIGNS, PANSY_PRESETS, parseDesigns, upsert, type Designs, type PansyDesign, type PotDesign, type PotRef } from './designs';
 import { lastNight, runNights, settleMiddleDir, trimmed, type Vine } from './vines';
@@ -60,6 +61,12 @@ export type Settings = {
   useOwn: boolean;
   /** Whether the iPhone "Add to Home Screen" note has been shown and put away. */
   installHint: boolean;
+  /** Her own candle on the sill; null for the room's own. */
+  candle: CandleLook | null;
+  /** Lit or blown out by her; null lights itself whenever the room is dim. */
+  candleLit: CandleLit;
+  /** Soft sounds of the weather and the room. Off unless she turns them on. */
+  sound: boolean;
 };
 
 export const SAVE_VERSION = 4;
@@ -93,6 +100,9 @@ export const DEFAULT_SETTINGS: Settings = {
   own: null,
   useOwn: false,
   installHint: false,
+  candle: null,
+  candleLit: null,
+  sound: false,
 };
 
 export function newId(): string {
@@ -399,6 +409,9 @@ function parseSettings(v: unknown): Settings {
     own: parseOwnRoom(s.own),
     useOwn: s.useOwn === true && parseOwnRoom(s.own) !== null,
     installHint: s.installHint === true,
+    candle: parseCandle(s.candle),
+    candleLit: parseCandleLit(s.candleLit),
+    sound: s.sound === true,
   };
 }
 

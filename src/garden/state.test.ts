@@ -77,6 +77,9 @@ describe('garden state', () => {
       own: null,
       useOwn: false,
       installHint: false,
+      candle: null,
+      candleLit: null,
+      sound: false,
     });
   });
 

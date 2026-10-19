@@ -11,7 +11,9 @@ import {
   type PotDesign,
   type PotPattern,
 } from '../garden/designs';
+import { CANDLE_SHAPE_NAMES, CANDLE_SHAPES, WAX_COLORS, WAX_NAMES, type CandleLit, type CandleLook } from '../garden/candle';
 import { newId } from '../garden/state';
+import { candleFlame, Flame, SillCandle } from '../scene/Decor';
 import { designColors } from '../plants/looks';
 import { PansyFlower, PansyPlant } from '../plants/Pansy';
 import { PaintedFront } from '../plants/PaintedPot';
@@ -285,6 +287,77 @@ export function RoomStudio({ room, editing, onChange, onSave, onClose }: {
           />
         </Section>
       ))}
+    </StudioFrame>
+  );
+}
+
+const FLAME_CHOICES: Array<[CandleLit, string]> = [
+  [true, 'Lit'],
+  [false, 'Blown out'],
+  [null, 'Lights itself'],
+];
+
+/** Her candle on the sill: its shape and wax, shown live in the room above the sheet. */
+export function CandleStudio({ look, lit, own, onChange, onLit, onRoomCandle, onSave, onClose }: {
+  look: CandleLook;
+  lit: CandleLit;
+  /** Whether she already has her own candle, so she can go back to the room's. */
+  own: boolean;
+  onChange: (look: CandleLook) => void;
+  onLit: (lit: CandleLit) => void;
+  onRoomCandle: () => void;
+  onSave: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <StudioFrame
+      title="My candle"
+      preview={
+        <svg viewBox="296 448 82 80" aria-hidden="true">
+          <defs>
+            <radialGradient id="studio-candle-glow">
+              <stop offset="0" stopColor="#ffc97e" stopOpacity="0.6" />
+              <stop offset="1" stopColor="#ff9f5a" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          <path className="ink" fill="#b98a5e" d="M290,517 L384,517 L384,530 L290,530 Z" />
+          {lit !== false && <circle cx={candleFlame('cozy', look)[0]} cy={candleFlame('cozy', look)[1]} r="40" fill="url(#studio-candle-glow)" />}
+          <SillCandle theme="cozy" look={look} />
+          {lit !== false && <Flame x={candleFlame('cozy', look)[0]} y={candleFlame('cozy', look)[1]} />}
+        </svg>
+      }
+      editing={false}
+      onSave={onSave}
+      onDelete={() => {}}
+      onClose={onClose}
+    >
+      <Section title="Shape">
+        <div className="decor-choice">
+          {CANDLE_SHAPES.map((shape) => (
+            <button key={shape} aria-pressed={look.shape === shape} onClick={() => onChange({ ...look, shape })}>
+              {CANDLE_SHAPE_NAMES[shape]}
+            </button>
+          ))}
+        </div>
+      </Section>
+      <Section title="Wax">
+        <Swatches colors={WAX_COLORS} names={WAX_NAMES} value={look.wax} onPick={(wax) => wax && onChange({ ...look, wax })} />
+      </Section>
+      <Section title="Flame">
+        <div className="decor-choice">
+          {FLAME_CHOICES.map(([value, name]) => (
+            <button key={name} aria-pressed={lit === value} onClick={() => onLit(value)}>
+              {name}
+            </button>
+          ))}
+        </div>
+        <p className="decor-hint">Tap the candle in the room to light it or blow it out. Left to itself, it lights in the evening and when it rains.</p>
+      </Section>
+      {own && (
+        <button className="quiet candle-reset" onClick={onRoomCandle}>
+          Back to the room's own candle
+        </button>
+      )}
     </StudioFrame>
   );
 }

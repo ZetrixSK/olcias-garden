@@ -64,7 +64,12 @@ import { paletteVars, type Weather } from './theme/palettes';
 import { seasonShown } from './theme/seasons';
 import { isDarkRoom, startingRoom, type OwnRoom } from './theme/ownRoom';
 import { MoveBanner, PlantCard, PlantPicker, StyleSheet, VarietyPicker, WindowChooser } from './ui/Sheets';
-import { NEW_PANSY, NEW_POT, PansyStudio, PotStudio, RoomStudio } from './ui/Studio';
+import { CandleStudio, NEW_PANSY, NEW_POT, PansyStudio, PotStudio, RoomStudio } from './ui/Studio';
+import { PictureSheet } from './ui/Picture';
+import { flameOn, type CandleLook } from './garden/candle';
+import { candleLit as roomIsDim } from './theme/palettes';
+import { ambientMix } from './sound/mix';
+import { useAmbience } from './sound/useAmbience';
 import { designRef } from './garden/designs';
 import { PlantArt } from './plants/PlantArt';
 import { pansyPalette as paletteOf } from './plants/looks';
@@ -172,7 +177,11 @@ type Mode =
   /** painting her own room; `draft` shows in the room until she saves or closes */
   | { kind: 'roomStudio'; draft: OwnRoom; editing: boolean }
   /** saving the garden to a file, or bringing one back */
-  | { kind: 'backup' };
+  | { kind: 'backup' }
+  /** a picture of the garden as it is */
+  | { kind: 'picture' }
+  /** her candle; `draft` shows on the sill until she saves or closes */
+  | { kind: 'candleStudio'; draft: CandleLook };
 
 /** Her pictures, as addresses the drawing can use, keyed by the image's name in storage. */
 type Pictures = Record<string, string>;
@@ -367,6 +376,11 @@ export function App() {
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', barColor);
   }, [barColor]);
 
+  // her candle, the one she's designing while the studio is open; lit by her, or by itself when the room is dim
+  const candle = mode.kind === 'candleStudio' ? mode.draft : (settings?.candle ?? null);
+  const candleOn = flameOn(settings?.candleLit ?? null, roomIsDim(weather));
+  useAmbience(!!settings?.sound, ambientMix(weather, seasonShown(now), new Date(now).getHours(), candleOn));
+
   if (!garden || !settings) return <div className="garden" style={paletteVars('cozy', weather)} />;
 
   const setSettings = (patch: Partial<Settings>) => {
@@ -556,6 +570,9 @@ export function App() {
             photoUrl={garden.decor.photo ? (pictures[garden.decor.photo.img] ?? null) : null}
             onFrame={openDecorate}
             rainbow={rainbow}
+            candle={candle}
+            candleOn={candleOn}
+            onCandle={() => setSettings({ candleLit: !candleOn })}
             hideCurtains={import.meta.env.DEV && window.location.search.includes('nocurtains')}
             garden={shown}
             now={shownNow}
@@ -577,6 +594,9 @@ export function App() {
             pictures={pictures}
             drawingId={mode.kind === 'drawing' ? mode.id : null}
             rainbow={rainbow}
+            candle={candle}
+            candleOn={candleOn}
+            onCandle={() => setSettings({ candleLit: !candleOn })}
             wateringId={wateringId}
             onSlot={onSlot}
           />
@@ -597,6 +617,7 @@ export function App() {
         }}
         memory={memory}
         onBackup={() => setMode({ kind: 'backup' })}
+        onPicture={() => setMode({ kind: 'picture' })}
         onBook={openBook}
         onDecorate={openDecorate}
         onOwnRoom={(edit) => {
@@ -607,7 +628,9 @@ export function App() {
           setMode(
             what === 'pot'
               ? { kind: 'potStudio', editing: null, forPlant: null }
-              : { kind: 'pansyStudio', editing: null, forSlot: null, forPlant: null },
+              : what === 'candle'
+                ? { kind: 'candleStudio', draft: settings.candle ?? (theme === 'witchy' ? { shape: 'taper', wax: '#2a1f2e' } : { shape: 'jar', wax: '#e7a7b6' }) }
+                : { kind: 'pansyStudio', editing: null, forSlot: null, forPlant: null },
           )
         }
         onClock={() => {
@@ -651,6 +674,25 @@ export function App() {
             setPictureError(null);
             setMode({ kind: 'idle' });
           }}
+        />
+      )}
+      {mode.kind === 'picture' && <PictureSheet onClose={() => setMode({ kind: 'idle' })} />}
+      {mode.kind === 'candleStudio' && (
+        <CandleStudio
+          look={mode.draft}
+          lit={settings.candleLit}
+          own={settings.candle !== null}
+          onChange={(draft) => setMode({ kind: 'candleStudio', draft })}
+          onLit={(candleLit) => setSettings({ candleLit })}
+          onRoomCandle={() => {
+            setSettings({ candle: null });
+            setMode({ kind: 'idle' });
+          }}
+          onSave={() => {
+            setSettings({ candle: mode.draft });
+            setMode({ kind: 'idle' });
+          }}
+          onClose={() => setMode({ kind: 'idle' })}
         />
       )}
       {mode.kind === 'backup' && <BackupSheet garden={garden} onRestore={restore} onClose={() => setMode({ kind: 'idle' })} />}

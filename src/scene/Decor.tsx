@@ -1,16 +1,23 @@
+import { useEffect, useRef, useState } from 'react';
+import { shade, type CandleLook, type CandleShape } from '../garden/candle';
 import type { Theme } from '../theme/palettes';
 import { PansyFlower, PANSY_OLCIA } from '../plants/Pansy';
 import { moonPath } from '../weather/moon';
 import { fv } from './geometry';
 import { PhotoFrame } from './OwnDecor';
 
-export const CANDLE_FLAME: Record<Theme, [number, number]> = {
+const CANDLE_FLAME: Record<Theme, [number, number]> = {
   cozy: [335, 483],
   witchy: [337, 462],
 };
+const SHAPE_FLAME: Record<CandleShape, [number, number]> = { jar: [336, 495], pillar: [336, 482], taper: [337, 462] };
 
-/** Candle on the right end of the sill. The flame itself is drawn in the light layer. */
-export function SillCandle({ theme }: { theme: Theme }) {
+/** Where the flame sits: on her own candle's wick, or the room's own candle's. */
+export const candleFlame = (theme: Theme, look: CandleLook | null): [number, number] => (look ? SHAPE_FLAME[look.shape] : CANDLE_FLAME[theme]);
+
+/** Candle on the right end of the sill: the room's own, or hers. The flame itself is drawn in the light layer. */
+export function SillCandle({ theme, look = null }: { theme: Theme; look?: CandleLook | null }) {
+  if (look) return <OwnCandle look={look} />;
   if (theme === 'cozy') {
     return (
       <g>
@@ -30,14 +37,94 @@ export function SillCandle({ theme }: { theme: Theme }) {
   }
   return (
     <g>
-      <ellipse className="ink" cx="337" cy="514" rx="15" ry="3.6" fill="#b58f4f" />
-      <path className="ink" fill="#c9a45c" d="M331,514 L331,506 C331,503 343,503 343,506 L343,514 Z" />
-      <path className="ink" fill="#c9a45c" d="M350,511 C356,511 357,505 352,504 L350,506" />
+      <TaperHolder />
       <path className="ink" fill="#24192a" d="M333.5,505 L333.5,468 C333.5,466.4 340.5,466.4 340.5,468 L340.5,505 Z" />
       <path className="ink-thin" fill="#2f2236" d="M340.5,470 C342,474 341.6,480 340.6,484 C339.6,480 339.8,474 340.5,470 Z M333.5,469 C332.4,473 332.6,476 333.6,478 Z" />
       <path d="M335.6,470 L335.6,502" stroke="#4d3d55" strokeWidth="1.2" strokeLinecap="round" />
       <path d="M337,467 L337,463" stroke="#1a1218" strokeWidth="1" strokeLinecap="round" />
     </g>
+  );
+}
+
+/** The brass holder a taper stands in. */
+function TaperHolder() {
+  return (
+    <g>
+      <ellipse className="ink" cx="337" cy="514" rx="15" ry="3.6" fill="#b58f4f" />
+      <path className="ink" fill="#c9a45c" d="M331,514 L331,506 C331,503 343,503 343,506 L343,514 Z" />
+      <path className="ink" fill="#c9a45c" d="M350,511 C356,511 357,505 352,504 L350,506" />
+    </g>
+  );
+}
+
+/** Her candle, in the shape and wax she chose. */
+function OwnCandle({ look: { shape, wax } }: { look: CandleLook }) {
+  const dark = shade(wax, 0.22);
+  const light = shade(wax, -0.35);
+  if (shape === 'jar') {
+    return (
+      <g>
+        <path className="ink" fill="#efe2cf" fillOpacity="0.55" d="M325,517 L325,496 C325,492.5 347,492.5 347,496 L347,517 Z" />
+        <path fill={wax} d="M326,516 L326,503 C331,504.6 341,504.6 346,503 L346,516 Z" />
+        <path d="M326,503 C331,504.6 341,504.6 346,503" fill="none" stroke={dark} strokeWidth="1" />
+        <path className="ink-thin" fill="#c9a77b" d="M328.5,507 L343.5,507 L343.5,513 L328.5,513 Z" />
+        <path d="M331,510 L341,510" stroke="#8a6a48" strokeWidth="0.8" strokeLinecap="round" />
+        <path d="M336,503.6 L336,498.5" stroke="#3a2a22" strokeWidth="1" strokeLinecap="round" />
+        <path d="M327.6,497 L327.6,514" stroke="#fff" strokeOpacity="0.55" strokeWidth="1.4" strokeLinecap="round" />
+      </g>
+    );
+  }
+  if (shape === 'pillar') {
+    return (
+      <g>
+        <ellipse cx="336" cy="517" rx="13" ry="2.4" fill="#000" opacity="0.12" />
+        <path className="ink" fill={wax} d="M327,517 L327,490 C327,487.6 345,487.6 345,490 L345,517 Z" />
+        <ellipse cx="336" cy="490" rx="8.2" ry="1.8" fill={dark} />
+        <path className="ink-thin" fill={wax} d="M329.6,490.4 C329.4,494 330,497.6 331.2,497.6 C332.4,497.6 332.4,494 332.2,490.6 Z" />
+        <path className="ink-thin" fill={wax} d="M340.4,490.6 C340.2,495 341,500.6 342.4,500.6 C343.6,500.6 343.4,495 343,490.4 Z" />
+        <path d="M329.2,499 L329.2,514" stroke={light} strokeOpacity="0.7" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M343,503 L343,515" stroke={dark} strokeOpacity="0.55" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M336,489.6 L336,485" stroke="#3a2a22" strokeWidth="1" strokeLinecap="round" />
+      </g>
+    );
+  }
+  return (
+    <g>
+      <TaperHolder />
+      <path className="ink" fill={wax} d="M333.5,505 L333.5,468 C333.5,466.4 340.5,466.4 340.5,468 L340.5,505 Z" />
+      <path className="ink-thin" fill={wax} d="M340.5,470 C342,474 341.6,480 340.6,484 C339.6,480 339.8,474 340.5,470 Z M333.5,469 C332.4,473 332.6,476 333.6,478 Z" />
+      <path d="M335.6,470 L335.6,502" stroke={light} strokeOpacity="0.6" strokeWidth="1.2" strokeLinecap="round" />
+      <path d="M337,467 L337,463" stroke="#1a1218" strokeWidth="1" strokeLinecap="round" />
+    </g>
+  );
+}
+
+/**
+ * The candle's light: glow and flame while it burns. Lighting it, the flame catches and grows;
+ * blowing it out leaves a curl of smoke rising from the wick.
+ */
+export function CandleLight({ x, y, lit, glow, r }: { x: number; y: number; lit: boolean; glow: string; r: number }) {
+  const was = useRef(lit);
+  const [change, setChange] = useState<{ n: number; to: boolean } | null>(null);
+  useEffect(() => {
+    if (was.current === lit) return;
+    was.current = lit;
+    setChange((c) => ({ n: (c?.n ?? 0) + 1, to: lit }));
+  }, [lit]);
+  return (
+    <>
+      {lit && (
+        <g key={`lit-${change?.n ?? 0}`} className={change?.to ? 'candle-catch' : undefined} pointerEvents="none">
+          <circle className="glow" cx={x} cy={y} r={r} fill={`url(#${glow})`} />
+          <Flame x={x} y={y} />
+        </g>
+      )}
+      {change && !change.to && (
+        <g key={`smoke-${change.n}`} transform={`translate(${x} ${y + 2})`} pointerEvents="none">
+          <path className="candle-smoke" d="M0,0 C-3,-5 3,-9 0,-14 C-3,-19 2,-23 -0.5,-29" fill="none" stroke="#d9d2dc" strokeWidth="1.5" strokeLinecap="round" />
+        </g>
+      )}
+    </>
   );
 }
 

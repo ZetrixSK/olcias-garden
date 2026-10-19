@@ -2,29 +2,7 @@ import { useEffect, useState } from 'react';
 import { backupName, backupSummary, makeBackup, readBackup, type Restored } from '../garden/backup';
 import type { GardenState } from '../garden/state';
 import { getImage } from '../garden/storage';
-
-/** Hands the file to the phone's share sheet (Save to Files, AirDrop, a message), or downloads it where sharing a file isn't possible. */
-function sendFile(file: File): Promise<'shared' | 'downloaded' | 'cancelled'> {
-  if (navigator.canShare?.({ files: [file] })) {
-    return navigator.share({ files: [file], title: "Olcia's Garden backup" }).then(
-      () => 'shared' as const,
-      (e: unknown) => (e instanceof DOMException && e.name === 'AbortError' ? 'cancelled' : download(file)),
-    );
-  }
-  return Promise.resolve(download(file));
-}
-
-function download(file: File): 'downloaded' {
-  const url = URL.createObjectURL(file);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = file.name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
-  return 'downloaded';
-}
+import { sendFile } from './share';
 
 /** Opens the phone's file picker; null if she cancels. */
 function chooseFile(): Promise<File | null> {
@@ -76,7 +54,7 @@ export function BackupSheet({ garden, onRestore, onClose }: {
   const save = () => {
     if (!file) return;
     setError(null);
-    void sendFile(file).then((how) => {
+    void sendFile(file, "Olcia's Garden backup").then((how) => {
       if (how === 'shared') setNote('Done. Keep it somewhere safe, like Files or iCloud Drive.');
       if (how === 'downloaded') setNote(`Saved as ${file.name}, in Downloads.`);
     });
