@@ -37,6 +37,56 @@ export const previewAllMoments = () => typeof location !== 'undefined' && new UR
 /** Everything that might be out there right now. */
 export type Outside = { visitors: Visitors; fog: boolean; aurora: boolean; rainbow: boolean };
 
+/** Moments that can be sent from the admin page, to show for a while whatever the day would bring. */
+export const MOMENTS = ['rainbow', 'aurora', 'fog', 'shooting-stars', 'ducks', 'heron', 'deer', 'robin', 'skater', 'butterflies'] as const;
+export type Moment = (typeof MOMENTS)[number];
+
+/**
+ * Whether a moment can be seen in her window right now, and if not, why not: northern lights and
+ * shooting stars need a clear night, a rainbow a dry day; the visitors keep to their seasons and
+ * nobody visits the lake at night.
+ */
+export function momentBlocked(m: Moment, season: Season, night: boolean, sky: 'clear' | 'cloudy' | 'rain'): string | null {
+  const winter = season === 'winter';
+  switch (m) {
+    case 'aurora':
+    case 'shooting-stars':
+      return night && sky === 'clear' ? null : 'That only shows on a clear night, and her sky is not one right now.';
+    case 'rainbow':
+      return !night && sky !== 'rain' ? null : 'A rainbow needs daylight and no rain falling.';
+    case 'fog':
+      return night ? 'Fog is only drawn by day.' : null;
+    case 'robin':
+    case 'skater':
+      if (!winter) return 'Only in winter, when the lake is frozen.';
+      return night ? 'Nobody visits the lake at night.' : null;
+    case 'ducks':
+    case 'heron':
+    case 'butterflies':
+      if (winter) return 'Not in winter.';
+      return night ? 'Nobody visits the lake at night.' : null;
+    case 'deer':
+      return night ? 'Nobody visits the lake at night.' : null;
+  }
+}
+
+/** What's outside, with the moments sent from the admin page added in (those that can be seen now). */
+export function withMoments(o: Outside, moments: readonly Moment[], season: Season, night: boolean, sky: 'clear' | 'cloudy' | 'rain'): Outside {
+  const on = moments.filter((m) => momentBlocked(m, season, night, sky) === null);
+  if (on.length === 0) return o;
+  const has = (m: Moment) => on.includes(m);
+  const v = o.visitors;
+  return {
+    visitors: {
+      ducks: v.ducks || has('ducks'), heron: v.heron || has('heron'), deer: v.deer || has('deer'),
+      robin: v.robin || has('robin'), skater: v.skater || has('skater'), butterflies: v.butterflies || has('butterflies'),
+    },
+    fog: o.fog || has('fog'),
+    aurora: o.aurora || has('aurora'),
+    rainbow: o.rainbow || has('rainbow'),
+  };
+}
+
 export function outsideNow(t: number, season: Season, night: boolean, sky: 'clear' | 'cloudy' | 'rain', rainbow: boolean): Outside {
   if (previewAllMoments()) {
     const winter = season === 'winter';

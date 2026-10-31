@@ -82,7 +82,7 @@ export function parsePansy(v: unknown): PansyDesign | null {
   };
 }
 
-function parsePot(v: unknown): PotDesign | null {
+export function parsePot(v: unknown): PotDesign | null {
   if (!isObj(v) || typeof v.id !== 'string' || !v.id) return null;
   return {
     id: v.id,

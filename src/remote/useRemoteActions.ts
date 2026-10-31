@@ -1,12 +1,22 @@
 import { useEffect, useRef, type MutableRefObject } from 'react';
 import type { GardenState } from '../garden/state';
-import { applyAction, handled, type RemoteAction } from './actions';
+import { applyAction, handled, type Effect, type RemoteAction, type World } from './actions';
 import { isRobot, listenForActions, pendingActions, remoteConfigured, reportAction } from './client';
 
 /** The garden saves a moment after each change; an action is only reported done once that has happened. */
 const REPORT_AFTER = 1200;
 /** Several actions arriving together play out one after another rather than all at once. */
 const BETWEEN = 900;
+
+/**
+ * A sortable key for when an action was sent. The database's times come as `2026-10-31T09:34:08.12+00:00`
+ * from a fetch but `2026-10-31 09:34:08.123456+00` over the live line (both UTC), so they're compared
+ * digit by digit, fractions padded to microseconds.
+ */
+export function sentOrder(createdAt: string): string {
+  const m = /^(\d{4})-(\d\d)-(\d\d)[ T](\d\d):(\d\d):(\d\d)(?:\.(\d+))?/.exec(createdAt);
+  return m ? m.slice(1, 7).join('') + (m[7] ?? '').padEnd(6, '0').slice(0, 6) : createdAt;
+}
 
 /**
  * Carries out changes sent from the admin page: those already waiting when the garden opens, and
@@ -18,12 +28,18 @@ export function useRemoteActions(
   ready: boolean,
   gardenRef: MutableRefObject<GardenState | null>,
   setGarden: (fn: (g: GardenState | null) => GardenState | null) => void,
+  onEffect: (e: Effect) => void,
+  world: World,
 ): void {
   const on = enabled && remoteConfigured && !isRobot();
-  const queue = useRef<RemoteAction[]>([]);
+  const queue = useRef<(RemoteAction & { created_at: string })[]>([]);
   const readyRef = useRef(ready);
   readyRef.current = ready;
   const kick = useRef<() => void>(() => {});
+  const effectRef = useRef(onEffect);
+  effectRef.current = onEffect;
+  const worldRef = useRef(world);
+  worldRef.current = world;
 
   useEffect(() => {
     if (!on) return;
@@ -34,8 +50,12 @@ export function useRemoteActions(
     // reports that failed (offline) are sent again on the next chance
     const unreported = new Map<string, { status: 'applied' | 'skipped'; reason: string | null }>();
 
-    const enqueue = (a: RemoteAction) => {
-      if (!queue.current.some((q) => q.id === a.id)) queue.current.push(a);
+    const enqueue = (a: RemoteAction & { created_at: string }) => {
+      if (!queue.current.some((q) => q.id === a.id)) {
+        queue.current.push(a);
+        // in the order they were sent, however they arrived
+        queue.current.sort((x, y) => (sentOrder(x.created_at) < sentOrder(y.created_at) ? -1 : 1));
+      }
       void work();
     };
 
@@ -61,8 +81,10 @@ export function useRemoteActions(
             await report(a.id, already.status, already.reason);
             continue;
           }
-          const { outcome } = applyAction(before, a);
-          setGarden((g) => (g ? applyAction(g, a).garden : g));
+          const now = Date.now();
+          const { outcome, effect } = applyAction(before, a, now, worldRef.current);
+          setGarden((g) => (g ? applyAction(g, a, now, worldRef.current).garden : g));
+          if (effect) effectRef.current(effect);
           await new Promise((r) => setTimeout(r, REPORT_AFTER));
           await report(a.id, outcome.status, outcome.reason);
           if (outcome.status === 'applied' && queue.current.length > 0) await new Promise((r) => setTimeout(r, BETWEEN));

@@ -47,7 +47,8 @@ export async function uploadGarden(garden: unknown, version: number, opened: boo
   if (error) throw error;
 }
 
-type ActionRow = { id: string; kind: string; payload: unknown };
+/** `created_at` keeps them in the order they were sent: live messages can overtake one another. */
+type ActionRow = { id: string; kind: string; payload: unknown; created_at: string };
 
 /** Actions sent to this garden that haven't been carried out yet, oldest first. */
 export async function pendingActions(): Promise<ActionRow[]> {
@@ -55,7 +56,7 @@ export async function pendingActions(): Promise<ActionRow[]> {
   const sb = await remote();
   const { data, error } = await sb
     .from('actions')
-    .select('id, kind, payload')
+    .select('id, kind, payload, created_at')
     .eq('garden', id)
     .eq('status', 'pending')
     .order('created_at')
@@ -84,8 +85,8 @@ export async function listenForActions(onAction: (a: ActionRow) => void, onConne
     .channel(`actions:${id}:${Math.random().toString(36).slice(2, 8)}`)
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'actions', filter: `garden=eq.${id}` }, (msg) => {
       const row = msg.new as Partial<ActionRow> & { status?: string };
-      if (typeof row.id === 'string' && typeof row.kind === 'string' && row.status === 'pending') {
-        onAction({ id: row.id, kind: row.kind, payload: row.payload });
+      if (typeof row.id === 'string' && typeof row.kind === 'string' && typeof row.created_at === 'string' && row.status === 'pending') {
+        onAction({ id: row.id, kind: row.kind, payload: row.payload, created_at: row.created_at });
       }
     })
     .subscribe((status, err) => {

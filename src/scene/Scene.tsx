@@ -1,5 +1,5 @@
 import { memo, useMemo } from 'react';
-import { outsideKey, outsideNow, type Outside } from '../weather/moments';
+import { outsideKey, outsideNow, withMoments, type Moment, type Outside } from '../weather/moments';
 import { WINDOW_SPOTS, type GardenState, type WindowSpot } from '../garden/state';
 import { chooseRoutes, type VineSpot } from '../garden/vines';
 import { POT_HEIGHT } from '../plants/Pots';
@@ -202,7 +202,8 @@ const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hi
 });
 
 /** The light over everything: night or rain tint, moon and stars, candlelight. */
-const Lights = memo(function Lights({ theme, sky, night, twilight, phase, occasion, dy, wallMid, fx, fy, candleOn }: Lit & {
+const Lights = memo(function Lights({ theme, sky, night, twilight, phase, occasion, dy, wallMid, fx, fy, candleOn, shower }: Lit & {
+  shower: boolean;
   phase: number;
   occasion: Occasion;
   dy: number;
@@ -217,7 +218,7 @@ const Lights = memo(function Lights({ theme, sky, night, twilight, phase, occasi
     <>
       {/* one tint for the whole scene keeps sky and room in the same light */}
       {tint && <rect className="tint" x="0" y="-300" width={VIEW_W} height={VIEW_H + 600} fill={tint.color} opacity={tint.opacity} />}
-      <SkyLights weather={weather} phase={phase} />
+      <SkyLights weather={weather} phase={phase} shower={shower} />
       {theme === 'witchy' && <WallSparkles points={ROOM_SPARKLES} cy={wallMid} night={night} />}
       {occasion === 'halloween' && isCandleLit(weather) && (
         <g transform={`translate(0 ${dy})`}>
@@ -234,13 +235,15 @@ const SillBoard = memo(Sill);
 const Trinket = memo(ShelfTrinket);
 const Candle = memo(SillCandle);
 
-export function Scene({ theme, weather, viewH, vines, still = false, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, rainbow = false, candle = null, candleOn, onCandle, ...rest }: {
+export function Scene({ theme, weather, viewH, vines, still = false, moments = [], snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, rainbow = false, candle = null, candleOn, onCandle, ...rest }: {
   theme: Theme;
   weather: Weather;
   viewH: number;
   vines: VineSpec[];
   /** During a replay vines are drawn as the replay has them, without growing in on their own. */
   still?: boolean;
+  /** Moments sent from the admin page that are showing now. */
+  moments?: readonly Moment[];
   snip?: Snip | null;
   /** Dev only: shows the bare window, to judge the vines without the curtains over them. */
   hideCurtains?: boolean;
@@ -263,9 +266,12 @@ export function Scene({ theme, weather, viewH, vines, still = false, snip = null
   const spots = { ...rest, placed };
   const { dy, minY, wallMid, pictureScale } = layoutFor(viewH);
   const cal: Calendar = { season: seasonShown(rest.now), occasion: occasionShown(rest.now) };
-  const key = outsideKey(rest.now, cal.season, weather.night, weather.sky, rainbow);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- the key holds everything that matters
-  const outside = useMemo(() => outsideNow(rest.now, cal.season, weather.night, weather.sky, rainbow), [key]);
+  const key = `${outsideKey(rest.now, cal.season, weather.night, weather.sky, rainbow)}|${moments.join()}`;
+  const outside = useMemo(
+    () => withMoments(outsideNow(rest.now, cal.season, weather.night, weather.sky, rainbow), moments, cal.season, weather.night, weather.sky),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the key holds everything that matters
+    [key],
+  );
   return (
     <svg className="scene" viewBox={`0 ${minY.toFixed(1)} ${VIEW_W} ${viewH.toFixed(1)}`} preserveAspectRatio="xMidYMax slice">
       <defs>
@@ -322,7 +328,7 @@ export function Scene({ theme, weather, viewH, vines, still = false, snip = null
         photoUrl={photoUrl}
         onFrame={onFrame}
       />
-      <Lights theme={theme} sky={weather.sky} night={weather.night} twilight={weather.twilight ?? null} phase={phaseAt(rest.now)} occasion={cal.occasion} dy={dy} wallMid={wallMid} fx={candleFlame(theme, candle)[0]} fy={candleFlame(theme, candle)[1]} candleOn={candleOn} />
+      <Lights theme={theme} sky={weather.sky} night={weather.night} twilight={weather.twilight ?? null} phase={phaseAt(rest.now)} occasion={cal.occasion} dy={dy} wallMid={wallMid} fx={candleFlame(theme, candle)[0]} fy={candleFlame(theme, candle)[1]} candleOn={candleOn} shower={moments.includes('shooting-stars')} />
     </svg>
   );
 }

@@ -76,6 +76,7 @@ import { PlantArt } from './plants/PlantArt';
 import { pansyPalette as paletteOf } from './plants/looks';
 import { Toolbar } from './ui/Toolbar';
 import { useWeather } from './weather/useWeather';
+import { MOMENTS, type Moment } from './weather/moments';
 import { useRemoteSync } from './remote/useRemoteSync';
 import { useRemoteActions } from './remote/useRemoteActions';
 import { requestLocation } from './weather/weather';
@@ -218,12 +219,15 @@ export function App() {
   gardenRef.current = garden;
   useRemoteSync(garden, SYNC);
   const [lapse, setLapse] = useState<Lapse | null>(null);
-  // changes sent from the admin page wait until the garden is open and no replay is playing
-  useRemoteActions(SYNC, garden !== null && lapse === null, gardenRef, setGarden);
+  /** The watering can and droplets over a plant, whether she watered it or it came from the admin page. */
+  const showWatering = useCallback((id: string) => {
+    setWateringId(id);
+    window.setTimeout(() => setWateringId((w) => (w === id ? null : w)), 1900);
+  }, []);
+  const [snip, setSnip] = useState<Snip | null>(null);
   const lastLapse = useRef<Timelapse | null>(null);
   const opened = useRef<{ at: number; garden: GardenState } | null>(null);
   const [letterOpen, setLetterOpen] = useState(false);
-  const [snip, setSnip] = useState<Snip | null>(null);
   const [bookOpen, setBookOpen] = useState(false);
   const [diaryOpen, setDiaryOpen] = useState(false);
   /** The day she last opened the diary, so its "on this day" mark goes once she's seen it. */
@@ -373,6 +377,23 @@ export function App() {
     lastSky.current = weather.sky;
   }, [weather.sky]);
   const rainbow = !weather.night && now < rainbowUntil;
+
+  // moments sent from the admin page (a rainbow, a visitor at the lake...) and when each one ends
+  const [sent, setSent] = useState<Partial<Record<Moment, number>>>({});
+  const moments = useMemo(() => MOMENTS.filter((m) => (sent[m] ?? 0) > now), [sent, now]);
+  // changes sent from the admin page wait until the garden is open and no replay is playing
+  useRemoteActions(
+    SYNC,
+    garden !== null && lapse === null,
+    gardenRef,
+    setGarden,
+    (e) => {
+      if (e.kind === 'moment') setSent((m) => ({ ...m, [e.moment]: e.until }));
+      else if (e.kind === 'trim') setSnip((s) => ({ id: e.plant, n: (s?.n ?? 0) + 1 }));
+      else showWatering(e.plant);
+    },
+    { night: weather.night, sky: weather.sky, season: seasonShown(now) },
+  );
   // her own room shows its colours over the furniture of the room she based it on; while she's
   // painting it, the draft shows instead
   const own = mode.kind === 'roomStudio' ? mode.draft : settings?.useOwn ? settings.own : null;
@@ -534,8 +555,7 @@ export function App() {
     const t = Date.now();
     setNow(t);
     update((g) => waterPlant(g, id, t));
-    setWateringId(id);
-    window.setTimeout(() => setWateringId((w) => (w === id ? null : w)), 1900);
+    showWatering(id);
   };
 
   // during a replay the garden is drawn as it was at that moment
@@ -587,6 +607,7 @@ export function App() {
               photoUrl={garden.decor.photo ? (pictures[garden.decor.photo.img] ?? null) : null}
               onFrame={openDecorate}
               rainbow={rainbow}
+              moments={moments}
               candle={candle}
               candleOn={candleOn}
               onCandle={() => setSettings({ candleLit: !candleOn })}
@@ -611,6 +632,7 @@ export function App() {
               pictures={pictures}
               drawingId={mode.kind === 'drawing' ? mode.id : null}
               rainbow={rainbow}
+              moments={moments}
               candle={candle}
               candleOn={candleOn}
               onCandle={() => setSettings({ candleLit: !candleOn })}

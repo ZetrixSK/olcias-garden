@@ -420,7 +420,7 @@ function parseWeather(v: unknown): Weather {
   };
 }
 
-function parseSettings(v: unknown): Settings {
+export function parseSettings(v: unknown): Settings {
   const s = isObj(v) ? v : {};
   const modes: WeatherMode[] = ['clock', 'live', 'manual'];
   const loc = s.location;

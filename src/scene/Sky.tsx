@@ -263,14 +263,23 @@ export function Sky({ weather, rainbow = false, aurora = false }: { weather: Wea
   );
 }
 
-/** Now and then a shooting star streaks across the night sky. */
-function ShootingStars() {
+/** Now and then a shooting star streaks across the night sky; in a shower, a few more and often. */
+function ShootingStars({ shower }: { shower: boolean }) {
+  const stars = [
+    { x: 260, y: 96, rot: 160, dur: '71s', delay: '-9s' },
+    { x: 170, y: 150, rot: 148, dur: '113s', delay: '-50s' },
+  ];
+  // each streaks at 97% of its cycle, so these first cross a moment after the shower begins
+  if (shower) {
+    stars.push(
+      { x: 300, y: 120, rot: 155, dur: '19s', delay: '-16.5s' },
+      { x: 220, y: 80, rot: 165, dur: '27s', delay: '-18s' },
+      { x: 140, y: 112, rot: 150, dur: '23s', delay: '-11s' },
+    );
+  }
   return (
     <g>
-      {[
-        { x: 260, y: 96, rot: 160, dur: '71s', delay: '-9s' },
-        { x: 170, y: 150, rot: 148, dur: '113s', delay: '-50s' },
-      ].map((s, i) => (
+      {stars.map((s, i) => (
         <g key={i} transform={`translate(${s.x} ${s.y}) rotate(${s.rot})`}>
           <g className="shooting-star" style={{ animationDuration: s.dur, animationDelay: s.delay }}>
             {/* a long tail tapering to nothing behind a bright head */}
@@ -293,7 +302,7 @@ function ShootingStars() {
 }
 
 /** Things that should stay luminous above the room's night tint. */
-export function SkyLights({ weather, phase }: { weather: Weather; phase: number }) {
+export function SkyLights({ weather, phase, shower = false }: { weather: Weather; phase: number; shower?: boolean }) {
   if (!weather.night || weather.sky === 'rain') return null;
   if (weather.sky === 'cloudy') {
     // the moon glows through a thin patch of cloud
@@ -306,7 +315,7 @@ export function SkyLights({ weather, phase }: { weather: Weather; phase: number 
   return (
     <g>
       <Stars />
-      <ShootingStars />
+      <ShootingStars shower={shower} />
       <Moon phase={phase} />
     </g>
   );

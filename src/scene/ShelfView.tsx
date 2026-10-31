@@ -11,7 +11,7 @@ import { fv, sv } from './geometry';
 import { Sign, WallMotifs } from './Room';
 import { Bunting, SillEnds } from './ShelfDecor';
 import { LakeLife, Landscape, Rain, SeasonAir, SeasonBranch } from './Outside';
-import { outsideKey, outsideNow } from '../weather/moments';
+import { outsideKey, outsideNow, withMoments, type Moment } from '../weather/moments';
 import { useMemo } from 'react';
 import { Sky, SkyLights } from './Sky';
 import { moonPhase } from '../weather/moon';
@@ -97,7 +97,7 @@ function Hanger({ x, rimY }: { x: number; rimY: number }) {
   );
 }
 
-export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movingId, wateringId, onSlot, paper = null, pictures = {}, drawingId = null, rainbow = false, candle = null, candleOn, onCandle }: {
+export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movingId, wateringId, onSlot, paper = null, pictures = {}, drawingId = null, rainbow = false, moments = [], candle = null, candleOn, onCandle }: {
   theme: Theme;
   weather: Weather;
   viewH: number;
@@ -113,6 +113,8 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
   /** The drawing whose card is open. */
   drawingId?: string | null;
   rainbow?: boolean;
+  /** Moments sent from the admin page that are showing now. */
+  moments?: readonly Moment[];
   /** Her own candle, or null for the room's own. */
   candle?: CandleLook | null;
   candleOn: boolean;
@@ -129,9 +131,9 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
   const bySlot = new Map(garden.plants.map((p) => [p.slot, p]));
   const season = seasonShown(now);
   const occasion = occasionShown(now);
-  const key = outsideKey(now, season, weather.night, weather.sky, rainbow);
+  const key = `${outsideKey(now, season, weather.night, weather.sky, rainbow)}|${moments.join()}`;
   // eslint-disable-next-line react-hooks/exhaustive-deps -- the key holds everything that matters
-  const outside = useMemo(() => outsideNow(now, season, weather.night, weather.sky, rainbow), [key]);
+  const outside = useMemo(() => withMoments(outsideNow(now, season, weather.night, weather.sky, rainbow), moments, season, weather.night, weather.sky), [key]);
   const lantern = { x: 200, y: bottom - 46, s: 0.95 };
 
   return (
@@ -240,7 +242,7 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
       {tint && <rect className="tint" x="-400" y="-400" width="1200" height="1600" fill={tint.color} opacity={tint.opacity} />}
       <g clipPath="url(#shelf-window-clip)">
         <g transform={SKY_FIT}>
-          <SkyLights weather={weather} phase={Math.round(moonPhase(now) * 100) / 100} />
+          <SkyLights weather={weather} phase={Math.round(moonPhase(now) * 100) / 100} shower={moments.includes('shooting-stars')} />
         </g>
       </g>
       {theme === 'witchy' && <WallSparkles points={SHELF_SPARKLES} night={weather.night} />}
