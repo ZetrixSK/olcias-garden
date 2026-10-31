@@ -46,3 +46,54 @@ export async function uploadGarden(garden: unknown, version: number, opened: boo
   const { error } = await sb.rpc('sync_garden', { p_garden: garden, p_version: version, p_opened: opened, p_label: label });
   if (error) throw error;
 }
+
+type ActionRow = { id: string; kind: string; payload: unknown };
+
+/** Actions sent to this garden that haven't been carried out yet, oldest first. */
+export async function pendingActions(): Promise<ActionRow[]> {
+  const id = await deviceId();
+  const sb = await remote();
+  const { data, error } = await sb
+    .from('actions')
+    .select('id, kind, payload')
+    .eq('garden', id)
+    .eq('status', 'pending')
+    .order('created_at')
+    .limit(50);
+  if (error) throw error;
+  return data;
+}
+
+/** Tells the admin page what became of an action. */
+export async function reportAction(id: string, status: 'applied' | 'skipped', reason: string | null): Promise<void> {
+  const sb = await remote();
+  const { error } = await sb.from('actions').update({ status, reason, done_at: new Date().toISOString() }).eq('id', id);
+  if (error) throw error;
+}
+
+/**
+ * Listens for new actions as they're sent. `onConnected` runs each time the line opens (again), so
+ * anything sent while it was down can be fetched. Returns a function that stops listening.
+ */
+export async function listenForActions(onAction: (a: ActionRow) => void, onConnected: () => void): Promise<() => void> {
+  const id = await deviceId();
+  const sb = await remote();
+  // a name of its own: the client hands back an existing channel of the same name, and removing that
+  // one (a remount tidying up) would silently stop this one too
+  const channel = sb
+    .channel(`actions:${id}:${Math.random().toString(36).slice(2, 8)}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'actions', filter: `garden=eq.${id}` }, (msg) => {
+      const row = msg.new as Partial<ActionRow> & { status?: string };
+      if (typeof row.id === 'string' && typeof row.kind === 'string' && row.status === 'pending') {
+        onAction({ id: row.id, kind: row.kind, payload: row.payload });
+      }
+    })
+    .subscribe((status, err) => {
+      if (import.meta.env.DEV) console.info('[actions]', status, err ?? '');
+      if (status === 'SUBSCRIBED') onConnected();
+    });
+  return () => void sb.removeChannel(channel);
+}
+
+/** Robots (link previews, deployment screenshots) load the page too; they shouldn't become gardens. */
+export const isRobot = () => typeof navigator !== 'undefined' && navigator.webdriver === true;

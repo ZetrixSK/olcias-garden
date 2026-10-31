@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { SAVE_VERSION, type GardenState } from '../garden/state';
-import { remoteConfigured, uploadGarden } from './client';
+import { isRobot, remoteConfigured, uploadGarden } from './client';
 import { deviceLabel, sharedGarden } from './shared';
 import { createUploader, HEARTBEAT, type Uploader } from './uploader';
 
@@ -13,7 +13,7 @@ const REOPEN = 5 * 60 * 1000;
  * waits. Pass null until the garden has loaded, or always null where nothing should be shared.
  */
 export function useRemoteSync(garden: GardenState | null, enabled: boolean): void {
-  const on = enabled && remoteConfigured;
+  const on = enabled && remoteConfigured && !isRobot();
   const uploader = useRef<Uploader | null>(null);
   const latest = useRef<GardenState | null>(null);
   latest.current = garden;

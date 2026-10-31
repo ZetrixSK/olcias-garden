@@ -77,6 +77,7 @@ import { pansyPalette as paletteOf } from './plants/looks';
 import { Toolbar } from './ui/Toolbar';
 import { useWeather } from './weather/useWeather';
 import { useRemoteSync } from './remote/useRemoteSync';
+import { useRemoteActions } from './remote/useRemoteActions';
 import { requestLocation } from './weather/weather';
 
 /** Height of the screen in scene units, where scenes are always 400 units wide. */
@@ -217,6 +218,8 @@ export function App() {
   gardenRef.current = garden;
   useRemoteSync(garden, SYNC);
   const [lapse, setLapse] = useState<Lapse | null>(null);
+  // changes sent from the admin page wait until the garden is open and no replay is playing
+  useRemoteActions(SYNC, garden !== null && lapse === null, gardenRef, setGarden);
   const lastLapse = useRef<Timelapse | null>(null);
   const opened = useRef<{ at: number; garden: GardenState } | null>(null);
   const [letterOpen, setLetterOpen] = useState(false);
@@ -577,6 +580,7 @@ export function App() {
               weather={weather}
               viewH={viewH}
               vines={vines}
+              still={lapse !== null}
               snip={snip}
               onBook={openBook}
               paper={paper}

@@ -92,7 +92,14 @@ export type GardenState = {
   decor: Decor;
   /** Her diary, one page per day. */
   diary: Diary;
+  /** Changes sent from the admin page that have been handled here, newest last, so none is ever done twice. */
+  remoteDone: RemoteDone[];
 };
+
+/** What became of an action sent to this garden: done, or skipped and why. */
+export type RemoteDone = { id: string; status: 'applied' | 'skipped'; reason: string | null };
+/** Plenty to cover anything still waiting to be reported back; older ones are forgotten. */
+export const MAX_REMOTE_DONE = 100;
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'cozy',
@@ -150,6 +157,7 @@ export function starterGarden(now: number): GardenState {
     pressed: [],
     decor: NO_DECOR,
     diary: {},
+    remoteDone: [],
   };
 }
 
@@ -351,6 +359,18 @@ export function updateSettings(state: GardenState, patch: Partial<Settings>): Ga
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
 const isTime = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0;
 
+function parseRemoteDone(v: unknown): RemoteDone[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .filter(isObj)
+    .flatMap((d): RemoteDone[] =>
+      typeof d.id === 'string' && (d.status === 'applied' || d.status === 'skipped')
+        ? [{ id: d.id, status: d.status, reason: typeof d.reason === 'string' ? d.reason : null }]
+        : [],
+    )
+    .slice(-MAX_REMOTE_DONE);
+}
+
 function parsePotRef(pot: unknown, species: SpeciesId, designs: Designs): PotRef {
   if (POT_KINDS.includes(pot as GardenPot)) return pot as GardenPot;
   const id = designId(typeof pot === 'string' ? pot : undefined);
@@ -495,6 +515,7 @@ export function parseSave(input: unknown, now = Date.now()): GardenState | null 
     designs,
     pressed: parsePressed(raw.pressed),
     diary: parseDiary(raw.diary),
+    remoteDone: parseRemoteDone(raw.remoteDone),
     decor: parseDecor(raw.decor, (slot) => SLOT_IDS.includes(slot as SlotId) && !isHanging(slot as SlotId) && !taken.has(slot as SlotId)),
   };
 }

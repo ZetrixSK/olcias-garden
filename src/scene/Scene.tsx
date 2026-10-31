@@ -20,6 +20,7 @@ import { Bats, LanternLight, ROOM_LANTERN, RoomPumpkins } from './Halloween';
 import type { OwnPaper } from './OwnDecor';
 import { HangingBat } from './HangingBat';
 import { leanFor, runnerStart, VINE_PHASE, VineRunner, Vines, type PlacedVine, type Snip, type VineSpec } from './Vines';
+import { useGrowingVines } from './useGrowingVines';
 
 /** Where each window spot stands: x, the surface it stands on, the drawing scale and the tap area's width. */
 const SPOT_POS: Record<WindowSpot, { x: number; base: number; scale: number; w: number; h: number }> = {
@@ -233,11 +234,13 @@ const SillBoard = memo(Sill);
 const Trinket = memo(ShelfTrinket);
 const Candle = memo(SillCandle);
 
-export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, rainbow = false, candle = null, candleOn, onCandle, ...rest }: {
+export function Scene({ theme, weather, viewH, vines, still = false, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, rainbow = false, candle = null, candleOn, onCandle, ...rest }: {
   theme: Theme;
   weather: Weather;
   viewH: number;
   vines: VineSpec[];
+  /** During a replay vines are drawn as the replay has them, without growing in on their own. */
+  still?: boolean;
   snip?: Snip | null;
   /** Dev only: shows the bare window, to judge the vines without the curtains over them. */
   hideCurtains?: boolean;
@@ -256,7 +259,7 @@ export function Scene({ theme, weather, viewH, vines, snip = null, hideCurtains 
   /** Tapping the candle lights it or blows it out. */
   onCandle?: () => void;
 } & Omit<SpotProps, 'placed'>) {
-  const placed = placeVines(vines, rest.garden);
+  const placed = placeVines(useGrowingVines(vines, still), rest.garden);
   const spots = { ...rest, placed };
   const { dy, minY, wallMid, pictureScale } = layoutFor(viewH);
   const cal: Calendar = { season: seasonShown(rest.now), occasion: occasionShown(rest.now) };
