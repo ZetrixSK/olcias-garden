@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   addDrawing,
   bouquetAt,
+  postSeen,
   rememberContact,
   setTag,
   cutStems,
@@ -403,6 +404,11 @@ export function App() {
   const closeNotice = useCallback(() => setNotice(null), []);
   useMail(sharing, garden !== null && lapse === null, gardenRef, setGarden, (a) => setNotice(arrivalNotice(a, words(gardenRef.current?.settings.lang ?? 'mixed'))));
   const loadBlocked = useCallback(() => blockedTags().catch(() => null), []);
+  /** Opens the post box; she has seen what came, so the letterbox's flag comes down. */
+  const openPost = useCallback(() => {
+    setGarden((g) => (g ? postSeen(g) : g));
+    setMode({ kind: 'post' });
+  }, []);
   /** Takes (or changes) her tag in the post; resolves with why not, or null. */
   const claim = useCallback(async (tag: string) => {
     const r = await claimTag(tag);
@@ -623,7 +629,11 @@ export function App() {
               paper={paper}
               photoUrl={garden.decor.photo ? (pictures[garden.decor.photo.img] ?? null) : null}
               onFrame={openDecorate}
-              onParcels={() => setMode({ kind: 'parcels' })}
+              onParcels={() => {
+                setGarden((g) => (g ? postSeen(g) : g));
+                setMode({ kind: 'parcels' });
+              }}
+              onPost={sharing ? openPost : undefined}
               rainbow={rainbow}
               moments={moments}
               candle={candle}
@@ -679,7 +689,7 @@ export function App() {
           onBook={openBook}
           onDecorate={openDecorate}
           onBouquet={() => setMode({ kind: 'bouquetStudio' })}
-          onPost={() => setMode({ kind: 'post' })}
+          onPost={openPost}
           postTag={garden.post.tag}
           onOwnRoom={(edit) => {
             if (settings.own && !edit) setSettings({ useOwn: true });

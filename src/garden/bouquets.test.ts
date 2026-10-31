@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseBouquet, stemOf, stemsLeft, STEMS_PER_PLANT, type Bouquet } from './bouquets';
 import {
-  addDrawing, addPlant, bouquetAt, cutStems, freeShelfSlots, moveBouquet, movePlant, parseSave, receiveBouquet, rememberContact, removeBouquet, setTag,
+  addDrawing, addPlant, bouquetAt, cutStems, freeShelfSlots, moveBouquet, movePlant, parseSave, postSeen, receiveBouquet, receivePost, rememberContact, removeBouquet, setTag,
   SLOT_IDS, starterGarden, unpackParcel, type GardenState,
 } from './state';
 
@@ -129,7 +129,20 @@ describe('her post box', () => {
     const g = setTag(starterGarden(NOW), 'olcia');
     expect(parseSave(JSON.parse(JSON.stringify(g)), NOW)!.post.tag).toBe('olcia');
     const raw = JSON.parse(JSON.stringify(g));
-    raw.post = { tag: 'NO WAY', contacts: ['ok_tag', 7, 'x'] };
-    expect(parseSave(raw, NOW)!.post).toEqual({ tag: null, contacts: ['ok_tag'] });
+    raw.post = { tag: 'NO WAY', contacts: ['ok_tag', 7, 'x'], unread: -3 };
+    expect(parseSave(raw, NOW)!.post).toEqual({ tag: null, contacts: ['ok_tag'], unread: 0 });
+  });
+});
+
+describe('the letterbox flag', () => {
+  it('goes up when a bouquet comes in the post, and down once she has looked', () => {
+    let g = receivePost(starterGarden(NOW), bouquet('m1', { from: 'josh' }));
+    g = receivePost(g, bouquet('m2', { from: 'mama' }));
+    expect(g.post.unread).toBe(2);
+    // the same post twice counts once
+    expect(receivePost(g, bouquet('m1', { from: 'josh' })).post.unread).toBe(2);
+    expect(postSeen(g).post.unread).toBe(0);
+    // her own bouquets don't raise it
+    expect(receiveBouquet(starterGarden(NOW), bouquet('own')).post.unread).toBe(0);
   });
 });

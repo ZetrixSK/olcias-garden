@@ -22,6 +22,7 @@ import { HangingBat } from './HangingBat';
 import { leanFor, runnerStart, VINE_PHASE, VineRunner, Vines, type PlacedVine, type Snip, type VineSpec } from './Vines';
 import { useGrowingVines } from './useGrowingVines';
 import { FloorParcels } from '../ui/Bouquets';
+import { Letterbox } from './Letterbox';
 
 /** Where each window spot stands: x, the surface it stands on, the drawing scale and the tap area's width. */
 const SPOT_POS: Record<WindowSpot, { x: number; base: number; scale: number; w: number; h: number }> = {
@@ -181,7 +182,7 @@ const Backdrop = memo(function Backdrop({ theme, sky, night, twilight, season, o
 });
 
 /** Curtains, pictures, sign, floor and the dogs. */
-const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hideCurtains, phase, mood, occasion, onBook, photoUrl, onFrame, parcels, onParcels }: {
+const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hideCurtains, phase, mood, occasion, onBook, photoUrl, onFrame, parcels, onParcels, mailNews, onPost }: {
   theme: Theme; dy: number; wallMid: number; pictureScale: number; hideCurtains: boolean; phase: number; mood: DogMood;
   occasion: Occasion;
   onBook?: () => void;
@@ -189,14 +190,25 @@ const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hi
   onFrame?: () => void;
   parcels: number;
   onParcels?: () => void;
+  /** Whether a bouquet came since she last looked in the post box (the letterbox's flag is up). */
+  mailNews: boolean;
+  /** Tapping the letterbox; without it there's no letterbox (the post isn't set up). */
+  onPost?: () => void;
 }) {
   return (
     <>
       {!hideCurtains && <Curtains theme={theme} />}
       {/* the witchy room's bat, asleep on the curtain rod by day; it visits the cozy room for Halloween */}
       {(theme === 'witchy' || occasion === 'halloween') && <HangingBat x={298} y={36} s={1.55} awake={mood === 'asleep'} />}
-      <WallDecor theme={theme} cy={wallMid} scale={pictureScale} phase={phase} onBook={onBook} photoUrl={photoUrl} onFrame={onFrame} />
-      <g transform={`translate(0 ${(wallMid - 606).toFixed(1)})`}>
+      <WallDecor theme={theme} cy={wallMid} scale={pictureScale} phase={phase} onBook={onBook} photoUrl={photoUrl} onFrame={onFrame} roomForPost={!!onPost} />
+      {/* her letterbox, on the wall between the sign and the photo frame */}
+      {onPost && (
+        <g transform={`translate(283 ${(wallMid + 2).toFixed(1)}) scale(${(pictureScale * 1.15).toFixed(3)})`}>
+          <Letterbox theme={theme} news={mailNews} onOpen={onPost} />
+        </g>
+      )}
+      {/* a touch left of centre, to leave the letterbox room beside it */}
+      <g transform={`translate(${onPost ? -12 : 0} ${(wallMid - 606).toFixed(1)})`}>
         <Sign theme={theme} />
       </g>
       <g transform={`translate(0 ${dy})`}>
@@ -259,7 +271,7 @@ const SillBoard = memo(Sill);
 const Trinket = memo(ShelfTrinket);
 const Candle = memo(SillCandle);
 
-export function Scene({ theme, weather, viewH, vines, still = false, moments = [], onParcels, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, rainbow = false, candle = null, candleOn, onCandle, ...rest }: {
+export function Scene({ theme, weather, viewH, vines, still = false, moments = [], onParcels, onPost, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, rainbow = false, candle = null, candleOn, onCandle, ...rest }: {
   theme: Theme;
   weather: Weather;
   viewH: number;
@@ -270,6 +282,8 @@ export function Scene({ theme, weather, viewH, vines, still = false, moments = [
   moments?: readonly Moment[];
   /** Tapping the parcel box on the floor. */
   onParcels?: () => void;
+  /** Tapping the letterbox on the wall; without it, no letterbox. */
+  onPost?: () => void;
   snip?: Snip | null;
   /** Dev only: shows the bare window, to judge the vines without the curtains over them. */
   hideCurtains?: boolean;
@@ -353,7 +367,7 @@ export function Scene({ theme, weather, viewH, vines, still = false, moments = [
         onBook={onBook}
         photoUrl={photoUrl}
         onFrame={onFrame}
-       parcels={rest.garden.parcels.length} onParcels={onParcels} />
+       parcels={rest.garden.parcels.length} onParcels={onParcels} mailNews={rest.garden.post.unread > 0} onPost={onPost} />
       <Lights theme={theme} sky={weather.sky} night={weather.night} twilight={weather.twilight ?? null} phase={phaseAt(rest.now)} occasion={cal.occasion} dy={dy} wallMid={wallMid} fx={candleFlame(theme, candle)[0]} fy={candleFlame(theme, candle)[1]} candleOn={candleOn} shower={moments.includes('shooting-stars')} />
       {weather.night && <WindowGlow garden={rest.garden} now={rest.now} />}
     </svg>

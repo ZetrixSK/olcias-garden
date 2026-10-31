@@ -244,7 +244,7 @@ export function Ball() {
 }
 
 /** Wall pieces between sill and floor, centred in whatever wall height the screen leaves. */
-export function WallDecor({ theme, cy, scale, phase, onBook, photoUrl = null, onFrame }: {
+export function WallDecor({ theme, cy, scale, phase, onBook, photoUrl = null, onFrame, roomForPost = false }: {
   theme: Theme;
   cy: number;
   scale: number;
@@ -252,13 +252,16 @@ export function WallDecor({ theme, cy, scale, phase, onBook, photoUrl = null, on
   onBook?: () => void;
   photoUrl?: string | null;
   onFrame?: () => void;
+  /** The photo frame moves a little right, so the letterbox fits between it and the sign. */
+  roomForPost?: boolean;
 }) {
+  const frameX = roomForPost ? 340 : 332;
   return (
     <g>
       <g transform={`translate(62 ${cy + 6}) scale(${scale}) translate(-62 -652)`}>
         <WallPicture theme={theme} phase={phase} onBook={onBook} />
       </g>
-      <g transform={`translate(332 ${cy + 6}) scale(${scale}) translate(-332 -652)`}>
+      <g transform={`translate(${frameX} ${cy + 6}) scale(${scale}) translate(-332 -652)`}>
         <PhotoFrame theme={theme} url={photoUrl} onTap={onFrame} />
       </g>
       {theme === 'witchy' && (

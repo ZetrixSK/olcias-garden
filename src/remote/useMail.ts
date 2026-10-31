@@ -1,6 +1,6 @@
 import { useEffect, useRef, type MutableRefObject } from 'react';
 import { parseBouquet } from '../garden/bouquets';
-import { freeShelfSlots, receiveBouquet, type GardenState } from '../garden/state';
+import { freeShelfSlots, receivePost, type GardenState } from '../garden/state';
 import { inbox, isRobot, listenForMail, markDelivered, remoteConfigured, type Mail } from './client';
 
 /** The garden saves a moment after each change; post is only marked taken in once that has happened. */
@@ -50,7 +50,7 @@ export function useMail(
             const already = g.bouquets.some((b) => b.id === m.id) || g.parcels.some((b) => b.id === m.id);
             if (!already) {
               const inBox = freeShelfSlots(g).length === 0;
-              setGarden((x) => (x ? receiveBouquet(x, bouquet) : x));
+              setGarden((x) => (x ? receivePost(x, bouquet) : x));
               arriveRef.current({ from: m.from_tag, inBox });
               await new Promise((r) => setTimeout(r, SAVE_FIRST));
             }

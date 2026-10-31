@@ -105,7 +105,8 @@ export type GardenState = {
   post: Post;
 };
 
-export type Post = { tag: string | null; contacts: string[] };
+/** Her tag, the tags she has sent to, and how many bouquets came since she last opened the post box. */
+export type Post = { tag: string | null; contacts: string[]; unread: number };
 const TAG = /^[a-z0-9_]{3,20}$/;
 export const MAX_CONTACTS = 8;
 
@@ -174,7 +175,7 @@ export function starterGarden(now: number): GardenState {
     bouquets: [],
     parcels: [],
     cuttings: [],
-    post: { tag: null, contacts: [] },
+    post: { tag: null, contacts: [], unread: 0 },
   };
 }
 
@@ -279,6 +280,17 @@ export function moveBouquet(state: GardenState, id: string, to: SlotId): GardenS
   if (!moving || moving.slot === to || isHanging(to)) return state;
   const swapped = relocate(state, to, moving.slot as SlotId);
   return { ...state, ...swapped, bouquets: swapped.bouquets.map((b) => (b.id === id ? { ...b, slot: to } : b)) };
+}
+
+/** A bouquet comes in the post: on the shelves or in the box, and the letterbox's flag goes up. */
+export function receivePost(state: GardenState, bouquet: Bouquet): GardenState {
+  const next = receiveBouquet(state, bouquet);
+  return next === state ? state : { ...next, post: { ...next.post, unread: next.post.unread + 1 } };
+}
+
+/** She has looked in the post box: the flag comes down. */
+export function postSeen(state: GardenState): GardenState {
+  return state.post.unread === 0 ? state : { ...state, post: { ...state.post, unread: 0 } };
 }
 
 /** Her own tag, as the post box took it. */
@@ -436,7 +448,8 @@ function parsePost(v: unknown): Post {
   const p = isObj(v) ? v : {};
   const tag = typeof p.tag === 'string' && TAG.test(p.tag) ? p.tag : null;
   const contacts = (Array.isArray(p.contacts) ? p.contacts : []).filter((c): c is string => typeof c === 'string' && TAG.test(c)).slice(0, MAX_CONTACTS);
-  return { tag, contacts };
+  const unread = typeof p.unread === 'number' && Number.isFinite(p.unread) ? Math.max(0, Math.min(99, Math.floor(p.unread))) : 0;
+  return { tag, contacts, unread };
 }
 
 function parseRemoteDone(v: unknown): RemoteDone[] {
