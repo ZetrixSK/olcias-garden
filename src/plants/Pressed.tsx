@@ -8,6 +8,7 @@ import { LeafCluster, RoseBloom, Thorns } from './Rose';
 import { BLUE_LEAF, TULIP_NIGHT, TULIP_PINK, TulipFlower } from './Tulip';
 import { CYCLAMEN_COLORS, CyclamenFlower, HelleboreFlower, SnowdropBell } from './Winter';
 import { HollyhockFlower, PumpkinFlower } from './Gothic';
+import { BatFlowerHead, MoonFace } from './Night';
 
 type Pt = [number, number];
 
@@ -172,6 +173,34 @@ export function PressedSprig({ species, palette, seed }: { species: SpeciesId; p
         <HollyhockFlower x={bx + side * 4} y={by} s={1} />
         <ellipse className="ink-thin" cx={s.tip[0]} cy={s.tip[1] + 2} rx="2.6" ry="3.6" fill="#8fae6c" />
         <ellipse className="ink-thin" cx={s.at(0.88)[0] - side * 2} cy={s.at(0.88)[1]} rx="2.8" ry="3.8" fill="#8fae6c" />
+      </g>
+    );
+  }
+
+  if (species === 'batflower') {
+    // pressed flat, the wings spread wide and the whiskers fall in loose curls across the page
+    const s = stemOf(54 + r() * 10, side * (3 + r() * 5), side * (2 + r() * 4));
+    return (
+      <g>
+        <Stem d={s.d} w={1.6} color="#4a5e44" />
+        <BatFlowerHead x={s.tip[0]} y={s.tip[1] - 2} rot={s.angle * 0.5} s={0.95} whiskers={7} />
+      </g>
+    );
+  }
+
+  if (species === 'moonflower') {
+    // one flower, flattened open, with a heart leaf and a curl of the vine
+    const s = stemOf(46 + r() * 12, side * (6 + r() * 6), side * (4 + r() * 5));
+    const [lx, ly] = s.at(0.4);
+    return (
+      <g>
+        <g transform={`translate(${lx} ${ly}) rotate(${-side * 58}) scale(1.1)`}>
+          <path className="ink-thin" fill="#5e8f58" d="M0,0 C-3,3 -10,2 -11,-4 C-12,-11 -5,-17 0,-21 C5,-17 12,-11 11,-4 C10,2 3,3 0,0 Z" />
+          <path d="M0,-1 L0,-19" fill="none" stroke="#3f6339" strokeWidth="0.6" />
+        </g>
+        <path d={`M${s.at(0.7)[0].toFixed(1)},${s.at(0.7)[1].toFixed(1)} c${side * 6},-2 ${side * 9},-8 ${side * 6},-11 c${-side * 2},-2 ${-side * 4},0 ${-side * 3},2`} fill="none" stroke="#6e9152" strokeWidth="0.9" strokeLinecap="round" />
+        <Stem d={s.d} w={1.3} color="#6e9152" />
+        <MoonFace x={s.tip[0]} y={s.tip[1] - 12} rot={s.angle + side * 14} tilt={0.88} s={1.35} />
       </g>
     );
   }

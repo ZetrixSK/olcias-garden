@@ -48,6 +48,8 @@ export function words(lang: Lang) {
     plural,
     /** A flower's name as written on its seed marker, in small letters. */
     marker: (s: SpeciesId) => (lang === 'en' ? SPECIES[s].name.toLowerCase() : SPECIES[s].polish),
+    /** What's written on the little wooden marker in the pot: the name, or a shorter word if it wouldn't fit. */
+    sign: (s: SpeciesId) => (lang === 'en' ? SPECIES[s].name.toLowerCase() : (SPECIES[s].sign ?? SPECIES[s].polish)),
     /** A flower's name as a title: "bratek" while the flowers are Polish in an English garden, as before. */
     flower: (s: SpeciesId) => (lang === 'en' ? SPECIES[s].name : pl ? capital(SPECIES[s].polish) : SPECIES[s].polish),
     /** In the mixed language, the English name written small under the Polish one. */

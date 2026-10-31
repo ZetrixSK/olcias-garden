@@ -8,6 +8,7 @@ import { admin, relabel, useActions, useGardens, useSend, useSession, type Sent 
 import { activeMoments, ago, isOnline, withPending, type ActionRow, type GardenRow } from './logic';
 import { BookPanel, GardenPanel, History, NewPlantPanel, PlantPanel, type Send } from './Panels';
 import { World } from './World';
+import { DesignPanel } from './DesignPanel';
 
 function useClock(): number {
   const [now, setNow] = useState(Date.now);
@@ -161,13 +162,12 @@ function Dashboard({ source }: { source: Source }) {
   }, [toast]);
 
   const send: Send = useCallback(
-    (kind, payload) => {
-      void sendRaw(kind, payload).then((r) => {
-        if (r.error !== null) return setToast(`Not sent: ${r.error}`);
-        const row = r.row;
-        if (row) setMine((list) => [row, ...list].slice(0, 30));
-        setToast('Sent');
-      });
+    async (kind, payload) => {
+      const r = await sendRaw(kind, payload);
+      if (r.error !== null) return setToast(`Not sent: ${r.error}`);
+      const row = r.row;
+      if (row) setMine((list) => [row, ...list].slice(0, 30));
+      setToast('Sent');
     },
     [sendRaw],
   );
@@ -218,6 +218,7 @@ function Dashboard({ source }: { source: Source }) {
             <History actions={actions} garden={garden} now={now} />
             <GardenPanel garden={garden} weather={weather} now={now} send={send} />
             <BookPanel garden={garden} send={send} />
+            <DesignPanel garden={garden} send={send} />
           </div>
         </div>
       )}

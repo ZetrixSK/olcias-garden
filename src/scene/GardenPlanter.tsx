@@ -1,12 +1,13 @@
 import { memo, useEffect, useRef, useState, type ReactNode } from 'react';
 import { isSoilWet, stageAt } from '../garden/growth';
 import type { Designs } from '../garden/designs';
-import type { GardenPot, Stage } from '../garden/species';
+import { GLOWING_SPECIES, STILL_SPECIES, type GardenPot, type Stage } from '../garden/species';
 import type { Plant } from '../garden/state';
 import { plantLook } from '../plants/looks';
 import type { PansyColors } from '../plants/Pansy';
 import type { PotDesign } from '../garden/designs';
 import { PlantArt } from '../plants/PlantArt';
+import { MoonflowerGlow } from '../plants/Night';
 import { POT_HEIGHT, Potted, RIM } from '../plants/Pots';
 import { useWords } from '../i18n';
 
@@ -17,7 +18,7 @@ export function GardenPlanter({ plant, now, designs, ...rest }: Omit<PlanterProp
 }) {
   const look = plantLook(plant, designs);
   // the seed marker says what's planted, in her language
-  const { marker } = useWords();
+  const { sign } = useWords();
   return (
     <PlanterArt
       plant={plant}
@@ -26,7 +27,7 @@ export function GardenPlanter({ plant, now, designs, ...rest }: Omit<PlanterProp
       shape={look.shape}
       potDesign={look.pot}
       palette={look.palette}
-      label={look.label ?? marker(plant.species)}
+      label={look.label ?? sign(plant.species)}
       {...rest}
     />
   );
@@ -72,7 +73,7 @@ const PlanterArt = memo(function PlanterArt({ plant, stage, wet, shape, potDesig
     <g className={moving ? 'moving' : undefined}>
       <Potted kind={shape} design={potDesign} wet={wet}>
         <g transform={lean ? `rotate(${lean})` : undefined}>
-          <g className="sway" style={{ animationDuration: `${7 + (plant.id.charCodeAt(0) % 5)}s` }}>
+          <g className={STILL_SPECIES.includes(plant.species) ? undefined : 'sway'} style={{ animationDuration: `${7 + (plant.id.charCodeAt(0) % 5)}s` }}>
             {outgrown && (
               <g key={`was-${grew}`} className="outgrown">
                 <PlantArt species={plant.species} stage={outgrown} palette={palette} label={label} />
@@ -141,4 +142,14 @@ export function EmptySlot({ hang, highlight }: { hang?: boolean; highlight: bool
       <path d={`M0,${hang ? 24 : -6} L0,${hang ? 12 : -18} M-6,${hang ? 18 : -12} L6,${hang ? 18 : -12}`} className="ink" fill="none" strokeWidth="2" />
     </g>
   );
+}
+
+/**
+ * The parts of a plant that glow after dark, on their own, for drawing above the night's tint at
+ * the same place as the plant. Nothing for plants that don't glow, or aren't in flower.
+ */
+export function GlowPlanter({ plant, now }: { plant: Plant; now: number }) {
+  if (!GLOWING_SPECIES.includes(plant.species)) return null;
+  const stage = stageAt(plant.species, plant, now);
+  return plant.species === 'moonflower' ? <MoonflowerGlow stage={stage} /> : null;
 }

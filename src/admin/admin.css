@@ -323,3 +323,43 @@ body {
   font-size: 14px;
   color: var(--a-muted);
 }
+
+/* designing: the same swatches as her studio */
+.admin .swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.admin button.swatch {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--a-ink);
+}
+.admin button.swatch.on {
+  box-shadow: 0 0 0 3px var(--a-card), 0 0 0 5px var(--a-ink);
+}
+.admin button.swatch.none {
+  width: auto;
+  border-radius: 22px;
+  padding: 0 12px;
+  background: var(--a-card);
+  color: var(--a-ink);
+}
+.admin button.swatch.none.on {
+  background: var(--a-ink);
+  color: var(--a-card);
+}
+.admin .design-preview {
+  display: grid;
+  place-items: center;
+  margin: 12px 0 4px;
+  padding: 8px;
+  border-radius: 14px;
+  background: #efe3cf;
+}
+.admin .design-preview svg {
+  width: 220px;
+  height: 190px;
+}

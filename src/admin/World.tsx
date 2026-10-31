@@ -43,7 +43,7 @@ export function World({ garden, weather, now, view, selectedId, moments, onPlant
   return (
     <div className="admin-frame" style={{ width: FRAME.w, height: FRAME.h }}>
       <LangProvider value={s.lang}>
-        <div className={`garden theme-${theme}${weather.night ? ' night' : ''}`} style={paletteVars(theme, weather, seasonShown(now), own)}>
+        <div className={`garden theme-${theme}${weather.night ? ' night' : ''}${weather.twilight === 'dusk' ? ' dusk' : ''}`} style={paletteVars(theme, weather, seasonShown(now), own)}>
           <div className="view" key={view}>
             {view === 'room' ? (
               <Scene

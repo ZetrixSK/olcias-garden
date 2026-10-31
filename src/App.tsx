@@ -572,7 +572,7 @@ export function App() {
   return (
     <LangProvider value={settings.lang}>
       <div
-        className={`garden theme-${theme}${uiDark ? ' ui-dark' : ''}${weather.night ? ' night' : ''}${lapse ? ' replaying' : ''}`}
+        className={`garden theme-${theme}${uiDark ? ' ui-dark' : ''}${weather.night ? ' night' : ''}${weather.twilight === 'dusk' ? ' dusk' : ''}${lapse ? ' replaying' : ''}`}
         style={paletteVars(theme, weather, seasonShown(now), own)}
       >
         <div className="view" key={settings.view}>

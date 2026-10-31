@@ -58,7 +58,7 @@ describe('rare moments and visitors', () => {
 describe('the new flowers', () => {
   it('can all be planted and survive a save', () => {
     let g: GardenState = { ...starterGarden(Date.UTC(2026, 9, 18)), plants: [] };
-    const slots = ['row2-a', 'row2-b', 'row2-c', 'row2-d', 'row3-a', 'row3-b', 'row3-c', 'row3-d', 'hang-l', 'hang-r'] as const;
+    const slots = ['row2-a', 'row2-b', 'row2-c', 'row2-d', 'row3-a', 'row3-b', 'row3-c', 'row3-d', 'hang-l', 'hang-r', 'sill-l', 'sill-r'] as const;
     SPECIES_IDS.forEach((sp, i) => (g = addPlant(g, slots[i]!, sp, Date.UTC(2026, 9, 18), `p${i}`)));
     expect(g.plants.map((p) => p.species)).toEqual(SPECIES_IDS);
     const back = parseSave(JSON.parse(JSON.stringify(g)), Date.UTC(2026, 9, 18))!;

@@ -9,7 +9,8 @@ import { seasonShown } from '../theme/seasons';
 import { MOMENTS, momentBlocked } from '../weather/moments';
 import { ago, describe, MOMENT_NAMES, SLOT_NAMES, SPOT_NAMES, type ActionRow } from './logic';
 
-export type Send = (kind: string, payload: Record<string, unknown>) => void;
+/** Sends an action; resolves once it's stored, so one sent after it is always carried out after it. */
+export type Send = (kind: string, payload: Record<string, unknown>) => Promise<void>;
 
 
 export function Panel({ title, children, aside }: { title: string; children: ReactNode; aside?: ReactNode }) {

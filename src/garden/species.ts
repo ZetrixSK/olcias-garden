@@ -1,4 +1,6 @@
-export type SpeciesId = 'pansy' | 'tulip' | 'rose' | 'daisy' | 'lavender' | 'snowdrop' | 'cyclamen' | 'hellebore' | 'hollyhock' | 'pumpkin';
+export type SpeciesId =
+  | 'pansy' | 'tulip' | 'rose' | 'daisy' | 'lavender' | 'snowdrop' | 'cyclamen' | 'hellebore' | 'hollyhock' | 'pumpkin'
+  | 'batflower' | 'moonflower';
 export type Stage = 'seed' | 'seedling' | 'bud' | 'bloom';
 
 export const STAGES: Stage[] = ['seed', 'seedling', 'bud', 'bloom'];
@@ -9,8 +11,10 @@ export type GardenPot = (typeof POT_KINDS)[number];
 
 type SpeciesInfo = {
   name: string;
-  /** Polish name, written on the seed marker. */
+  /** Polish name. */
   polish: string;
+  /** A shorter word for the wooden seed marker, when the Polish name is too long to fit on it. */
+  sign?: string;
   /** Hours of growth needed to reach seedling, bud and bloom. */
   hours: [number, number, number];
   pot: GardenPot;
@@ -30,7 +34,15 @@ export const SPECIES: Record<SpeciesId, SpeciesInfo> = {
   hollyhock: { name: 'Black hollyhock', polish: 'malwa', hours: [14, 60, 120], pot: 'slim' },
   // the Halloween one
   pumpkin: { name: 'Pumpkin', polish: 'dynia', hours: [6, 30, 80], pot: 'cauldron' },
+  // night flowers: wings of near-black bracts, and white flowers that open and glow after dark
+  batflower: { name: 'Bat flower', polish: 'kwiat nietoperza', sign: 'nietoperz', hours: [12, 60, 132], pot: 'cauldron' },
+  moonflower: { name: 'Moonflower', polish: 'kwiat księżyca', sign: 'księżyc', hours: [8, 40, 96], pot: 'round' },
 };
+
+/** Plants that hold still: a vine twined round its wire doesn't sway. */
+export const STILL_SPECIES: readonly SpeciesId[] = ['moonflower'];
+/** Plants with flowers that glow after dark, drawn again above the night's tint. */
+export const GLOWING_SPECIES: readonly SpeciesId[] = ['moonflower'];
 
 export const SPECIES_IDS = Object.keys(SPECIES) as SpeciesId[];
 

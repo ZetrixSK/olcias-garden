@@ -9,6 +9,7 @@ import { DIARY_ICON } from './Diary';
 import { BACKUP_ICON } from './Backup';
 import { CAMERA_ICON } from './Picture';
 import { ambience } from '../sound/ambience';
+import { remoteConfigured } from '../remote/client';
 import { LANGS, useWords, type Lang } from '../i18n';
 
 const SUN = (
@@ -279,6 +280,20 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
               <Icon>{BACKUP_ICON}</Icon>
               {t('Backup · save or restore', 'Zapisz albo przywróć')}
             </button>
+            {remoteConfigured && (
+              <>
+                {/* her diary and the notes in her book stay on the phone unless she shares them */}
+                <p className="hint">{t('Diary and notes', 'Pamiętnik i notatki')}</p>
+                <div className="row two">
+                  <button aria-pressed={!settings.shareNotes} onClick={() => onSettings({ shareNotes: false })}>
+                    {t('Just for me', 'Tylko dla mnie')}
+                  </button>
+                  <button aria-pressed={settings.shareNotes} onClick={() => onSettings({ shareNotes: true })}>
+                    {t('Shared', 'Wspólne')}
+                  </button>
+                </div>
+              </>
+            )}
             <p className="hint">Language · Język</p>
             <div className="row three">
               {LANGS.map((l) => (

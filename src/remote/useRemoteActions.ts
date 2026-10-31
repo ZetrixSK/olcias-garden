@@ -40,9 +40,12 @@ export function useRemoteActions(
     let listening = false;
     // reports that failed (offline) are sent again on the next chance
     const unreported = new Map<string, { status: 'applied' | 'skipped'; reason: string | null }>();
+    // the one being carried out now, and those done and reported: a second fetch can't queue them again
+    let current: string | null = null;
+    const finished = new Set<string>();
 
     const enqueue = (a: RemoteAction & { created_at: string }) => {
-      if (!queue.current.some((q) => q.id === a.id)) {
+      if (a.id !== current && !finished.has(a.id) && !queue.current.some((q) => q.id === a.id)) {
         queue.current.push(a);
         // in the order they were sent, however they arrived
         queue.current.sort((x, y) => (sentOrder(x.created_at) < sentOrder(y.created_at) ? -1 : 1));
@@ -54,6 +57,7 @@ export function useRemoteActions(
       try {
         await reportAction(id, status, reason);
         unreported.delete(id);
+        finished.add(id);
       } catch {
         unreported.set(id, { status, reason });
       }
@@ -65,6 +69,7 @@ export function useRemoteActions(
       try {
         while (!stopped && readyRef.current && gardenRef.current && queue.current.length > 0) {
           const a = queue.current.shift()!;
+          current = a.id;
           const before = gardenRef.current;
           const already = handled(before, a.id);
           if (already) {
@@ -82,6 +87,7 @@ export function useRemoteActions(
         }
       } finally {
         running = false;
+        current = null;
       }
     }
 

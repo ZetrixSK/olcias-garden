@@ -47,3 +47,14 @@ describe('the three languages', () => {
     expect(parseLang('pl')).toBe('pl');
   });
 });
+
+describe('night flower names', () => {
+  it('uses the full name everywhere but a short word on the seed marker', () => {
+    const pl = words('pl');
+    expect(pl.marker('batflower')).toBe('kwiat nietoperza');
+    expect(pl.sign('batflower')).toBe('nietoperz');
+    expect(pl.sign('moonflower')).toBe('księżyc');
+    expect(pl.sign('pansy')).toBe('bratek');
+    expect(words('en').sign('moonflower')).toBe('moonflower');
+  });
+});

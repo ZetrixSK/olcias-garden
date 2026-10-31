@@ -6,7 +6,7 @@ import { CandleLight, candleFlame, SHELF_SPARKLES, SillCandle, WallSparkles } fr
 import type { CandleLook } from '../garden/candle';
 import { PeekingDogs } from './Dogs';
 import { dogMood } from './dogMood';
-import { EmptySlot, GardenPlanter } from './GardenPlanter';
+import { EmptySlot, GardenPlanter, GlowPlanter } from './GardenPlanter';
 import { fv, sv } from './geometry';
 import { Sign, WallMotifs } from './Room';
 import { Bunting, SillEnds } from './ShelfDecor';
@@ -240,6 +240,22 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
       {occasion === 'halloween' && <JackOLantern {...lantern} />}
 
       {tint && <rect className="tint" x="-400" y="-400" width="1200" height="1600" fill={tint.color} opacity={tint.opacity} />}
+      {/* night flowers shine through the dark: drawn again, above the tint, where their plants stand */}
+      {weather.night && (
+        <g pointerEvents="none">
+          {SLOT_IDS.map((slot) => {
+            const plant = bySlot.get(slot);
+            if (!plant) return null;
+            const pos = SLOT_POS[slot];
+            const rimY = pos.y - POT_HEIGHT[plantLook(plant, garden.designs).shape] * PLANT_SCALE;
+            return (
+              <g key={slot} transform={`translate(${pos.x} ${rimY}) scale(${PLANT_SCALE})`}>
+                <GlowPlanter plant={plant} now={now} />
+              </g>
+            );
+          })}
+        </g>
+      )}
       <g clipPath="url(#shelf-window-clip)">
         <g transform={SKY_FIT}>
           <SkyLights weather={weather} phase={Math.round(moonPhase(now) * 100) / 100} shower={moments.includes('shooting-stars')} />

@@ -9,7 +9,7 @@ import { Ball, CandleLight, candleFlame, CornerPiece, ROOM_SPARKLES, ShelfTrinke
 import type { CandleLook } from '../garden/candle';
 import { DogBed, Dogs } from './Dogs';
 import { dogMood, type DogMood } from './dogMood';
-import { EmptySlot, GardenPlanter } from './GardenPlanter';
+import { EmptySlot, GardenPlanter, GlowPlanter } from './GardenPlanter';
 import { FLOOR_Y, SILL_Y, VIEW_H, VIEW_W, WINDOW_OPENING } from './geometry';
 import { Frost, LakeLife, Landscape, Rain, SeasonAir, SeasonBranch } from './Outside';
 import { Curtains, Floor, Shelf, Sign, Sill, Wall, WindowFrame } from './Room';
@@ -58,6 +58,25 @@ function placeVines(vines: VineSpec[], garden: GardenState): PlacedVine[] {
     const rimY = pos.base - POT_HEIGHT[plantLook(plant, garden.designs).shape] * pos.scale;
     return [{ vine, kind, start: runnerStart(kind, pos.x, rimY), phase: VINE_PHASE[spot] ?? 0 }];
   });
+}
+
+/** The flowers that glow, at their plants' places in the window, for drawing above the night's tint. */
+function WindowGlow({ garden, now }: { garden: GardenState; now: number }) {
+  return (
+    <g pointerEvents="none">
+      {WINDOW_SPOTS.map((spot) => {
+        const plant = garden.plants.find((p) => p.display === spot);
+        if (!plant) return null;
+        const pos = SPOT_POS[spot];
+        const rimY = pos.base - POT_HEIGHT[plantLook(plant, garden.designs).shape] * pos.scale;
+        return (
+          <g key={spot} transform={`translate(${pos.x} ${rimY.toFixed(1)}) scale(${pos.scale})`}>
+            <GlowPlanter plant={plant} now={now} />
+          </g>
+        );
+      })}
+    </g>
+  );
 }
 
 /** Her plants in one row of the window (shelf or sill), with invisible tap areas over each spot. */
@@ -329,6 +348,7 @@ export function Scene({ theme, weather, viewH, vines, still = false, moments = [
         onFrame={onFrame}
       />
       <Lights theme={theme} sky={weather.sky} night={weather.night} twilight={weather.twilight ?? null} phase={phaseAt(rest.now)} occasion={cal.occasion} dy={dy} wallMid={wallMid} fx={candleFlame(theme, candle)[0]} fy={candleFlame(theme, candle)[1]} candleOn={candleOn} shower={moments.includes('shooting-stars')} />
+      {weather.night && <WindowGlow garden={rest.garden} now={rest.now} />}
     </svg>
   );
 }
