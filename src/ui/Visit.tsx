@@ -12,6 +12,7 @@ import { ShelfView } from '../scene/ShelfView';
 import { vineSpecs } from '../scene/vineSpecs';
 import { candleLit as roomIsDim, paletteVars } from '../theme/palettes';
 import { seasonShown } from '../theme/seasons';
+import { isDarkRoom } from '../theme/ownRoom';
 import { useWeather } from '../weather/useWeather';
 import { ConfirmButton } from './Decorate';
 import { cleanTag, postMessage, TagInput, validTag, type Notice } from './Post';
@@ -173,6 +174,8 @@ export function VisitView({ visit, now, viewH, onAct, onLeave }: { visit: Visiti
   const own = s.useOwn ? s.own : null;
   const theme = own ? own.base : s.theme;
   const candleOn = flameOn(s.candleLit, roomIsDim(weather));
+  const palette = paletteVars(theme, weather, seasonShown(now), own);
+  const uiDark = own ? isDarkRoom(own) : theme === 'witchy';
   const plant = picked?.kind === 'plant' ? g.plants.find((p) => p.id === picked.id) : undefined;
   const canPlant = visit.level >= 3;
 
@@ -200,8 +203,9 @@ export function VisitView({ visit, now, viewH, onAct, onLeave }: { visit: Visiti
   };
 
   return (
-    <div className="visit-layer">
-      <div className={`garden theme-${theme}${weather.night ? ' night' : ''}${weather.twilight === 'dusk' ? ' dusk' : ''}`} style={paletteVars(theme, weather, seasonShown(now), own)}>
+    // the visited room's colours reach everything in the visit, its cards and sheets too
+    <div className={`visit-layer theme-${theme}${uiDark ? ' ui-dark' : ''}`} style={palette}>
+      <div className={`garden theme-${theme}${weather.night ? ' night' : ''}${weather.twilight === 'dusk' ? ' dusk' : ''}`} style={palette}>
         <ViewSwiper view={view} enabled={!picked} onChange={setView}
           room={
             <Scene theme={theme} weather={weather} viewH={viewH} vines={vineSpecs(g)} candle={s.candle} candleOn={candleOn} garden={g} now={now} selectedId={plant?.id ?? null} placingId={null} wateringId={watering} onSpot={onSpot} />
@@ -229,7 +233,11 @@ export function VisitView({ visit, now, viewH, onAct, onLeave }: { visit: Visiti
             <h2>{plant.name ?? w.flower(plant.species)}</h2>
             <button className="close" aria-label={t('Close', 'Zamknij')} onClick={() => setPicked(null)}>×</button>
           </div>
-          <p className="hint">{w.flower(plant.species)} · {t(STAGE_LABEL[stageAt(plant.species, plant, now)], { seed: 'Posadzony', seedling: 'Kiełkuje', bud: 'Pąki', bloom: 'Kwitnie' }[stageAt(plant.species, plant, now)])}</p>
+          <p className="hint">
+            {/* the kind of flower only when the title is its own name, not the kind again */}
+            {plant.name ? `${w.flower(plant.species)} · ` : ''}
+            {t(STAGE_LABEL[stageAt(plant.species, plant, now)], { seed: 'Posadzony', seedling: 'Kiełkuje', bud: 'Pąki', bloom: 'Kwitnie' }[stageAt(plant.species, plant, now)])}
+          </p>
           {visit.level < 2 ? (
             <p className="hint">{t('You can look, but not touch.', 'Możesz oglądać, ale nie dotykać.')}</p>
           ) : (

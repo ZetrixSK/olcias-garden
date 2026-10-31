@@ -537,22 +537,17 @@ body {
   position: absolute;
   inset: 0;
 }
-.pager-track.moving {
+.pager-track.ready {
+  /* once both views are drawn they stay drawn on one layer: a swipe only moves it */
   will-change: transform;
 }
-/* the two views side by side on the track; the one out of sight isn't painted unless sliding */
+/* the two views side by side on the track */
 .view {
   position: absolute;
   top: 0;
   bottom: 0;
   width: 100%;
   animation: view-in 0.45s ease-out;
-}
-.view:not(.current) {
-  visibility: hidden;
-}
-.pager-track.moving .view {
-  visibility: visible;
 }
 @keyframes view-in {
   from { opacity: 0; }

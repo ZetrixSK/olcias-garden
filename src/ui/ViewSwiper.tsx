@@ -9,28 +9,36 @@ const COMMIT = 0.22;
 const FLICK = 0.5;
 /** A drag only starts once the finger has clearly moved sideways; anything less is a tap. */
 const SLOP = 10;
-const GLIDE = 'transform 340ms cubic-bezier(0.2, 0.8, 0.3, 1)';
+const GLIDE = 'transform 360ms cubic-bezier(0.22, 0.9, 0.3, 1)';
 
 const prefersStill = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 const at = (index: number, px = 0) => `translate3d(calc(${-index * 100}% + ${px}px), 0, 0)`;
 
+type Idle = (cb: () => void, o?: { timeout: number }) => number;
+/** Runs when the phone has a quiet moment (or soon, where there's no way to ask). */
+const whenIdle = (cb: () => void, timeout: number) => {
+  const idle = (window as Window & { requestIdleCallback?: Idle }).requestIdleCallback;
+  if (idle) idle(cb, { timeout });
+  else window.setTimeout(cb, Math.min(timeout, 600));
+};
+
 type Drag = { id: number; x: number; y: number; t: number; dx: number; active: boolean };
 
 /**
- * The view out of sight keeps what it last drew and skips every update (a replay, a watering, the
- * clock) until it's about to be seen; then it catches up once. Only the view in sight does any work.
+ * The view out of sight keeps what it last drew. It catches up with any change in a quiet moment
+ * soon after (`version`), never in the middle of a swipe; only the view in sight follows every change.
  */
 const Frozen = memo(
-  function Frozen({ children }: { live: boolean; children: ReactNode }) {
+  function Frozen({ children }: { live: boolean; version: number; children: ReactNode }) {
     return <>{children}</>;
   },
-  (_prev, next) => !next.live,
+  (prev, next) => !next.live && prev.version === next.version,
 );
 
 /**
- * The garden's two views side by side, as if on one long wall, both already drawn: a sideways swipe
- * pulls the other one into sight under the finger, then glides on (or springs back). Changing the
- * view any other way glides there too. The view out of sight isn't painted until it's needed.
+ * The garden's two views side by side, as if on one long wall. Once both are drawn they stay
+ * drawn, so a swipe only moves them: the other view comes into sight under the finger, then the
+ * wall glides on (or springs back). Changing the view any other way glides there too.
  */
 export function ViewSwiper({ view, enabled, onChange, room, shelves }: {
   view: View;
@@ -43,21 +51,37 @@ export function ViewSwiper({ view, enabled, onChange, room, shelves }: {
   const drag = useRef<Drag | null>(null);
   const swallowClick = useRef(false);
   const index = ORDER.indexOf(view);
-  // both views show while one is sliding over the other; otherwise only the one in sight
-  const [moving, setMoving] = useState(false);
   const shown = useRef(view);
-  // the other view is drawn once the garden has settled after opening, so opening stays quick;
-  // a swipe before then draws it there and then
+
+  // the other view is drawn once the garden has settled after opening, so opening stays quick
   const [both, setBoth] = useState(false);
+  useEffect(() => whenIdle(() => setBoth(true), 1500), []);
+
+  // the view out of sight catches up with changes in a quiet moment, not while she's swiping
+  const [version, setVersion] = useState(0);
+  const stale = useRef(false);
+  const lastProps = useRef({ room, shelves });
+  if (lastProps.current.room !== room || lastProps.current.shelves !== shelves) {
+    lastProps.current = { room, shelves };
+    stale.current = true;
+  }
   useEffect(() => {
-    const idle = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
-    if (idle) {
-      idle(() => setBoth(true), { timeout: 1500 });
-      return;
-    }
-    const t = window.setTimeout(() => setBoth(true), 900);
-    return () => window.clearTimeout(t);
-  }, []);
+    if (!both || !stale.current) return;
+    let cancelled = false;
+    const t = window.setTimeout(
+      () =>
+        whenIdle(() => {
+          if (cancelled || !stale.current) return;
+          stale.current = false;
+          setVersion((v) => v + 1);
+        }, 2000),
+      700,
+    );
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+    };
+  });
 
   const place = (transform: string, transition: string) => {
     const el = track.current;
@@ -69,18 +93,13 @@ export function ViewSwiper({ view, enabled, onChange, room, shelves }: {
   // the track's place is only ever set here, so a change of view can glide rather than jump
   useLayoutEffect(() => place(at(index), 'none'), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /** Both views stay drawn while sliding; once it's settled (or if no slide comes), only one. */
-  const settle = () => window.setTimeout(() => setMoving(false), 420);
-
   // a change of view however it came (a swipe, or the button in the corner) glides there
   useLayoutEffect(() => {
     if (shown.current === view) return;
     shown.current = view;
-    if (prefersStill()) return place(at(index), 'none');
-    setMoving(true);
-    place(at(index), GLIDE);
-    settle();
-  }, [view, index]);
+    if (!both) setBoth(true);
+    place(at(index), prefersStill() ? 'none' : GLIDE);
+  }, [view, index, both]);
 
   const target = (dx: number): View | null => ORDER[index + (dx < 0 ? 1 : -1)] ?? null;
 
@@ -92,18 +111,25 @@ export function ViewSwiper({ view, enabled, onChange, room, shelves }: {
   const onPointerMove = (e: React.PointerEvent) => {
     const d = drag.current;
     if (!d || d.id !== e.pointerId) return;
-    const dx = e.clientX - d.x;
-    const dy = e.clientY - d.y;
     if (!d.active) {
+      const dx = e.clientX - d.x;
+      const dy = e.clientY - d.y;
       if (Math.abs(dx) < SLOP || Math.abs(dx) < Math.abs(dy) * 1.2) {
         // mostly up and down, or barely moved: not a swipe
         if (Math.abs(dy) > SLOP * 2) drag.current = null;
         return;
       }
       d.active = true;
-      d.x = e.clientX - Math.sign(dx) * SLOP;
+      // start from here, so the wall doesn't jump by the distance it took to tell it was a swipe
+      d.x = e.clientX;
+      d.t = performance.now();
       track.current?.setPointerCapture(e.pointerId);
-      setMoving(true);
+      // only if the other view missed a change (or isn't drawn yet) is there anything to do now
+      if (!both) setBoth(true);
+      else if (stale.current) {
+        stale.current = false;
+        setVersion((v) => v + 1);
+      }
     }
     const w = track.current?.clientWidth ?? 400;
     const raw = e.clientX - d.x;
@@ -127,9 +153,8 @@ export function ViewSwiper({ view, enabled, onChange, room, shelves }: {
       place(at(ORDER.indexOf(next)), prefersStill() ? 'none' : GLIDE);
       onChange(next);
     } else {
-      place(at(index), GLIDE);
+      place(at(index), prefersStill() ? 'none' : GLIDE);
     }
-    settle();
   };
 
   return (
@@ -147,15 +172,16 @@ export function ViewSwiper({ view, enabled, onChange, room, shelves }: {
         e.preventDefault();
       }}
     >
-      <div
-        ref={track}
-        className={`pager-track${moving ? ' moving' : ''}`}
-      >
-        {ORDER.map((v, i) => (
-          <div key={v} className={`view${v === view ? ' current' : ''}`} style={{ left: `${i * 100}%` }} aria-hidden={v !== view || undefined}>
-            {(v === view || both || moving) && <Frozen live={v === view || moving}>{v === 'room' ? room : shelves}</Frozen>}
-          </div>
-        ))}
+      <div ref={track} className={`pager-track${both ? ' ready' : ''}`}>
+        {ORDER.map((v, i) =>
+          v === view || both ? (
+            <div key={v} className={`view${v === view ? ' current' : ''}`} style={{ left: `${i * 100}%` }} aria-hidden={v !== view || undefined}>
+              <Frozen live={v === view} version={version}>
+                {v === 'room' ? room : shelves}
+              </Frozen>
+            </div>
+          ) : null,
+        )}
       </div>
     </div>
   );
