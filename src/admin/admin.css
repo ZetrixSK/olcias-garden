@@ -256,7 +256,7 @@ body {
 
 /* what was sent */
 .admin .history,
-.admin .book {
+.admin .pressed-list {
   list-style: none;
   margin: 8px 0 0;
   padding: 0;
@@ -287,11 +287,11 @@ body {
 .admin .history .skipped .status {
   color: #a8324a;
 }
-.admin .book li {
+.admin .pressed-list li {
   padding: 8px 0;
   border-bottom: 1px solid var(--a-line);
 }
-.admin .book em {
+.admin .pressed-list em {
   display: block;
   margin-top: 4px;
 }

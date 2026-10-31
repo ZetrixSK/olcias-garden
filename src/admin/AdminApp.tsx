@@ -4,8 +4,8 @@ import { applyAction } from '../remote/actions';
 import { seasonShown } from '../theme/seasons';
 import { clockWeather } from '../weather/weather';
 import { useWeather } from '../weather/useWeather';
-import { admin, relabel, useActions, useGardens, useSend, useSession } from './data';
-import { activeMoments, ago, isOnline, type ActionRow, type GardenRow } from './logic';
+import { admin, relabel, useActions, useGardens, useSend, useSession, type Sent } from './data';
+import { activeMoments, ago, isOnline, withPending, type ActionRow, type GardenRow } from './logic';
 import { BookPanel, GardenPanel, History, NewPlantPanel, PlantPanel, type Send } from './Panels';
 import { World } from './World';
 
@@ -112,7 +112,7 @@ type Source = {
   loading: boolean;
   error: string | null;
   useActionsFor: (id: string | null) => ActionRow[];
-  useSendTo: (id: string | null) => (kind: string, payload: Record<string, unknown>) => Promise<string | null>;
+  useSendTo: (id: string | null) => (kind: string, payload: Record<string, unknown>) => Promise<Sent>;
   signOut: () => void;
 };
 
@@ -136,11 +136,22 @@ function Dashboard({ source }: { source: Source }) {
   // the garden seen most recently, until another is chosen
   const id = chosen ?? gardens[0]?.id ?? null;
   const row = gardens.find((g) => g.id === id) ?? null;
-  const garden = useMemo(() => (row ? parseSave(row.garden, Date.now()) : null), [row]);
-  const actions = source.useActionsFor(id);
+  const uploaded = useMemo(() => (row ? parseSave(row.garden, Date.now()) : null), [row]);
+  const live = source.useActionsFor(id);
+  // what was just sent shows straight away, before the live history echoes it back
+  const [mine, setMine] = useState<ActionRow[]>([]);
+  const actions = useMemo(() => {
+    const known = new Set(live.map((a) => a.id));
+    return [...mine.filter((a) => !known.has(a.id) && a.garden === id), ...live];
+  }, [live, mine, id]);
   const sendRaw = source.useSendTo(id);
-  const { weather } = useWeather(garden?.settings ?? DEFAULT_SETTINGS, now);
+  const { weather } = useWeather(uploaded?.settings ?? DEFAULT_SETTINGS, now);
   const moments = useMemo(() => activeMoments(actions, now), [actions, now]);
+  // her garden as it will be once her phone catches up, so every change shows at once
+  const garden = useMemo(
+    () => (uploaded ? withPending(uploaded, actions, Date.now(), { night: weather.night, sky: weather.sky, season: seasonShown(Date.now()) }) : null),
+    [uploaded, actions, weather.night, weather.sky],
+  );
 
   useEffect(() => setPicked(null), [id]);
   useEffect(() => {
@@ -151,7 +162,12 @@ function Dashboard({ source }: { source: Source }) {
 
   const send: Send = useCallback(
     (kind, payload) => {
-      void sendRaw(kind, payload).then((err) => setToast(err ? `Not sent: ${err}` : 'Sent'));
+      void sendRaw(kind, payload).then((r) => {
+        if (r.error !== null) return setToast(`Not sent: ${r.error}`);
+        const row = r.row;
+        if (row) setMine((list) => [row, ...list].slice(0, 30));
+        setToast('Sent');
+      });
     },
     [sendRaw],
   );
@@ -217,22 +233,29 @@ function Dashboard({ source }: { source: Source }) {
 function DemoDashboard() {
   const [row, setRow] = useState<GardenRow>(() => {
     const t = Date.now();
-    return { id: 'demo', label: 'Demo garden', garden: starterGarden(t), save_version: 4, first_seen: new Date(t).toISOString(), last_seen: new Date(t).toISOString(), open_count: 3 };
+    const g = starterGarden(t);
+    const bloom = g.plants.find((p) => p.display === 'sill-2')!;
+    const garden = { ...g, pressed: [{ id: 'demo-pressed', plantId: bloom.id, species: bloom.species, at: t - 86_400_000, variety: null, design: null, name: null, note: '' }] };
+    return { id: 'demo', label: 'Demo garden', garden, save_version: 4, first_seen: new Date(t).toISOString(), last_seen: new Date(t).toISOString(), open_count: 3 };
   });
   const [actions, setActions] = useState<ActionRow[]>([]);
   const rowRef = useRef(row);
+  // like a real phone: each action waits a moment as "waiting", then is carried out and uploaded
   const send = useCallback(async (kind: string, payload: Record<string, unknown>) => {
     const t = Date.now();
-    const action = { id: `demo-${t}-${Math.random()}`, kind, payload };
-    const weather = clockWeather(new Date(t));
-    const world = { night: weather.night, sky: weather.sky, season: seasonShown(t) };
-    const r = rowRef.current;
-    const { garden, outcome } = applyAction(parseSave(r.garden, t)!, action, t, world);
-    const done: ActionRow = { ...action, garden: 'demo', created_at: new Date(t).toISOString(), status: outcome.status, done_at: new Date(t).toISOString(), reason: outcome.reason };
-    rowRef.current = { ...r, garden, last_seen: new Date(t).toISOString() };
-    setRow(rowRef.current);
-    setActions((list) => [done, ...list]);
-    return null;
+    const sent: ActionRow = { id: `demo-${t}-${Math.random()}`, garden: 'demo', kind, payload, created_at: new Date(t).toISOString(), status: 'pending', done_at: null, reason: null };
+    setActions((list) => [sent, ...list]);
+    window.setTimeout(() => {
+      const now = Date.now();
+      const weather = clockWeather(new Date(now));
+      const world = { night: weather.night, sky: weather.sky, season: seasonShown(now) };
+      const r = rowRef.current;
+      const { garden, outcome } = applyAction(parseSave(r.garden, now)!, sent, now, world);
+      rowRef.current = { ...r, garden, last_seen: new Date(now).toISOString() };
+      setRow(rowRef.current);
+      setActions((list) => list.map((a) => (a.id === sent.id ? { ...a, status: outcome.status, reason: outcome.reason, done_at: new Date(now).toISOString() } : a)));
+    }, 3000);
+    return { error: null, row: null } as const;
   }, []);
   return (
     <Dashboard

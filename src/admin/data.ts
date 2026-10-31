@@ -95,13 +95,15 @@ export function useActions(gardenId: string | null): ActionRow[] {
   return actions;
 }
 
-/** Sends an action to a garden. Resolves with an error message, or null once it's on its way. */
-export function useSend(gardenId: string | null): (kind: string, payload: Record<string, unknown>) => Promise<string | null> {
+export type Sent = { error: string } | { error: null; row: ActionRow | null };
+
+/** Sends an action to a garden. Resolves with the action as stored (to show at once), or an error. */
+export function useSend(gardenId: string | null): (kind: string, payload: Record<string, unknown>) => Promise<Sent> {
   return useCallback(
     async (kind, payload) => {
-      if (!admin || !gardenId) return 'No garden chosen.';
-      const { error } = await admin.from('actions').insert({ garden: gardenId, kind, payload });
-      return error ? error.message : null;
+      if (!admin || !gardenId) return { error: 'No garden chosen.' };
+      const { data, error } = await admin.from('actions').insert({ garden: gardenId, kind, payload }).select().single();
+      return error ? { error: error.message } : { error: null, row: (data as ActionRow | null) ?? null };
     },
     [gardenId],
   );

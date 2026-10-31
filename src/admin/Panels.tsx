@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { stageAt } from '../garden/growth';
 import { PANSY_PRESET_NAMES, PANSY_PRESETS, designRef } from '../garden/designs';
 import { POT_KINDS, SPECIES, SPECIES_IDS, STAGES, STAGE_LABEL, type SpeciesId, type Stage } from '../garden/species';
-import { isHanging, SLOT_IDS, WINDOW_SPOTS, type GardenState, type Plant, type SlotId } from '../garden/state';
+import { isHanging, newId, SLOT_IDS, WINDOW_SPOTS, type GardenState, type Plant, type SlotId } from '../garden/state';
 import { isVineSpecies, isVineSpot } from '../garden/vines';
 import type { Weather } from '../theme/palettes';
 import { seasonShown } from '../theme/seasons';
@@ -168,7 +168,8 @@ export function NewPlantPanel({ garden, slot, send, onClose }: { garden: GardenS
           type="button"
           className="primary"
           onClick={() => {
-            send('plant', { slot, species, stage, ...(species === 'pansy' ? { variety } : {}), ...(name.trim() ? { name: name.trim() } : {}) });
+            // its id is chosen here, so it can be shown and tended before her phone has even planted it
+            send('plant', { id: newId(), slot, species, stage, ...(species === 'pansy' ? { variety } : {}), ...(name.trim() ? { name: name.trim() } : {}) });
             onClose();
           }}
         >
@@ -272,7 +273,7 @@ export function BookPanel({ garden, send }: { garden: GardenState; send: Send })
   return (
     <Panel title="Her pressed flowers">
       {!garden.settings.shareNotes && <p className="hint">Her notes aren't shared, so they show empty here. A note is never written over one of hers.</p>}
-      <ul className="book">
+      <ul className="pressed-list">
         {pressed.map((p) => (
           <li key={p.id}>
             <span>

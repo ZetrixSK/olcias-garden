@@ -1,6 +1,7 @@
 import { describe as group, expect, it } from 'vitest';
 import { starterGarden } from '../garden/state';
-import { activeMoments, ago, describe, isOnline, plantName, type ActionRow } from './logic';
+import { activeMoments, ago, describe, isOnline, plantName, withPending, type ActionRow } from './logic';
+import { applyAction } from '../remote/actions';
 
 const NOW = new Date(2026, 9, 31, 12).getTime();
 const MIN = 60_000;
@@ -49,5 +50,34 @@ group('describe', () => {
     expect(describe({ kind: 'moment', payload: { moment: 'aurora', minutes: 15 } }, g)).toBe('Northern lights for 15 min');
     expect(describe({ kind: 'settings', payload: { patch: { theme: 'witchy' } } }, g)).toBe('Settings: theme witchy');
     expect(describe({ kind: 'plant', payload: { species: 'rose', slot: 'row3-a', name: 'Ruby' } }, g)).toBe('Plant a rose called Ruby on the bottom shelf 1');
+  });
+});
+
+group('withPending', () => {
+  const world = { night: false, sky: 'clear' as const, season: 'autumn' as const };
+  const at = (s: number) => new Date(NOW + s * 1000).toISOString();
+
+  it('shows what was sent before her phone has caught up, in the order sent', () => {
+    const g = starterGarden(NOW);
+    const list = [
+      row({ id: 'b', kind: 'settings', payload: { patch: { lang: 'pl' } }, status: 'pending', created_at: at(2) }),
+      row({ id: 'a', kind: 'settings', payload: { patch: { lang: 'en' } }, status: 'pending', created_at: at(1) }),
+    ];
+    expect(withPending(g, list, NOW, world).settings.lang).toBe('pl');
+  });
+
+  it('leaves out what her upload already includes, what was skipped, and moments', () => {
+    const g = starterGarden(NOW);
+    const pansy = g.plants.find((p) => p.display === 'sill-2')!;
+    const grow = row({ id: 'g1', kind: 'overgrow', payload: { plant: pansy.id }, status: 'applied' });
+    const uploaded = applyAction(g, grow, NOW, world).garden;
+    const list = [
+      grow,
+      row({ id: 's1', kind: 'settings', payload: { patch: { theme: 'witchy' } }, status: 'skipped' }),
+      row({ id: 'm1', kind: 'moment', payload: { moment: 'rainbow' }, status: 'applied' }),
+    ];
+    const shown = withPending(uploaded, list, NOW, world);
+    expect(shown.plants.find((p) => p.id === pansy.id)!.vine!.length).toBeCloseTo(0.22);
+    expect(shown.settings.theme).toBe('cozy');
   });
 });

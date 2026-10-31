@@ -1,6 +1,8 @@
 import { MOMENTS, type Moment } from '../weather/moments';
 import { SPECIES, type SpeciesId } from '../garden/species';
 import type { GardenState, SlotId, WindowSpot } from '../garden/state';
+import { applyAction, type World } from '../remote/actions';
+import { timeKey } from '../remote/timeKey';
 
 export const SLOT_NAMES: Record<SlotId, string> = {
   'hang-l': 'Hanging, left', 'sill-l': 'Top shelf, left', 'sill-r': 'Top shelf, right', 'hang-r': 'Hanging, right',
@@ -38,6 +40,20 @@ export type ActionRow = {
   done_at: string | null;
   reason: string | null;
 };
+
+/**
+ * Her garden as it will be once her phone has caught up: the last upload, with every action sent
+ * since that it doesn't include yet carried out on top, oldest first, by the same code her phone
+ * uses. An upload lists the actions it already includes, so none is counted twice; skipped ones
+ * never happened. Moments aren't part of the garden, so they're left to the history.
+ */
+export function withPending(g: GardenState, actions: ActionRow[], now: number, world: World): GardenState {
+  const included = new Set(g.remoteDone.map((d) => d.id));
+  const todo = actions
+    .filter((a) => a.status !== 'skipped' && a.kind !== 'moment' && !included.has(a.id))
+    .sort((a, b) => (timeKey(a.created_at) < timeKey(b.created_at) ? -1 : 1));
+  return todo.reduce((out, a) => applyAction(out, { id: a.id, kind: a.kind, payload: a.payload }, now, world).garden, g);
+}
 
 /** "just now", "5 min ago", "3 h ago", "2 days ago". */
 export function ago(then: number, now: number): string {
