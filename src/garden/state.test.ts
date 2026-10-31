@@ -80,6 +80,8 @@ describe('garden state', () => {
       candle: null,
       candleLit: null,
       sound: false,
+      lang: 'mixed',
+      shareNotes: false,
     });
   });
 

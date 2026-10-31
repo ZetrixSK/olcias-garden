@@ -3,6 +3,7 @@ import { backupName, backupSummary, makeBackup, readBackup, type Restored } from
 import type { GardenState } from '../garden/state';
 import { getImage } from '../garden/storage';
 import { sendFile } from './share';
+import { useWords } from '../i18n';
 
 /** Opens the phone's file picker; null if she cancels. */
 function chooseFile(): Promise<File | null> {
@@ -22,7 +23,6 @@ function chooseFile(): Promise<File | null> {
   });
 }
 
-const longDate = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
 const MAX_FILE = 200 * 1024 * 1024;
 
@@ -38,13 +38,16 @@ export function BackupSheet({ garden, onRestore, onClose }: {
   const [error, setError] = useState<string | null>(null);
   const [found, setFound] = useState<Restored | null>(null);
   const [busy, setBusy] = useState(false);
+  const w = useWords();
+  const { t } = w;
+  const longDate = (at: number) => new Date(at).toLocaleDateString(w.locale, { day: 'numeric', month: 'long', year: 'numeric' });
 
   useEffect(() => {
     let live = true;
-    const t = Date.now();
-    makeBackup(garden, getImage, t)
-      .then((text) => live && setFile(new File([text], backupName(t), { type: 'application/json' })))
-      .catch(() => live && setError("The backup couldn't be made just now."));
+    const made = Date.now();
+    makeBackup(garden, getImage, made)
+      .then((text) => live && setFile(new File([text], backupName(made), { type: 'application/json' })))
+      .catch(() => live && setError(t("The backup couldn't be made just now.", 'Nie udało się teraz zrobić kopii.')));
     return () => {
       live = false;
     };
@@ -55,8 +58,8 @@ export function BackupSheet({ garden, onRestore, onClose }: {
     if (!file) return;
     setError(null);
     void sendFile(file, "Olcia's Garden backup").then((how) => {
-      if (how === 'shared') setNote('Done. Keep it somewhere safe, like Files or iCloud Drive.');
-      if (how === 'downloaded') setNote(`Saved as ${file.name}, in Downloads.`);
+      if (how === 'shared') setNote(t('Done. Keep it somewhere safe, like Files or iCloud Drive.', 'Gotowe. Trzymaj ją w bezpiecznym miejscu, na przykład w Plikach albo na iCloud Drive.'));
+      if (how === 'downloaded') setNote(t(`Saved as ${file.name}, in Downloads.`, `Zapisano jako ${file.name}, w Pobranych.`));
     });
   };
 
@@ -65,13 +68,13 @@ export function BackupSheet({ garden, onRestore, onClose }: {
     setNote(null);
     const picked = await chooseFile();
     if (!picked) return;
-    if (picked.size > MAX_FILE) return setError("That file is far too big to be a garden backup.");
+    if (picked.size > MAX_FILE) return setError(t('That file is far too big to be a garden backup.', 'Ten plik jest za duży jak na kopię ogrodu.'));
     try {
       const r = readBackup(await picked.text(), Date.now());
       if (r) setFound(r);
-      else setError("That file isn't a garden backup, or it's damaged.");
+      else setError(t("That file isn't a garden backup, or it's damaged.", 'To nie jest kopia ogrodu albo plik jest uszkodzony.'));
     } catch {
-      setError("That file couldn't be opened.");
+      setError(t("That file couldn't be opened.", 'Nie udało się otworzyć tego pliku.'));
     }
   };
 
@@ -82,37 +85,50 @@ export function BackupSheet({ garden, onRestore, onClose }: {
       await onRestore(found);
     } catch {
       setBusy(false);
-      setError("There wasn't room on the phone to restore it. Nothing was changed.");
+      setError(t("There wasn't room on the phone to restore it. Nothing was changed.", 'Zabrakło miejsca w telefonie. Nic nie zostało zmienione.'));
     }
   };
 
   return (
-    <div className="sheet studio backup" role="dialog" aria-label="Backup">
+    <div className="sheet studio backup" role="dialog" aria-label={t('Backup', 'Kopia zapasowa')}>
       <div className="sheet-head">
-        <h2>Keep it safe</h2>
-        <button className="close" aria-label="Close" onClick={onClose}>×</button>
+        <h2>{t('Keep it safe', 'Kopia zapasowa')}</h2>
+        <button className="close" aria-label={t('Close', 'Zamknij')} onClick={onClose}>×</button>
       </div>
       <div className="studio-body">
         {error && <p className="decor-error">{error}</p>}
         {found ? (
           <section className="studio-section">
-            <h3>{found.exportedAt ? `Backup from ${longDate(found.exportedAt)}` : 'A garden backup'}</h3>
-            <p className="decor-hint">{backupSummary(found)}.</p>
-            <p className="decor-hint">Restoring puts this in place of the garden as it is now. The garden now is kept aside on the phone, not thrown away.</p>
+            <h3>
+              {found.exportedAt
+                ? t(`Backup from ${longDate(found.exportedAt)}`, `Kopia z ${longDate(found.exportedAt)}`)
+                : t('A garden backup', 'Kopia ogrodu')}
+            </h3>
+            <p className="decor-hint">{backupSummary(found, w)}.</p>
+            <p className="decor-hint">
+              {t(
+                'Restoring puts this in place of the garden as it is now. The garden now is kept aside on the phone, not thrown away.',
+                'Przywrócenie zastąpi obecny ogród tą kopią. Obecny ogród zostanie odłożony na bok w telefonie, nie zniknie.',
+              )}
+            </p>
             <div className="decor-choice two">
-              <button className="quiet" onClick={() => setFound(null)} disabled={busy}>Not now</button>
-              <button className="danger" onClick={() => void restore()} disabled={busy}>{busy ? 'Restoring…' : 'Restore it'}</button>
+              <button className="quiet" onClick={() => setFound(null)} disabled={busy}>{t('Not now', 'Nie teraz')}</button>
+              <button className="danger" onClick={() => void restore()} disabled={busy}>
+                {busy ? t('Restoring…', 'Przywracam…') : t('Restore it', 'Przywróć')}
+              </button>
             </div>
           </section>
         ) : (
           <>
             <p className="decor-hint">
-              Everything here lives only on this phone. A backup is one file with all of it inside: the plants, the diary,
-              pressed flowers, drawings and photos.
+              {t(
+                'Everything here lives only on this phone. A backup is one file with all of it inside: the plants, the diary, pressed flowers, drawings and photos.',
+                'Wszystko tutaj jest zapisane tylko na tym telefonie. Kopia to jeden plik, w którym jest wszystko: rośliny, pamiętnik, zielnik, rysunki i zdjęcia.',
+              )}
             </p>
             <div className="decor-buttons backup-buttons">
-              <button onClick={save} disabled={!file}>{file ? 'Save a backup' : 'Getting it ready…'}</button>
-              <button className="quiet" onClick={() => void choose()}>Restore from a backup</button>
+              <button onClick={save} disabled={!file}>{file ? t('Save a backup', 'Zapisz kopię') : t('Getting it ready…', 'Przygotowuję…')}</button>
+              <button className="quiet" onClick={() => void choose()}>{t('Restore from a backup', 'Przywróć z kopii')}</button>
             </div>
             {note && <p className="decor-hint">{note}</p>}
           </>

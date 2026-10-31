@@ -70,11 +70,13 @@ import { flameOn, type CandleLook } from './garden/candle';
 import { candleLit as roomIsDim } from './theme/palettes';
 import { ambientMix } from './sound/mix';
 import { useAmbience } from './sound/useAmbience';
+import { LangProvider, words } from './i18n';
 import { designRef } from './garden/designs';
 import { PlantArt } from './plants/PlantArt';
 import { pansyPalette as paletteOf } from './plants/looks';
 import { Toolbar } from './ui/Toolbar';
 import { useWeather } from './weather/useWeather';
+import { useRemoteSync } from './remote/useRemoteSync';
 import { requestLocation } from './weather/weather';
 
 /** Height of the screen in scene units, where scenes are always 400 units wide. */
@@ -139,6 +141,8 @@ function devVines(): VineSpec[] {
 const AWAY = parseAway(new URLSearchParams(window.location.search).get('away'));
 /** With &nowater the preview leaves the plants unwatered all that time, so nothing outgrows its pot. */
 const AWAY_WATER = !new URLSearchParams(window.location.search).has('nowater');
+/** The shared copy is kept up to date in the real app; in dev only with ?sync, and never during a preview. */
+const SYNC = !AWAY && (import.meta.env.PROD || new URLSearchParams(window.location.search).has('sync'));
 
 const prefersStill = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
@@ -211,6 +215,7 @@ export function App() {
   const loaded = useRef(false);
   const gardenRef = useRef<GardenState | null>(null);
   gardenRef.current = garden;
+  useRemoteSync(garden, SYNC);
   const [lapse, setLapse] = useState<Lapse | null>(null);
   const lastLapse = useRef<Timelapse | null>(null);
   const opened = useRef<{ at: number; garden: GardenState } | null>(null);
@@ -376,12 +381,19 @@ export function App() {
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', barColor);
   }, [barColor]);
 
+  // the page's language follows hers, so the phone's keyboard and spellcheck do too
+  const lang = settings?.lang ?? 'mixed';
+  useEffect(() => {
+    document.documentElement.lang = lang === 'pl' ? 'pl' : 'en';
+  }, [lang]);
+
   // her candle, the one she's designing while the studio is open; lit by her, or by itself when the room is dim
   const candle = mode.kind === 'candleStudio' ? mode.draft : (settings?.candle ?? null);
   const candleOn = flameOn(settings?.candleLit ?? null, roomIsDim(weather));
   useAmbience(!!settings?.sound, ambientMix(weather, seasonShown(now), new Date(now).getHours(), candleOn));
 
   if (!garden || !settings) return <div className="garden" style={paletteVars('cozy', weather)} />;
+  const { t } = words(settings.lang);
 
   const setSettings = (patch: Partial<Settings>) => {
     update((g) => updateSettings(g, patch));
@@ -441,14 +453,14 @@ export function App() {
       try {
         await putImage(img, prepared.blob);
       } catch {
-        setPictureError("There wasn't room on the phone to keep that picture.");
+        setPictureError(t("There wasn't room on the phone to keep that picture.", 'Zabrakło miejsca w telefonie na ten obrazek.'));
         return null;
       }
       const url = URL.createObjectURL(prepared.blob);
       setPictures((p) => ({ ...p, [img]: url }));
       return { img, w: prepared.w, h: prepared.h };
     } catch {
-      setPictureError("That picture couldn't be opened. A PNG or JPEG works best.");
+      setPictureError(t("That picture couldn't be opened. A PNG or JPEG works best.", 'Nie udało się otworzyć tego obrazka. Najlepiej działa PNG albo JPEG.'));
       return null;
     } finally {
       setAdding(null);
@@ -553,354 +565,356 @@ export function App() {
   const studioPlant = mode.kind === 'potStudio' && mode.forPlant ? garden.plants.find((p) => p.id === mode.forPlant) : undefined;
 
   return (
-    <div
-      className={`garden theme-${theme}${uiDark ? ' ui-dark' : ''}${weather.night ? ' night' : ''}${lapse ? ' replaying' : ''}`}
-      style={paletteVars(theme, weather, seasonShown(now), own)}
-    >
-      <div className="view" key={settings.view}>
-        {settings.view === 'room' ? (
-          <Scene
-            theme={theme}
-            weather={weather}
-            viewH={viewH}
-            vines={vines}
-            snip={snip}
-            onBook={openBook}
-            paper={paper}
-            photoUrl={garden.decor.photo ? (pictures[garden.decor.photo.img] ?? null) : null}
-            onFrame={openDecorate}
-            rainbow={rainbow}
-            candle={candle}
-            candleOn={candleOn}
-            onCandle={() => setSettings({ candleLit: !candleOn })}
-            hideCurtains={import.meta.env.DEV && window.location.search.includes('nocurtains')}
-            garden={shown}
-            now={shownNow}
-            selectedId={cardPlant?.id ?? null}
-            placingId={mode.kind === 'place' ? mode.id : null}
-            wateringId={wateringId}
-            onSpot={onSpot}
+    <LangProvider value={settings.lang}>
+      <div
+        className={`garden theme-${theme}${uiDark ? ' ui-dark' : ''}${weather.night ? ' night' : ''}${lapse ? ' replaying' : ''}`}
+        style={paletteVars(theme, weather, seasonShown(now), own)}
+      >
+        <div className="view" key={settings.view}>
+          {settings.view === 'room' ? (
+            <Scene
+              theme={theme}
+              weather={weather}
+              viewH={viewH}
+              vines={vines}
+              snip={snip}
+              onBook={openBook}
+              paper={paper}
+              photoUrl={garden.decor.photo ? (pictures[garden.decor.photo.img] ?? null) : null}
+              onFrame={openDecorate}
+              rainbow={rainbow}
+              candle={candle}
+              candleOn={candleOn}
+              onCandle={() => setSettings({ candleLit: !candleOn })}
+              hideCurtains={import.meta.env.DEV && window.location.search.includes('nocurtains')}
+              garden={shown}
+              now={shownNow}
+              selectedId={cardPlant?.id ?? null}
+              placingId={mode.kind === 'place' ? mode.id : null}
+              wateringId={wateringId}
+              onSpot={onSpot}
+            />
+          ) : (
+            <ShelfView
+              theme={theme}
+              weather={weather}
+              viewH={viewH}
+              garden={shown}
+              now={shownNow}
+              selectedId={cardPlant?.id ?? null}
+              movingId={mode.kind === 'move' ? mode.id : null}
+              paper={paper}
+              pictures={pictures}
+              drawingId={mode.kind === 'drawing' ? mode.id : null}
+              rainbow={rainbow}
+              candle={candle}
+              candleOn={candleOn}
+              onCandle={() => setSettings({ candleLit: !candleOn })}
+              wateringId={wateringId}
+              onSlot={onSlot}
+            />
+          )}
+        </div>
+        <div className="grain" style={{ backgroundImage: `url(${grain})` }} />
+        <Toolbar
+          settings={settings}
+          weather={weather}
+          status={status}
+          onSettings={setSettings}
+          onLiveWeather={liveWeather}
+          locating={locating}
+          onLetter={() => setLetterOpen(true)}
+          onDiary={() => {
+            setDiaryOpen(true);
+            setDiarySeenOn(today);
+          }}
+          memory={memory}
+          onBackup={() => setMode({ kind: 'backup' })}
+          onPicture={() => setMode({ kind: 'picture' })}
+          onBook={openBook}
+          onDecorate={openDecorate}
+          onOwnRoom={(edit) => {
+            if (settings.own && !edit) setSettings({ useOwn: true });
+            else setMode({ kind: 'roomStudio', draft: settings.own ?? startingRoom(settings.theme), editing: !!settings.own });
+          }}
+          onStudio={(what) =>
+            setMode(
+              what === 'pot'
+                ? { kind: 'potStudio', editing: null, forPlant: null }
+                : what === 'candle'
+                  ? { kind: 'candleStudio', draft: settings.candle ?? (theme === 'witchy' ? { shape: 'taper', wax: '#2a1f2e' } : { shape: 'jar', wax: '#e7a7b6' }) }
+                  : { kind: 'pansyStudio', editing: null, forSlot: null, forPlant: null },
+            )
+          }
+          onClock={() => {
+            const o = opened.current;
+            const tl = lastLapse.current ?? (o ? buildTimelapse(o.garden, o.at, Date.now()) : null);
+            if (tl) playLapse(tl, false);
+          }}
+        />
+        {mode.kind === 'pick' && (
+          <PlantPicker
+            onPick={plantSpecies}
+            onDrawing={isHanging(mode.slot) ? null : () => void drawingIn(mode.slot)}
+            busy={adding === 'drawing'}
+            error={pictureError}
+            onClose={() => setMode({ kind: 'idle' })}
           />
-        ) : (
-          <ShelfView
-            theme={theme}
-            weather={weather}
-            viewH={viewH}
-            garden={shown}
-            now={shownNow}
-            selectedId={cardPlant?.id ?? null}
-            movingId={mode.kind === 'move' ? mode.id : null}
-            paper={paper}
-            pictures={pictures}
-            drawingId={mode.kind === 'drawing' ? mode.id : null}
-            rainbow={rainbow}
-            candle={candle}
-            candleOn={candleOn}
-            onCandle={() => setSettings({ candleLit: !candleOn })}
-            wateringId={wateringId}
-            onSlot={onSlot}
+        )}
+        {mode.kind === 'decorate' && (
+          <DecorateSheet
+            decor={garden.decor}
+            wallpaperUrl={wallpaperUrl}
+            photoUrl={garden.decor.photo ? (pictures[garden.decor.photo.img] ?? null) : null}
+            busy={adding}
+            error={pictureError}
+            onWallpaper={() => void chooseWallpaper()}
+            onWallpaperLook={(patch: { size?: WallpaperSize; soft?: boolean }) =>
+              update((g) => (g.decor.wallpaper ? setWallpaper(g, { ...g.decor.wallpaper, ...patch }) : g))
+            }
+            onWallpaperReset={() => {
+              const old = garden.decor.wallpaper;
+              update((g) => setWallpaper(g, null));
+              dropPicture(old?.img);
+            }}
+            onPhoto={() => void choosePhoto()}
+            onPhotoReset={() => {
+              const old = garden.decor.photo;
+              update((g) => setPhoto(g, null));
+              dropPicture(old?.img);
+            }}
+            onClose={() => {
+              setPictureError(null);
+              setMode({ kind: 'idle' });
+            }}
+          />
+        )}
+        {mode.kind === 'picture' && <PictureSheet onClose={() => setMode({ kind: 'idle' })} />}
+        {mode.kind === 'candleStudio' && (
+          <CandleStudio
+            look={mode.draft}
+            lit={settings.candleLit}
+            own={settings.candle !== null}
+            onChange={(draft) => setMode({ kind: 'candleStudio', draft })}
+            onLit={(candleLit) => setSettings({ candleLit })}
+            onRoomCandle={() => {
+              setSettings({ candle: null });
+              setMode({ kind: 'idle' });
+            }}
+            onSave={() => {
+              setSettings({ candle: mode.draft });
+              setMode({ kind: 'idle' });
+            }}
+            onClose={() => setMode({ kind: 'idle' })}
+          />
+        )}
+        {mode.kind === 'backup' && <BackupSheet garden={garden} onRestore={restore} onClose={() => setMode({ kind: 'idle' })} />}
+        {offerInstall && (
+          <InstallHint
+            onDone={() => {
+              setInstallHidden(true);
+              setSettings({ installHint: true });
+            }}
+          />
+        )}
+        {mode.kind === 'roomStudio' && (
+          <RoomStudio
+            room={mode.draft}
+            editing={mode.editing}
+            onChange={(draft) => setMode({ ...mode, draft })}
+            onSave={() => {
+              setSettings({ own: mode.draft, useOwn: true });
+              setMode({ kind: 'idle' });
+            }}
+            onClose={() => setMode({ kind: 'idle' })}
+          />
+        )}
+        {mode.kind === 'drawing' && (
+          <DrawingCard
+            onMove={() => setMode({ kind: 'move', id: mode.id })}
+            onRemove={() => {
+              const d = garden.decor.drawings.find((x) => x.id === mode.id);
+              update((g) => removeDrawing(g, mode.id));
+              dropPicture(d?.img);
+              setMode({ kind: 'idle' });
+            }}
+            onClose={() => setMode({ kind: 'idle' })}
+          />
+        )}
+        {mode.kind === 'choose' && (
+          <WindowChooser
+            plants={garden.plants.filter((p) => p.display === null)}
+            now={now}
+            designs={garden.designs}
+            onPick={(id) => {
+              update((g) => placeInWindow(g, id, mode.spot));
+              setMode({ kind: 'idle' });
+            }}
+            onShelves={() => setSettings({ view: 'shelves' })}
+            onClose={() => setMode({ kind: 'idle' })}
+          />
+        )}
+        {cardPlant && (
+          <PlantCard
+            key={cardPlant.id}
+            plant={cardPlant}
+            now={now}
+            inWindowView={settings.view === 'room'}
+            onWater={() => water(cardPlant.id)}
+            onMove={() => setMode(settings.view === 'room' ? { kind: 'place', id: cardPlant.id } : { kind: 'move', id: cardPlant.id })}
+            onWindow={() => {
+              if (cardPlant.display) {
+                update((g) => takeDown(g, cardPlant.id));
+                setMode({ kind: 'idle' });
+              } else {
+                setSettings({ view: 'room' });
+                setMode({ kind: 'place', id: cardPlant.id });
+              }
+            }}
+            onStyle={() => setMode({ kind: 'style', id: cardPlant.id })}
+            onTrim={
+              settings.vines && cardPlant.vine
+                ? () => {
+                    // a flower from the cut stem goes into the book, the first trim of the day
+                    const t = Date.now();
+                    setNow(t);
+                    update((g) => pressFlower(trimVine(g, cardPlant.id), cardPlant.id, t));
+                    setSnip((s) => ({ id: cardPlant.id, n: (s?.n ?? 0) + 1 }));
+                  }
+                : null
+            }
+            onPress={
+              canPress(garden, cardPlant.id, now)
+                ? () => {
+                    const t = Date.now();
+                    setNow(t);
+                    update((g) => pressFlower(g, cardPlant.id, t));
+                  }
+                : null
+            }
+            pressedToday={pressedToday(garden.pressed, cardPlant.id, now)}
+            onBook={openBook}
+            onName={(name) => update((g) => setPlantName(g, cardPlant.id, name))}
+            onRemove={() => {
+              update((g) => removePlant(g, cardPlant.id));
+              setMode({ kind: 'idle' });
+            }}
+            onClose={() => setMode({ kind: 'idle' })}
+          />
+        )}
+        {mode.kind === 'variety' && (
+          <VarietyPicker
+            designs={garden.designs}
+            onPick={(v) => plantIn(mode.slot, 'pansy', v)}
+            onDesign={() => setMode({ kind: 'pansyStudio', editing: null, forSlot: mode.slot, forPlant: null })}
+            onEdit={(id) => setMode({ kind: 'pansyStudio', editing: id, forSlot: mode.slot, forPlant: null })}
+            onClose={() => setMode({ kind: 'idle' })}
+          />
+        )}
+        {mode.kind === 'style' && stylePlant && (
+          <StyleSheet
+            plant={stylePlant}
+            designs={garden.designs}
+            now={now}
+            onPot={(pot) => update((g) => setPot(g, stylePlant.id, pot))}
+            onVariety={(v) => update((g) => setVariety(g, stylePlant.id, v))}
+            onPaint={() => setMode({ kind: 'potStudio', editing: null, forPlant: stylePlant.id })}
+            onEditPot={(id) => setMode({ kind: 'potStudio', editing: id, forPlant: stylePlant.id })}
+            onDesignPansy={() => setMode({ kind: 'pansyStudio', editing: null, forSlot: null, forPlant: stylePlant.id })}
+            onEditPansy={(id) => setMode({ kind: 'pansyStudio', editing: id, forSlot: null, forPlant: stylePlant.id })}
+            onClose={() => setMode({ kind: 'card', id: stylePlant.id })}
+          />
+        )}
+        {mode.kind === 'potStudio' && (
+          <PotStudio
+            key={mode.editing ?? 'new'}
+            initial={garden.designs.pots.find((d) => d.id === mode.editing) ?? NEW_POT()}
+            editing={mode.editing !== null}
+            onSave={(d) => {
+              update((g) => {
+                const saved = savePotDesign(g, d);
+                return mode.forPlant ? setPot(saved, mode.forPlant, designRef(d.id)) : saved;
+              });
+              setMode(mode.forPlant ? { kind: 'style', id: mode.forPlant } : { kind: 'idle' });
+            }}
+            onDelete={() => {
+              if (mode.editing) update((g) => deleteDesign(g, 'pot', mode.editing!));
+              setMode(mode.forPlant ? { kind: 'style', id: mode.forPlant } : { kind: 'idle' });
+            }}
+            onClose={() => setMode(mode.forPlant ? { kind: 'style', id: mode.forPlant } : { kind: 'idle' })}
+          >
+            {studioPlant ? (
+              <PlantArt species={studioPlant.species} stage="bloom" palette={paletteOf(studioPlant.variety, garden.designs)} />
+            ) : (
+              <PlantArt species="pansy" stage="bloom" />
+            )}
+          </PotStudio>
+        )}
+        {mode.kind === 'pansyStudio' && (
+          <PansyStudio
+            key={mode.editing ?? 'new'}
+            initial={garden.designs.pansies.find((d) => d.id === mode.editing) ?? NEW_PANSY()}
+            editing={mode.editing !== null}
+            onSave={(d) => {
+              const ref = designRef(d.id);
+              update((g) => {
+                const saved = savePansyDesign(g, d);
+                return mode.forPlant ? setVariety(saved, mode.forPlant, ref) : saved;
+              });
+              if (mode.forSlot) plantIn(mode.forSlot, 'pansy', ref);
+              else setMode(mode.forPlant ? { kind: 'style', id: mode.forPlant } : { kind: 'idle' });
+            }}
+            onDelete={() => {
+              if (mode.editing) update((g) => deleteDesign(g, 'pansy', mode.editing!));
+              setMode(mode.forSlot ? { kind: 'variety', slot: mode.forSlot } : mode.forPlant ? { kind: 'style', id: mode.forPlant } : { kind: 'idle' });
+            }}
+            onClose={() =>
+              setMode(mode.forSlot ? { kind: 'variety', slot: mode.forSlot } : mode.forPlant ? { kind: 'style', id: mode.forPlant } : { kind: 'idle' })
+            }
+          />
+        )}
+        {mode.kind === 'move' && <MoveBanner text={t('Tap where it should go', 'Stuknij, gdzie ma stanąć')} onCancel={() => setMode({ kind: 'idle' })} />}
+        {mode.kind === 'place' && <MoveBanner text={t('Tap a place in the window', 'Stuknij miejsce w oknie')} onCancel={() => setMode({ kind: 'idle' })} />}
+        {AWAY && !lapse && mode.kind === 'idle' && (
+          <div className="banner" role="status">
+            <span>{AWAY_WATER ? t('Demo · watered daily', 'Demo · podlewane codziennie') : t('Demo · never watered', 'Demo · bez podlewania')}</span>
+            <button onClick={() => opened.current && playLapse(buildTimelapse(opened.current.garden, opened.current.at - AWAY, opened.current.at), false)}>
+              {t('Again', 'Jeszcze raz')}
+            </button>
+            <button onClick={() => window.location.assign(window.location.pathname)}>{t('Leave', 'Wyjdź')}</button>
+          </div>
+        )}
+        {lapse && <LapseClock lapse={lapse.tl} p={lapse.p} fading={lapse.fading} onSkip={skipLapse} />}
+        {diaryOpen && (
+          <DiaryBook
+            diary={garden.diary}
+            now={now}
+            onSave={(key, mood, text) => update((g) => saveDiaryEntry(g, key, mood, text, Date.now()))}
+            onDelete={(key) => update((g) => deleteDiaryEntry(g, key))}
+            onClose={() => setDiaryOpen(false)}
+          />
+        )}
+        {bookOpen && (
+          <PressedBook
+            pressed={garden.pressed}
+            onNote={(id, note) => update((g) => setPressNote(g, id, note))}
+            onRemove={(id) => update((g) => unpress(g, id))}
+            onClose={() => setBookOpen(false)}
+          />
+        )}
+        {letterOpen && !lapse && (
+          <Letter
+            onKeep={() => {
+              setLetterOpen(false);
+              if (settings.letter === 'unread') setSettings({ letter: 'kept' });
+            }}
+            onThrowAway={() => {
+              setLetterOpen(false);
+              setSettings({ letter: 'deleted' });
+            }}
           />
         )}
       </div>
-      <div className="grain" style={{ backgroundImage: `url(${grain})` }} />
-      <Toolbar
-        settings={settings}
-        weather={weather}
-        status={status}
-        onSettings={setSettings}
-        onLiveWeather={liveWeather}
-        locating={locating}
-        onLetter={() => setLetterOpen(true)}
-        onDiary={() => {
-          setDiaryOpen(true);
-          setDiarySeenOn(today);
-        }}
-        memory={memory}
-        onBackup={() => setMode({ kind: 'backup' })}
-        onPicture={() => setMode({ kind: 'picture' })}
-        onBook={openBook}
-        onDecorate={openDecorate}
-        onOwnRoom={(edit) => {
-          if (settings.own && !edit) setSettings({ useOwn: true });
-          else setMode({ kind: 'roomStudio', draft: settings.own ?? startingRoom(settings.theme), editing: !!settings.own });
-        }}
-        onStudio={(what) =>
-          setMode(
-            what === 'pot'
-              ? { kind: 'potStudio', editing: null, forPlant: null }
-              : what === 'candle'
-                ? { kind: 'candleStudio', draft: settings.candle ?? (theme === 'witchy' ? { shape: 'taper', wax: '#2a1f2e' } : { shape: 'jar', wax: '#e7a7b6' }) }
-                : { kind: 'pansyStudio', editing: null, forSlot: null, forPlant: null },
-          )
-        }
-        onClock={() => {
-          const o = opened.current;
-          const tl = lastLapse.current ?? (o ? buildTimelapse(o.garden, o.at, Date.now()) : null);
-          if (tl) playLapse(tl, false);
-        }}
-      />
-      {mode.kind === 'pick' && (
-        <PlantPicker
-          onPick={plantSpecies}
-          onDrawing={isHanging(mode.slot) ? null : () => void drawingIn(mode.slot)}
-          busy={adding === 'drawing'}
-          error={pictureError}
-          onClose={() => setMode({ kind: 'idle' })}
-        />
-      )}
-      {mode.kind === 'decorate' && (
-        <DecorateSheet
-          decor={garden.decor}
-          wallpaperUrl={wallpaperUrl}
-          photoUrl={garden.decor.photo ? (pictures[garden.decor.photo.img] ?? null) : null}
-          busy={adding}
-          error={pictureError}
-          onWallpaper={() => void chooseWallpaper()}
-          onWallpaperLook={(patch: { size?: WallpaperSize; soft?: boolean }) =>
-            update((g) => (g.decor.wallpaper ? setWallpaper(g, { ...g.decor.wallpaper, ...patch }) : g))
-          }
-          onWallpaperReset={() => {
-            const old = garden.decor.wallpaper;
-            update((g) => setWallpaper(g, null));
-            dropPicture(old?.img);
-          }}
-          onPhoto={() => void choosePhoto()}
-          onPhotoReset={() => {
-            const old = garden.decor.photo;
-            update((g) => setPhoto(g, null));
-            dropPicture(old?.img);
-          }}
-          onClose={() => {
-            setPictureError(null);
-            setMode({ kind: 'idle' });
-          }}
-        />
-      )}
-      {mode.kind === 'picture' && <PictureSheet onClose={() => setMode({ kind: 'idle' })} />}
-      {mode.kind === 'candleStudio' && (
-        <CandleStudio
-          look={mode.draft}
-          lit={settings.candleLit}
-          own={settings.candle !== null}
-          onChange={(draft) => setMode({ kind: 'candleStudio', draft })}
-          onLit={(candleLit) => setSettings({ candleLit })}
-          onRoomCandle={() => {
-            setSettings({ candle: null });
-            setMode({ kind: 'idle' });
-          }}
-          onSave={() => {
-            setSettings({ candle: mode.draft });
-            setMode({ kind: 'idle' });
-          }}
-          onClose={() => setMode({ kind: 'idle' })}
-        />
-      )}
-      {mode.kind === 'backup' && <BackupSheet garden={garden} onRestore={restore} onClose={() => setMode({ kind: 'idle' })} />}
-      {offerInstall && (
-        <InstallHint
-          onDone={() => {
-            setInstallHidden(true);
-            setSettings({ installHint: true });
-          }}
-        />
-      )}
-      {mode.kind === 'roomStudio' && (
-        <RoomStudio
-          room={mode.draft}
-          editing={mode.editing}
-          onChange={(draft) => setMode({ ...mode, draft })}
-          onSave={() => {
-            setSettings({ own: mode.draft, useOwn: true });
-            setMode({ kind: 'idle' });
-          }}
-          onClose={() => setMode({ kind: 'idle' })}
-        />
-      )}
-      {mode.kind === 'drawing' && (
-        <DrawingCard
-          onMove={() => setMode({ kind: 'move', id: mode.id })}
-          onRemove={() => {
-            const d = garden.decor.drawings.find((x) => x.id === mode.id);
-            update((g) => removeDrawing(g, mode.id));
-            dropPicture(d?.img);
-            setMode({ kind: 'idle' });
-          }}
-          onClose={() => setMode({ kind: 'idle' })}
-        />
-      )}
-      {mode.kind === 'choose' && (
-        <WindowChooser
-          plants={garden.plants.filter((p) => p.display === null)}
-          now={now}
-          designs={garden.designs}
-          onPick={(id) => {
-            update((g) => placeInWindow(g, id, mode.spot));
-            setMode({ kind: 'idle' });
-          }}
-          onShelves={() => setSettings({ view: 'shelves' })}
-          onClose={() => setMode({ kind: 'idle' })}
-        />
-      )}
-      {cardPlant && (
-        <PlantCard
-          key={cardPlant.id}
-          plant={cardPlant}
-          now={now}
-          inWindowView={settings.view === 'room'}
-          onWater={() => water(cardPlant.id)}
-          onMove={() => setMode(settings.view === 'room' ? { kind: 'place', id: cardPlant.id } : { kind: 'move', id: cardPlant.id })}
-          onWindow={() => {
-            if (cardPlant.display) {
-              update((g) => takeDown(g, cardPlant.id));
-              setMode({ kind: 'idle' });
-            } else {
-              setSettings({ view: 'room' });
-              setMode({ kind: 'place', id: cardPlant.id });
-            }
-          }}
-          onStyle={() => setMode({ kind: 'style', id: cardPlant.id })}
-          onTrim={
-            settings.vines && cardPlant.vine
-              ? () => {
-                  // a flower from the cut stem goes into the book, the first trim of the day
-                  const t = Date.now();
-                  setNow(t);
-                  update((g) => pressFlower(trimVine(g, cardPlant.id), cardPlant.id, t));
-                  setSnip((s) => ({ id: cardPlant.id, n: (s?.n ?? 0) + 1 }));
-                }
-              : null
-          }
-          onPress={
-            canPress(garden, cardPlant.id, now)
-              ? () => {
-                  const t = Date.now();
-                  setNow(t);
-                  update((g) => pressFlower(g, cardPlant.id, t));
-                }
-              : null
-          }
-          pressedToday={pressedToday(garden.pressed, cardPlant.id, now)}
-          onBook={openBook}
-          onName={(name) => update((g) => setPlantName(g, cardPlant.id, name))}
-          onRemove={() => {
-            update((g) => removePlant(g, cardPlant.id));
-            setMode({ kind: 'idle' });
-          }}
-          onClose={() => setMode({ kind: 'idle' })}
-        />
-      )}
-      {mode.kind === 'variety' && (
-        <VarietyPicker
-          designs={garden.designs}
-          onPick={(v) => plantIn(mode.slot, 'pansy', v)}
-          onDesign={() => setMode({ kind: 'pansyStudio', editing: null, forSlot: mode.slot, forPlant: null })}
-          onEdit={(id) => setMode({ kind: 'pansyStudio', editing: id, forSlot: mode.slot, forPlant: null })}
-          onClose={() => setMode({ kind: 'idle' })}
-        />
-      )}
-      {mode.kind === 'style' && stylePlant && (
-        <StyleSheet
-          plant={stylePlant}
-          designs={garden.designs}
-          now={now}
-          onPot={(pot) => update((g) => setPot(g, stylePlant.id, pot))}
-          onVariety={(v) => update((g) => setVariety(g, stylePlant.id, v))}
-          onPaint={() => setMode({ kind: 'potStudio', editing: null, forPlant: stylePlant.id })}
-          onEditPot={(id) => setMode({ kind: 'potStudio', editing: id, forPlant: stylePlant.id })}
-          onDesignPansy={() => setMode({ kind: 'pansyStudio', editing: null, forSlot: null, forPlant: stylePlant.id })}
-          onEditPansy={(id) => setMode({ kind: 'pansyStudio', editing: id, forSlot: null, forPlant: stylePlant.id })}
-          onClose={() => setMode({ kind: 'card', id: stylePlant.id })}
-        />
-      )}
-      {mode.kind === 'potStudio' && (
-        <PotStudio
-          key={mode.editing ?? 'new'}
-          initial={garden.designs.pots.find((d) => d.id === mode.editing) ?? NEW_POT()}
-          editing={mode.editing !== null}
-          onSave={(d) => {
-            update((g) => {
-              const saved = savePotDesign(g, d);
-              return mode.forPlant ? setPot(saved, mode.forPlant, designRef(d.id)) : saved;
-            });
-            setMode(mode.forPlant ? { kind: 'style', id: mode.forPlant } : { kind: 'idle' });
-          }}
-          onDelete={() => {
-            if (mode.editing) update((g) => deleteDesign(g, 'pot', mode.editing!));
-            setMode(mode.forPlant ? { kind: 'style', id: mode.forPlant } : { kind: 'idle' });
-          }}
-          onClose={() => setMode(mode.forPlant ? { kind: 'style', id: mode.forPlant } : { kind: 'idle' })}
-        >
-          {studioPlant ? (
-            <PlantArt species={studioPlant.species} stage="bloom" palette={paletteOf(studioPlant.variety, garden.designs)} />
-          ) : (
-            <PlantArt species="pansy" stage="bloom" />
-          )}
-        </PotStudio>
-      )}
-      {mode.kind === 'pansyStudio' && (
-        <PansyStudio
-          key={mode.editing ?? 'new'}
-          initial={garden.designs.pansies.find((d) => d.id === mode.editing) ?? NEW_PANSY()}
-          editing={mode.editing !== null}
-          onSave={(d) => {
-            const ref = designRef(d.id);
-            update((g) => {
-              const saved = savePansyDesign(g, d);
-              return mode.forPlant ? setVariety(saved, mode.forPlant, ref) : saved;
-            });
-            if (mode.forSlot) plantIn(mode.forSlot, 'pansy', ref);
-            else setMode(mode.forPlant ? { kind: 'style', id: mode.forPlant } : { kind: 'idle' });
-          }}
-          onDelete={() => {
-            if (mode.editing) update((g) => deleteDesign(g, 'pansy', mode.editing!));
-            setMode(mode.forSlot ? { kind: 'variety', slot: mode.forSlot } : mode.forPlant ? { kind: 'style', id: mode.forPlant } : { kind: 'idle' });
-          }}
-          onClose={() =>
-            setMode(mode.forSlot ? { kind: 'variety', slot: mode.forSlot } : mode.forPlant ? { kind: 'style', id: mode.forPlant } : { kind: 'idle' })
-          }
-        />
-      )}
-      {mode.kind === 'move' && <MoveBanner text="Tap where it should go" onCancel={() => setMode({ kind: 'idle' })} />}
-      {mode.kind === 'place' && <MoveBanner text="Tap a place in the window" onCancel={() => setMode({ kind: 'idle' })} />}
-      {AWAY && !lapse && mode.kind === 'idle' && (
-        <div className="banner" role="status">
-          <span>{AWAY_WATER ? 'Demo · watered daily' : 'Demo · never watered'}</span>
-          <button onClick={() => opened.current && playLapse(buildTimelapse(opened.current.garden, opened.current.at - AWAY, opened.current.at), false)}>
-            Again
-          </button>
-          <button onClick={() => window.location.assign(window.location.pathname)}>Leave</button>
-        </div>
-      )}
-      {lapse && <LapseClock lapse={lapse.tl} p={lapse.p} fading={lapse.fading} onSkip={skipLapse} />}
-      {diaryOpen && (
-        <DiaryBook
-          diary={garden.diary}
-          now={now}
-          onSave={(key, mood, text) => update((g) => saveDiaryEntry(g, key, mood, text, Date.now()))}
-          onDelete={(key) => update((g) => deleteDiaryEntry(g, key))}
-          onClose={() => setDiaryOpen(false)}
-        />
-      )}
-      {bookOpen && (
-        <PressedBook
-          pressed={garden.pressed}
-          onNote={(id, note) => update((g) => setPressNote(g, id, note))}
-          onRemove={(id) => update((g) => unpress(g, id))}
-          onClose={() => setBookOpen(false)}
-        />
-      )}
-      {letterOpen && !lapse && (
-        <Letter
-          onKeep={() => {
-            setLetterOpen(false);
-            if (settings.letter === 'unread') setSettings({ letter: 'kept' });
-          }}
-          onThrowAway={() => {
-            setLetterOpen(false);
-            setSettings({ letter: 'deleted' });
-          }}
-        />
-      )}
-    </div>
+    </LangProvider>
   );
 }

@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { LETTER } from '../letter';
+import { useWords } from '../i18n';
 
 /** The letter, on paper, with a wax seal. Keeping it is the default; throwing it away asks first. */
 export function Letter({ onKeep, onThrowAway }: { onKeep: () => void; onThrowAway: () => void }) {
   const [confirm, setConfirm] = useState(false);
+  const { t } = useWords();
   const paragraphs = LETTER.body.split(/\n\s*\n/).map((t) => t.trim()).filter(Boolean);
   return (
     <>
       <div className="scrim letter-scrim" onClick={onKeep} />
-      <div className="letter" role="dialog" aria-label="A letter">
+      <div className="letter" role="dialog" aria-label={t('A letter', 'List')}>
         <svg className="seal" viewBox="-20 -20 40 40" aria-hidden="true">
           <path
             className="ink"
@@ -27,18 +29,18 @@ export function Letter({ onKeep, onThrowAway }: { onKeep: () => void; onThrowAwa
         <div className="letter-actions">
           {confirm ? (
             <>
-              <span>Throw it away for good?</span>
+              <span>{t('Throw it away for good?', 'Wyrzucić go na zawsze?')}</span>
               <button className="danger" onClick={onThrowAway}>
-                Yes
+                {t('Yes', 'Tak')}
               </button>
-              <button onClick={() => setConfirm(false)}>No</button>
+              <button onClick={() => setConfirm(false)}>{t('No', 'Nie')}</button>
             </>
           ) : (
             <>
               <button className="quiet" onClick={() => setConfirm(true)}>
-                Throw away
+                {t('Throw away', 'Wyrzuć')}
               </button>
-              <button onClick={onKeep}>Keep it</button>
+              <button onClick={onKeep}>{t('Keep it', 'Zatrzymaj')}</button>
             </>
           )}
         </div>

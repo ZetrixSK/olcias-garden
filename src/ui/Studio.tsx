@@ -11,8 +11,9 @@ import {
   type PotDesign,
   type PotPattern,
 } from '../garden/designs';
-import { CANDLE_SHAPE_NAMES, CANDLE_SHAPES, WAX_COLORS, WAX_NAMES, type CandleLit, type CandleLook } from '../garden/candle';
+import { CANDLE_SHAPE_NAMES, CANDLE_SHAPES, WAX_COLORS, WAX_NAMES, type CandleLit, type CandleLook, type CandleShape } from '../garden/candle';
 import { newId } from '../garden/state';
+import { useWords } from '../i18n';
 import { candleFlame, Flame, SillCandle } from '../scene/Decor';
 import { designColors } from '../plants/looks';
 import { PansyFlower, PansyPlant } from '../plants/Pansy';
@@ -28,10 +29,11 @@ function Swatches({ colors, value, onPick, none, names = SWATCH_NAMES }: {
   none?: boolean;
   names?: Record<string, string>;
 }) {
+  const { t } = useWords();
   return (
     <div className="swatches">
       {none && (
-        <button className="swatch none" aria-label="None" aria-pressed={value === null} onClick={() => onPick(null)}>
+        <button className="swatch none" aria-label={t('None', 'Brak')} aria-pressed={value === null} onClick={() => onPick(null)}>
           <svg viewBox="-10 -10 20 20" aria-hidden="true">
             <path d="M-6,6 L6,-6" />
           </svg>
@@ -65,22 +67,23 @@ function StudioFrame({ title, preview, children, editing, onSave, onDelete, onCl
   onClose: () => void;
 }) {
   const [confirm, setConfirm] = useState(false);
+  const { t } = useWords();
   return (
     <div className={compact ? 'sheet studio compact' : 'sheet studio'} role="dialog" aria-label={title}>
       <div className="sheet-head">
         <h2>{title}</h2>
-        <button className="close" aria-label="Close" onClick={onClose}>×</button>
+        <button className="close" aria-label={t('Close', 'Zamknij')} onClick={onClose}>×</button>
       </div>
       {preview && <div className="studio-preview">{preview}</div>}
       <div className="studio-body">{children}</div>
       <div className="studio-actions">
         {editing &&
           (confirm ? (
-            <button className="danger" onClick={onDelete}>Throw it away?</button>
+            <button className="danger" onClick={onDelete}>{t('Throw it away?', 'Wyrzucić?')}</button>
           ) : (
-            <button className="quiet" onClick={() => setConfirm(true)}>Delete</button>
+            <button className="quiet" onClick={() => setConfirm(true)}>{t('Delete', 'Usuń')}</button>
           ))}
-        <button className="primary" onClick={onSave}>Save</button>
+        <button className="primary" onClick={onSave}>{t('Save', 'Zapisz')}</button>
       </div>
     </div>
   );
@@ -88,11 +91,14 @@ function StudioFrame({ title, preview, children, editing, onSave, onDelete, onCl
 
 // ---- pots ----
 
-const PATTERN_NAMES: Record<PotPattern, string> = {
-  none: 'Plain', scallops: 'Scallops', dots: 'Dots', stripes: 'Stripes', bands: 'Bands',
-  hearts: 'Hearts', moons: 'Moons', checks: 'Checks', zigzag: 'Zigzag', flowers: 'Flowers',
+const PATTERN_NAMES: Record<PotPattern, [string, string]> = {
+  none: ['Plain', 'Gładka'], scallops: ['Scallops', 'Falbanki'], dots: ['Dots', 'Kropki'], stripes: ['Stripes', 'Paski'],
+  bands: ['Bands', 'Obręcze'], hearts: ['Hearts', 'Serca'], moons: ['Moons', 'Księżyce'], checks: ['Checks', 'Kratka'],
+  zigzag: ['Zigzag', 'Zygzak'], flowers: ['Flowers', 'Kwiatki'],
 };
-const SHAPE_NAMES: Record<PotDesign['shape'], string> = { wide: 'Bowl', slim: 'Flowerpot', round: 'Jar', cauldron: 'Cauldron', teacup: 'Teacup' };
+const SHAPE_NAMES: Record<PotDesign['shape'], [string, string]> = {
+  wide: ['Bowl', 'Miska'], slim: ['Flowerpot', 'Doniczka'], round: ['Jar', 'Słoik'], cauldron: ['Cauldron', 'Kociołek'], teacup: ['Teacup', 'Filiżanka'],
+};
 
 /** A pot drawn small, for the option buttons. */
 function MiniPot({ d }: { d: PotDesign }) {
@@ -116,9 +122,10 @@ export function PotStudio({ initial, editing, children, onSave, onDelete, onClos
 }) {
   const [d, setD] = useState(initial);
   const set = (patch: Partial<PotDesign>) => setD((x) => ({ ...x, ...patch }));
+  const { t } = useWords();
   return (
     <StudioFrame
-      title={editing ? 'Repaint the pot' : 'Paint a pot'}
+      title={editing ? t('Repaint the pot', 'Przemaluj doniczkę') : t('Paint a pot', 'Pomaluj doniczkę')}
       editing={editing}
       onSave={() => onSave(d)}
       onDelete={onDelete}
@@ -131,35 +138,35 @@ export function PotStudio({ initial, editing, children, onSave, onDelete, onClos
         </svg>
       }
     >
-      <Section title="Shape">
+      <Section title={t('Shape', 'Kształt')}>
         <div className="options five">
           {POT_SHAPES.map((shape) => (
             <button key={shape} aria-pressed={d.shape === shape} onClick={() => set({ shape })}>
               <MiniPot d={{ ...d, shape }} />
-              <span>{SHAPE_NAMES[shape]}</span>
+              <span>{t(...SHAPE_NAMES[shape])}</span>
             </button>
           ))}
         </div>
       </Section>
-      <Section title="Colour">
+      <Section title={t('Colour', 'Kolor')}>
         <Swatches colors={POT_SWATCHES} value={d.body} onPick={(c) => c && set({ body: c })} />
       </Section>
-      <Section title="Pattern">
+      <Section title={t('Pattern', 'Wzór')}>
         <div className="options five">
           {POT_PATTERNS.map((pattern) => (
             <button key={pattern} aria-pressed={d.pattern === pattern} onClick={() => set({ pattern })}>
               <MiniPot d={{ ...d, pattern }} />
-              <span>{PATTERN_NAMES[pattern]}</span>
+              <span>{t(...PATTERN_NAMES[pattern])}</span>
             </button>
           ))}
         </div>
       </Section>
       {d.pattern !== 'none' && (
-        <Section title="Pattern colour">
+        <Section title={t('Pattern colour', 'Kolor wzoru')}>
           <Swatches colors={POT_SWATCHES} value={d.patternColor} onPick={(c) => c && set({ patternColor: c })} />
         </Section>
       )}
-      <Section title="Rim">
+      <Section title={t('Rim', 'Brzeg')}>
         <Swatches colors={POT_SWATCHES} value={d.rim} onPick={(c) => c && set({ rim: c })} />
       </Section>
     </StudioFrame>
@@ -168,7 +175,7 @@ export function PotStudio({ initial, editing, children, onSave, onDelete, onClos
 
 // ---- bratki ----
 
-const FACE_NAMES: Record<PansyFace, string> = { blotch: 'Blotch', whiskers: 'Whiskers', clear: 'Clear' };
+const FACE_NAMES: Record<PansyFace, [string, string]> = { blotch: ['Blotch', 'Plamka'], whiskers: ['Whiskers', 'Wąsiki'], clear: ['Clear', 'Bez wzoru'] };
 
 export const NEW_PANSY = (): PansyDesign => ({
   id: newId(), name: '', top: '#4a2350', low: '#eaa2bb', face: 'blotch', faceColor: '#241326', edge: null,
@@ -184,9 +191,12 @@ export function PansyStudio({ initial, editing, onSave, onDelete, onClose }: {
   const [d, setD] = useState(initial);
   const set = (patch: Partial<PansyDesign>) => setD((x) => ({ ...x, ...patch }));
   const colors = designColors(d);
+  const w = useWords();
+  const { t } = w;
+  const bratek = w.lang === 'en' ? 'pansy' : 'bratek';
   return (
     <StudioFrame
-      title={editing ? 'Your bratek' : 'Design a bratek'}
+      title={editing ? t(`Your ${bratek}`, 'Twój bratek') : t(`Design a ${bratek}`, 'Zaprojektuj bratka')}
       editing={editing}
       onSave={() => onSave({ ...d, name: d.name.trim() })}
       onDelete={onDelete}
@@ -204,39 +214,39 @@ export function PansyStudio({ initial, editing, onSave, onDelete, onClose }: {
         </svg>
       }
     >
-      <Section title="Name">
+      <Section title={t('Name', 'Nazwa')}>
         <input
           className="studio-name"
           value={d.name}
           maxLength={32}
-          placeholder="Name your bratek"
+          placeholder={t(`Name your ${bratek}`, 'Nazwij swojego bratka')}
           onChange={(e) => set({ name: e.target.value })}
         />
       </Section>
-      <Section title="Top petals">
+      <Section title={t('Top petals', 'Górne płatki')}>
         <Swatches colors={PANSY_SWATCHES} value={d.top} onPick={(c) => c && set({ top: c })} />
       </Section>
-      <Section title="Lower petals">
+      <Section title={t('Lower petals', 'Dolne płatki')}>
         <Swatches colors={PANSY_SWATCHES} value={d.low} onPick={(c) => c && set({ low: c })} />
       </Section>
-      <Section title="Face">
+      <Section title={t('Face', 'Oczko')}>
         <div className="options three">
           {PANSY_FACES.map((face) => (
             <button key={face} aria-pressed={d.face === face} onClick={() => set({ face })}>
               <svg viewBox="-34 -30 68 64" aria-hidden="true">
                 <PansyFlower x={0} y={0} c={designColors({ ...d, face })} />
               </svg>
-              <span>{FACE_NAMES[face]}</span>
+              <span>{t(...FACE_NAMES[face])}</span>
             </button>
           ))}
         </div>
       </Section>
       {d.face !== 'clear' && (
-        <Section title="Face colour">
+        <Section title={t('Face colour', 'Kolor oczka')}>
           <Swatches colors={PANSY_SWATCHES} value={d.faceColor} onPick={(c) => c && set({ faceColor: c })} />
         </Section>
       )}
-      <Section title="Petal edge">
+      <Section title={t('Petal edge', 'Brzeg płatków')}>
         <Swatches colors={PANSY_SWATCHES} value={d.edge} onPick={(edge) => set({ edge })} none />
       </Section>
     </StudioFrame>
@@ -245,13 +255,13 @@ export function PansyStudio({ initial, editing, onSave, onDelete, onClose }: {
 
 // ---- her room ----
 
-const ROOM_SECTIONS: Array<[RoomPart, string]> = [
-  ['wall', 'Walls'],
-  ['motif', 'Wallpaper pattern'],
-  ['curtain', 'Curtains'],
-  ['frame', 'Window frame'],
-  ['floor', 'Floor'],
-  ['bed', 'Dog bed'],
+const ROOM_SECTIONS: Array<[RoomPart, string, string]> = [
+  ['wall', 'Walls', 'Ściany'],
+  ['motif', 'Wallpaper pattern', 'Wzór tapety'],
+  ['curtain', 'Curtains', 'Zasłony'],
+  ['frame', 'Window frame', 'Rama okna'],
+  ['floor', 'Floor', 'Podłoga'],
+  ['bed', 'Dog bed', 'Legowisko psów'],
 ];
 
 /**
@@ -266,19 +276,20 @@ export function RoomStudio({ room, editing, onChange, onSave, onClose }: {
   onClose: () => void;
 }) {
   const set = (patch: Partial<OwnRoom>) => onChange({ ...room, ...patch });
+  const { t } = useWords();
   return (
-    <StudioFrame compact title={editing ? 'My room' : 'Paint my room'} editing={false} onSave={onSave} onDelete={() => {}} onClose={onClose}>
-      <Section title="Furniture and decorations">
+    <StudioFrame compact title={editing ? t('My room', 'Mój pokój') : t('Paint my room', 'Pomaluj mój pokój')} editing={false} onSave={onSave} onDelete={() => {}} onClose={onClose}>
+      <Section title={t('Furniture and decorations', 'Meble i ozdoby')}>
         <div className="decor-choice two">
           {(['cozy', 'witchy'] as Theme[]).map((base) => (
             <button key={base} aria-pressed={room.base === base} onClick={() => set({ base })}>
-              {base === 'cozy' ? 'Cozy' : 'Witchy'}
+              {base === 'cozy' ? t('Cozy', 'Przytulny') : t('Witchy', 'Wiedźmowy')}
             </button>
           ))}
         </div>
       </Section>
-      {ROOM_SECTIONS.map(([part, title]) => (
-        <Section key={part} title={title}>
+      {ROOM_SECTIONS.map(([part, en, pl]) => (
+        <Section key={part} title={t(en, pl)}>
           <Swatches
             colors={part === 'floor' ? FLOOR_SWATCHES : ROOM_SWATCHES}
             names={ROOM_SWATCH_NAMES}
@@ -291,11 +302,12 @@ export function RoomStudio({ room, editing, onChange, onSave, onClose }: {
   );
 }
 
-const FLAME_CHOICES: Array<[CandleLit, string]> = [
-  [true, 'Lit'],
-  [false, 'Blown out'],
-  [null, 'Lights itself'],
+const FLAME_CHOICES: Array<[CandleLit, string, string]> = [
+  [true, 'Lit', 'Zapalona'],
+  [false, 'Blown out', 'Zgaszona'],
+  [null, 'Lights itself', 'Sama się pali'],
 ];
+const SHAPES_PL: Record<CandleShape, string> = { jar: 'W słoiku', pillar: 'Słupek', taper: 'Wysoka świeca' };
 
 /** Her candle on the sill: its shape and wax, shown live in the room above the sheet. */
 export function CandleStudio({ look, lit, own, onChange, onLit, onRoomCandle, onSave, onClose }: {
@@ -309,9 +321,10 @@ export function CandleStudio({ look, lit, own, onChange, onLit, onRoomCandle, on
   onSave: () => void;
   onClose: () => void;
 }) {
+  const { t } = useWords();
   return (
     <StudioFrame
-      title="My candle"
+      title={t('My candle', 'Moja świeca')}
       preview={
         <svg viewBox="296 448 82 80" aria-hidden="true">
           <defs>
@@ -331,31 +344,36 @@ export function CandleStudio({ look, lit, own, onChange, onLit, onRoomCandle, on
       onDelete={() => {}}
       onClose={onClose}
     >
-      <Section title="Shape">
+      <Section title={t('Shape', 'Kształt')}>
         <div className="decor-choice">
           {CANDLE_SHAPES.map((shape) => (
             <button key={shape} aria-pressed={look.shape === shape} onClick={() => onChange({ ...look, shape })}>
-              {CANDLE_SHAPE_NAMES[shape]}
+              {t(CANDLE_SHAPE_NAMES[shape], SHAPES_PL[shape])}
             </button>
           ))}
         </div>
       </Section>
-      <Section title="Wax">
+      <Section title={t('Wax', 'Wosk')}>
         <Swatches colors={WAX_COLORS} names={WAX_NAMES} value={look.wax} onPick={(wax) => wax && onChange({ ...look, wax })} />
       </Section>
-      <Section title="Flame">
+      <Section title={t('Flame', 'Płomień')}>
         <div className="decor-choice">
-          {FLAME_CHOICES.map(([value, name]) => (
-            <button key={name} aria-pressed={lit === value} onClick={() => onLit(value)}>
-              {name}
+          {FLAME_CHOICES.map(([value, en, pl]) => (
+            <button key={en} aria-pressed={lit === value} onClick={() => onLit(value)}>
+              {t(en, pl)}
             </button>
           ))}
         </div>
-        <p className="decor-hint">Tap the candle in the room to light it or blow it out. Left to itself, it lights in the evening and when it rains.</p>
+        <p className="decor-hint">
+          {t(
+            'Tap the candle in the room to light it or blow it out. Left to itself, it lights in the evening and when it rains.',
+            'Stuknij świecę w pokoju, żeby ją zapalić albo zdmuchnąć. Zostawiona sama sobie zapala się wieczorem i kiedy pada.',
+          )}
+        </p>
       </Section>
       {own && (
         <button className="quiet candle-reset" onClick={onRoomCandle}>
-          Back to the room's own candle
+          {t("Back to the room's own candle", 'Wróć do świecy z pokoju')}
         </button>
       )}
     </StudioFrame>

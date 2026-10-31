@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { MAX_DRAWINGS, TILE_WIDTH, type Decor, type WallpaperSize } from '../garden/decor';
+import { useWords } from '../i18n';
 
-const SIZE_NAMES: Record<WallpaperSize, string> = { s: 'Small', m: 'Medium', l: 'Large' };
+const SIZE_NAMES: Record<WallpaperSize, [string, string]> = { s: ['Small', 'Mały'], m: ['Medium', 'Średni'], l: ['Large', 'Duży'] };
 
 /** A button that asks once more before undoing something she made. */
 function ConfirmButton({ label, confirm, onConfirm }: { label: string; confirm: string; onConfirm: () => void }) {
@@ -15,6 +16,33 @@ function ConfirmButton({ label, confirm, onConfirm }: { label: string; confirm: 
 
 /** The sizes guide: what to draw, at what size in pixels, for each place. */
 function Guide() {
+  const { pl } = useWords();
+  if (pl) {
+    return (
+      <details className="decor-guide">
+        <summary>Jakiego rozmiaru mają być obrazki?</summary>
+        <dl>
+          <dt>Tapeta</dt>
+          <dd>
+            Kwadratowy rysunek, około <b>512 × 512 px</b> (do 1024 zostaje ostry). Powtarza się we wszystkie strony, więc lewa krawędź
+            powinna przechodzić w prawą, a górna w dolną. Zapisz go jako <b>PNG z przezroczystym tłem</b>, a między Twoimi wzorkami
+            będzie widać kolor ściany; obrazek bez przezroczystości zakryje całą ścianę.
+          </dd>
+          <dt>Ramka na zdjęcie</dt>
+          <dd>
+            Dowolne zdjęcie z galerii. Ramka jest pionowa, <b>3 na 4</b>, na przykład <b>900 × 1200 px</b>. Zdjęcie o innym kształcie
+            zostanie przycięte od środka, więc to, co ważne, trzymaj blisko środka.
+          </dd>
+          <dt>Rysunki na półkach</dt>
+          <dd>
+            <b>PNG z przezroczystym tłem</b>, pionowy, około <b>600 × 800 px</b>, z przedmiotem stojącym na dolnej krawędzi obrazka
+            i odrobiną pustego miejsca dookoła. Stoi na półce tak jak doniczka.
+          </dd>
+        </dl>
+        <p>Większe obrazki też są dobre: zmniejszą się przy dodawaniu. Są zapisane tylko na tym telefonie.</p>
+      </details>
+    );
+  }
   return (
     <details className="decor-guide">
       <summary>What size should my pictures be?</summary>
@@ -56,17 +84,18 @@ export function DecorateSheet({ decor, wallpaperUrl, photoUrl, busy, error, onWa
   onClose: () => void;
 }) {
   const wp = decor.wallpaper;
+  const { t } = useWords();
   return (
-    <div className="sheet studio decorate" role="dialog" aria-label="Decorate">
+    <div className="sheet studio decorate" role="dialog" aria-label={t('Decorate', 'Ozdabianie')}>
       <div className="sheet-head">
-        <h2>Decorate</h2>
-        <button className="close" aria-label="Close" onClick={onClose}>×</button>
+        <h2>{t('Decorate', 'Ozdabianie')}</h2>
+        <button className="close" aria-label={t('Close', 'Zamknij')} onClick={onClose}>×</button>
       </div>
       <div className="studio-body">
         {error && <p className="decor-error">{error}</p>}
 
         <section className="studio-section">
-          <h3>Wallpaper</h3>
+          <h3>{t('Wallpaper', 'Tapeta')}</h3>
           <div className="decor-row">
             <div
               className="decor-thumb"
@@ -77,30 +106,36 @@ export function DecorateSheet({ decor, wallpaperUrl, photoUrl, busy, error, onWa
                   : undefined
               }
             >
-              {!wp && <span>the room's own</span>}
+              {!wp && <span>{t("the room's own", 'zwykła')}</span>}
             </div>
             <div className="decor-buttons">
               <button onClick={onWallpaper} disabled={busy !== null}>
-                {busy === 'wallpaper' ? 'Adding…' : wp ? 'Choose another drawing' : 'Use my drawing'}
+                {busy === 'wallpaper' ? t('Adding…', 'Dodaję…') : wp ? t('Choose another drawing', 'Wybierz inny rysunek') : t('Use my drawing', 'Użyj mojego rysunku')}
               </button>
-              {wp && <ConfirmButton label="Back to the usual wallpaper" confirm="Sure? Back to the usual" onConfirm={onWallpaperReset} />}
+              {wp && (
+                <ConfirmButton
+                  label={t('Back to the usual wallpaper', 'Wróć do zwykłej tapety')}
+                  confirm={t('Sure? Back to the usual', 'Na pewno? Wróć do zwykłej')}
+                  onConfirm={onWallpaperReset}
+                />
+              )}
             </div>
           </div>
           {wp && (
             <>
-              <div className="decor-choice" role="group" aria-label="Pattern size">
+              <div className="decor-choice" role="group" aria-label={t('Pattern size', 'Rozmiar wzoru')}>
                 {(['s', 'm', 'l'] as const).map((size) => (
                   <button key={size} aria-pressed={wp.size === size} onClick={() => onWallpaperLook({ size })}>
-                    {SIZE_NAMES[size]}
+                    {t(...SIZE_NAMES[size])}
                   </button>
                 ))}
               </div>
-              <div className="decor-choice two" role="group" aria-label="Strength">
+              <div className="decor-choice two" role="group" aria-label={t('Strength', 'Intensywność')}>
                 <button aria-pressed={!wp.soft} onClick={() => onWallpaperLook({ soft: false })}>
-                  Full colour
+                  {t('Full colour', 'Pełny kolor')}
                 </button>
                 <button aria-pressed={wp.soft} onClick={() => onWallpaperLook({ soft: true })}>
-                  Soft
+                  {t('Soft', 'Delikatny')}
                 </button>
               </div>
             </>
@@ -108,26 +143,36 @@ export function DecorateSheet({ decor, wallpaperUrl, photoUrl, busy, error, onWa
         </section>
 
         <section className="studio-section">
-          <h3>Photo frame</h3>
+          <h3>{t('Photo frame', 'Ramka na zdjęcie')}</h3>
           <div className="decor-row">
             <div className="decor-thumb photo" aria-hidden="true" style={photoUrl ? { backgroundImage: `url(${photoUrl})` } : undefined}>
-              {!photoUrl && <span>a little painting</span>}
+              {!photoUrl && <span>{t('a little painting', 'mały obrazek')}</span>}
             </div>
             <div className="decor-buttons">
               <button onClick={onPhoto} disabled={busy !== null}>
-                {busy === 'photo' ? 'Adding…' : photoUrl ? 'Choose another photo' : 'Choose a photo'}
+                {busy === 'photo' ? t('Adding…', 'Dodaję…') : photoUrl ? t('Choose another photo', 'Wybierz inne zdjęcie') : t('Choose a photo', 'Wybierz zdjęcie')}
               </button>
-              {decor.photo && <ConfirmButton label="Back to the painting" confirm="Sure? Take the photo out" onConfirm={onPhotoReset} />}
+              {decor.photo && (
+                <ConfirmButton
+                  label={t('Back to the painting', 'Wróć do obrazka')}
+                  confirm={t('Sure? Take the photo out', 'Na pewno? Wyjmij zdjęcie')}
+                  onConfirm={onPhotoReset}
+                />
+              )}
             </div>
           </div>
-          <p className="decor-hint">It hangs on the wall to the right in the window view. Tap it there to change it.</p>
+          <p className="decor-hint">
+            {t('It hangs on the wall to the right in the window view. Tap it there to change it.', 'Wisi na ścianie po prawej, w widoku okna. Stuknij ją tam, żeby zmienić.')}
+          </p>
         </section>
 
         <section className="studio-section">
-          <h3>Drawings on the shelves</h3>
+          <h3>{t('Drawings on the shelves', 'Rysunki na półkach')}</h3>
           <p className="decor-hint">
-            Tap an empty spot on the shelves and choose <b>One of my drawings</b>. Tap a drawing to move it or take it down.
-            {decor.drawings.length > 0 && ` (${decor.drawings.length} of ${MAX_DRAWINGS})`}
+            {t('Tap an empty spot on the shelves and choose ', 'Stuknij puste miejsce na półce i wybierz ')}
+            <b>{t('One of my drawings', 'Mój rysunek')}</b>
+            {t('. Tap a drawing to move it or take it down.', '. Stuknij rysunek, żeby go przesunąć albo zdjąć.')}
+            {decor.drawings.length > 0 && ` (${decor.drawings.length} ${t('of', 'z')} ${MAX_DRAWINGS})`}
           </p>
         </section>
 
@@ -139,20 +184,21 @@ export function DecorateSheet({ decor, wallpaperUrl, photoUrl, busy, error, onWa
 
 /** What she can do with a drawing on the shelves. */
 export function DrawingCard({ onMove, onRemove, onClose }: { onMove: () => void; onRemove: () => void; onClose: () => void }) {
+  const { t } = useWords();
   return (
-    <div className="sheet" role="dialog" aria-label="Your drawing">
+    <div className="sheet" role="dialog" aria-label={t('Your drawing', 'Twój rysunek')}>
       <div className="sheet-head">
-        <h2>Your drawing</h2>
-        <button className="close" aria-label="Close" onClick={onClose}>×</button>
+        <h2>{t('Your drawing', 'Twój rysunek')}</h2>
+        <button className="close" aria-label={t('Close', 'Zamknij')} onClick={onClose}>×</button>
       </div>
       <div className="actions two-wide">
         <button onClick={onMove}>
           <svg viewBox="-14 -14 28 28" aria-hidden="true">
             <path d="M-10,0 L10,0 M6,-4 L10,0 L6,4 M-6,-4 L-10,0 L-6,4" />
           </svg>
-          Move
+          {t('Move', 'Przesuń')}
         </button>
-        <ConfirmButton label="Take it down" confirm="Sure? Take it down" onConfirm={onRemove} />
+        <ConfirmButton label={t('Take it down', 'Zdejmij')} confirm={t('Sure? Take it down', 'Na pewno? Zdejmij')} onConfirm={onRemove} />
       </div>
     </div>
   );

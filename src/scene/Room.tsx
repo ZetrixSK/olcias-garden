@@ -1,4 +1,5 @@
 import type { Theme } from '../theme/palettes';
+import { useWords } from '../i18n';
 import { OwnWallpaper, wallFill, type OwnPaper } from './OwnDecor';
 import { FLOOR_Y, WINDOW_OPENING, WINDOW_OUTER, fv, sv } from './geometry';
 
@@ -207,6 +208,7 @@ export function Floor() {
 
 export function Sign({ theme }: { theme: Theme }) {
   const cozy = theme === 'cozy';
+  const { t } = useWords();
   return (
     <g>
       <path d="M200,566 L146,592 M200,566 L254,592" className="ink-thin" fill="none" />
@@ -217,7 +219,7 @@ export function Sign({ theme }: { theme: Theme }) {
             <path className="ink" style={fv('sign-bg')} d="M134,590 L266,588 C267,600 266,614 267,626 L135,628 C133,616 135,602 134,590 Z" />
             <path d="M138,622 L264,620" style={sv('sign-shade')} strokeWidth="3" />
             <text x="200" y="615" textAnchor="middle" fontFamily="Kalam" fontWeight="700" fontSize="21" style={fv('sign-ink')}>
-              Olcia's garden
+              {t("Olcia's garden", 'Ogródek Olci')}
             </text>
           </>
         ) : (
@@ -226,7 +228,7 @@ export function Sign({ theme }: { theme: Theme }) {
             <path style={fv('sign-bg')} d="M134,591 L267,589 L268,627 L135,629 Z" />
             <path d="M140,600 C170,598 190,604 220,598" stroke="#fff" strokeOpacity="0.06" strokeWidth="6" fill="none" />
             <text x="200" y="618" textAnchor="middle" fontFamily="Grenze Gotisch" fontWeight="600" fontSize="22" style={fv('sign-ink')} opacity="0.92">
-              Olcia's Garden
+              {t("Olcia's Garden", 'Ogród Olci')}
             </text>
             <path d="M146,598 A3.5,3.5 0 1 0 146,605 A2.4,3.5 0 1 1 146,598 Z M256,618 l0.6,2 l2,0.6 l-2,0.6 l-0.6,2 l-0.6,-2 l-2,-0.6 l2,-0.6 Z" style={fv('sign-ink')} opacity="0.85" />
           </>

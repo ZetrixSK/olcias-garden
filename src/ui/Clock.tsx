@@ -1,4 +1,5 @@
 import type { Timelapse } from '../garden/timelapse';
+import { useWords, words, type Words } from '../i18n';
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -22,14 +23,16 @@ function handTime(lapse: Timelapse, e: number): number {
   return lapse.to - shown * (1 - e);
 }
 
-export function elapsedText(ms: number): string {
+export function elapsedText(ms: number, w: Words = words('mixed')): string {
+  const hr = w.t('h', 'godz.');
   const min = Math.floor(ms / 60_000);
   if (min < 60) return `${min} min`;
   const h = Math.floor(min / 60);
-  if (h < 24) return min % 60 ? `${h} h ${min % 60} min` : `${h} h`;
+  if (h < 24) return min % 60 ? `${h} ${hr} ${min % 60} min` : `${h} ${hr}`;
   const d = Math.floor(h / 24);
   const rest = h % 24;
-  return `${d} ${d === 1 ? 'day' : 'days'}${rest ? `, ${rest} h` : ''}`;
+  const days = w.pl ? (d === 1 ? 'dzień' : 'dni') : d === 1 ? 'day' : 'days';
+  return `${d} ${days}${rest ? `, ${rest} ${hr}` : ''}`;
 }
 
 /** A little twin-bell alarm clock in the room's colours. */
@@ -77,13 +80,15 @@ function AlarmClock({ time }: { time: number }) {
 /** The clock shown while the garden replays what happened since she was last here. */
 export function LapseClock({ lapse, p, fading, onSkip }: { lapse: Timelapse; p: number; fading: boolean; onSkip: () => void }) {
   const e = ease(Math.min(1, p));
+  const w = useWords();
+  const note = w.t('while you were away', 'kiedy Cię nie było');
   return (
-    <div className={fading ? 'lapse fading' : 'lapse'} onClick={onSkip} role="status" aria-label="While you were away">
+    <div className={fading ? 'lapse fading' : 'lapse'} onClick={onSkip} role="status" aria-label={note}>
       <div className="lapse-clock">
         <AlarmClock time={handTime(lapse, e)} />
       </div>
-      <p className="lapse-note">while you were away</p>
-      <p className="lapse-time">{elapsedText((lapse.to - lapse.from) * e)}</p>
+      <p className="lapse-note">{note}</p>
+      <p className="lapse-time">{elapsedText((lapse.to - lapse.from) * e, w)}</p>
     </div>
   );
 }

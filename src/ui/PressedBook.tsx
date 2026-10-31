@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { designRef, NO_DESIGNS, PANSY_PRESET_NAMES, type PansyPreset } from '../garden/designs';
+import { designRef, NO_DESIGNS, PANSY_PRESETS, type PansyPreset } from '../garden/designs';
 import { MAX_NOTE, type Pressing } from '../garden/pressed';
-import { SPECIES } from '../garden/species';
+import { useWords, words, type Words } from '../i18n';
 import { hash, rng } from '../garden/vines';
 import { pansyPalette } from '../plants/looks';
 import { PressedSprig } from '../plants/Pressed';
@@ -9,14 +9,14 @@ import { PressedSprig } from '../plants/Pressed';
 const PER_PAGE = 4;
 
 /** What's written under a pressed flower: the plant's own name, her bratek's name, a variety's name, or just the plant's kind. */
-export function pressedName(p: Pressing): string {
+export function pressedName(p: Pressing, w: Words = words('mixed')): string {
   if (p.name) return p.name;
   if (p.design?.name) return p.design.name;
-  if (p.variety && p.variety !== 'mix') return PANSY_PRESET_NAMES[p.variety as PansyPreset] ?? SPECIES[p.species].polish;
-  return SPECIES[p.species].polish;
+  if (p.variety && p.variety !== 'mix' && PANSY_PRESETS.includes(p.variety as PansyPreset)) return w.preset(p.variety as PansyPreset);
+  return w.marker(p.species);
 }
 
-const dateText = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+const dateText = (t: number, w: Words) => new Date(t).toLocaleDateString(w.locale, { day: 'numeric', month: 'long', year: 'numeric' });
 
 /**
  * One flower, laid flat on the page at a slight angle. The drawing is fitted to its own outline,
@@ -56,6 +56,8 @@ function JournalPage({ p, onNote, onRemove, onBack }: {
   onBack: () => void;
 }) {
   const [asking, setAsking] = useState(false);
+  const w = useWords();
+  const { t } = w;
   return (
     <>
       <div className="book-page journal-page">
@@ -63,32 +65,32 @@ function JournalPage({ p, onNote, onRemove, onBack }: {
           <Specimen p={p} />
           <span className="tape" aria-hidden="true" />
         </div>
-        <p className="specimen-name">{pressedName(p)}</p>
-        <p className="specimen-date">{dateText(p.at)}</p>
+        <p className="specimen-name">{pressedName(p, w)}</p>
+        <p className="specimen-date">{dateText(p.at, w)}</p>
         <textarea
           className="journal-note"
           value={p.note}
           maxLength={MAX_NOTE}
-          placeholder="Write something beside it…"
-          aria-label="Your note"
+          placeholder={t('Write something beside it…', 'Napisz coś obok…')}
+          aria-label={t('Your note', 'Twoja notatka')}
           onChange={(e) => onNote(e.target.value)}
         />
       </div>
       <div className="letter-actions book-actions">
         {asking ? (
           <>
-            <span>Take it out?</span>
+            <span>{t('Take it out?', 'Wyjąć go?')}</span>
             <button className="danger" onClick={onRemove}>
-              Yes
+              {t('Yes', 'Tak')}
             </button>
-            <button onClick={() => setAsking(false)}>No</button>
+            <button onClick={() => setAsking(false)}>{t('No', 'Nie')}</button>
           </>
         ) : (
           <>
             <button className="quiet" onClick={() => setAsking(true)}>
-              Take out
+              {t('Take out', 'Wyjmij')}
             </button>
-            <button onClick={onBack}>Back to the book</button>
+            <button onClick={onBack}>{t('Back to the book', 'Wróć do zielnika')}</button>
           </>
         )}
       </div>
@@ -110,10 +112,12 @@ export function PressedBook({ pressed, onNote, onRemove, onClose }: {
   const onPage = pressed.slice(shown * PER_PAGE, shown * PER_PAGE + PER_PAGE);
   const opened = open ? pressed.find((p) => p.id === open) : undefined;
   const turn = (to: number) => setPage(Math.max(0, Math.min(pages - 1, to)));
+  const w = useWords();
+  const { t } = w;
   return (
     <>
       <div className="scrim letter-scrim" onClick={onClose} />
-      <div className="book" role="dialog" aria-label="Pressed flowers">
+      <div className="book" role="dialog" aria-label={t('Pressed flowers', 'Zielnik')}>
         {opened ? (
           <JournalPage
             key={opened.id}
@@ -128,22 +132,22 @@ export function PressedBook({ pressed, onNote, onRemove, onClose }: {
         ) : (
           <>
             <div className="book-page">
-              <h2>Pressed flowers</h2>
+              <h2>{t('Pressed flowers', 'Zielnik')}</h2>
               {pressed.length === 0 ? (
                 <p className="book-empty">
-                  Nothing pressed yet.
+                  {t('Nothing pressed yet.', 'Jeszcze nic tu nie ma.')}
                   <br />
-                  When a flower is in bloom, tap it and choose Press.
+                  {t('When a flower is in bloom, tap it and choose Press.', 'Kiedy kwiat zakwitnie, stuknij go i wybierz Zasusz.')}
                 </p>
               ) : (
                 <ul className="book-grid">
                   {onPage.map((p) => (
                     <li key={p.id}>
-                      <button className="specimen" aria-label={`${pressedName(p)}, ${dateText(p.at)}. Open its page`} onClick={() => setOpen(p.id)}>
+                      <button className="specimen" aria-label={`${pressedName(p, w)}, ${dateText(p.at, w)}`} onClick={() => setOpen(p.id)}>
                         <Specimen p={p} />
                         <span className="tape" aria-hidden="true" />
-                        <span className="specimen-name">{pressedName(p)}</span>
-                        <span className="specimen-date">{dateText(p.at)}</span>
+                        <span className="specimen-name">{pressedName(p, w)}</span>
+                        <span className="specimen-date">{dateText(p.at, w)}</span>
                         {p.note && <span className="specimen-note">{p.note}</span>}
                       </button>
                     </li>
@@ -152,16 +156,16 @@ export function PressedBook({ pressed, onNote, onRemove, onClose }: {
               )}
             </div>
             <div className="letter-actions book-actions">
-              <button className="quiet" aria-label="Previous page" disabled={shown === 0} onClick={() => turn(shown - 1)}>
+              <button className="quiet" aria-label={t('Previous page', 'Poprzednia strona')} disabled={shown === 0} onClick={() => turn(shown - 1)}>
                 ‹
               </button>
               <span className="book-folio">
                 {shown + 1} / {pages}
               </span>
-              <button className="quiet" aria-label="Next page" disabled={shown === pages - 1} onClick={() => turn(shown + 1)}>
+              <button className="quiet" aria-label={t('Next page', 'Następna strona')} disabled={shown === pages - 1} onClick={() => turn(shown + 1)}>
                 ›
               </button>
-              <button onClick={onClose}>Close</button>
+              <button onClick={onClose}>{t('Close', 'Zamknij')}</button>
             </div>
           </>
         )}

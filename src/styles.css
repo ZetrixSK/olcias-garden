@@ -754,6 +754,8 @@ body {
   font-weight: 700;
   font-size: 14px;
   line-height: 1.1;
+  text-align: center;
+  padding: 0 2px;
 }
 .picker .en {
   font-size: 12px;

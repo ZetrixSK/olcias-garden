@@ -44,7 +44,7 @@ describe('the pressed-flower book', () => {
   it('writes the variety or the plant under each flower', () => {
     let g = garden([plant('a', { variety: 'velvet' }), plant('b', { species: 'rose', slot: 'row3-b' }), plant('c', { slot: 'row3-c' })]);
     g = pressFlower(pressFlower(pressFlower(g, 'a', at(18, 10)), 'b', at(18, 10)), 'c', at(18, 10));
-    expect(g.pressed.map(pressedName)).toEqual(['Velvet night', 'róża', 'bratek']);
+    expect(g.pressed.map((p) => pressedName(p))).toEqual(['Velvet night', 'róża', 'bratek']);
   });
 
   it('lets a flower be taken back out', () => {

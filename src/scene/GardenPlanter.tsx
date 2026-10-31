@@ -8,6 +8,7 @@ import type { PansyColors } from '../plants/Pansy';
 import type { PotDesign } from '../garden/designs';
 import { PlantArt } from '../plants/PlantArt';
 import { POT_HEIGHT, Potted, RIM } from '../plants/Pots';
+import { useWords } from '../i18n';
 
 /** One of her plants in its pot, as drawn in either view. Rooted at the rim; the pot hangs below. */
 export function GardenPlanter({ plant, now, designs, ...rest }: Omit<PlanterProps, 'stage' | 'wet' | 'shape' | 'potDesign' | 'palette' | 'label'> & {
@@ -15,6 +16,8 @@ export function GardenPlanter({ plant, now, designs, ...rest }: Omit<PlanterProp
   designs: Designs;
 }) {
   const look = plantLook(plant, designs);
+  // the seed marker says what's planted, in her language
+  const { marker } = useWords();
   return (
     <PlanterArt
       plant={plant}
@@ -23,7 +26,7 @@ export function GardenPlanter({ plant, now, designs, ...rest }: Omit<PlanterProp
       shape={look.shape}
       potDesign={look.pot}
       palette={look.palette}
-      label={look.label}
+      label={look.label ?? marker(plant.species)}
       {...rest}
     />
   );

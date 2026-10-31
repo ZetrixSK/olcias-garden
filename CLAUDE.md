@@ -125,7 +125,16 @@ Calculate growth from timestamps rather than relying on continuously running tim
 
 Use a versioned save format and handle corrupted or outdated saves gracefully.
 
-Do not introduce a backend, account system, ads, monetization, or analytics.
+Do not introduce ads, monetization, or analytics.
+
+The one approved backend is Supabase (project `bnzwavfiltdemetdmmvg`), used only for the private admin feature: the user can see Olcia's garden and send it changes, which she has agreed to. Rules for it:
+
+* The phone is the source of truth. The garden must open and work fully offline and without Supabase configured; remote code is loaded lazily and fails quietly.
+* Each device signs in anonymously (no login for her); row-level security keeps every device to its own rows. The admin is a normal Supabase user listed in `private.admins`.
+* The admin sends actions (instructions such as "grow the vine on plant X"), never overwrites of her save. Actions that no longer make sense are skipped and reported.
+* Her diary and pressed-flower notes are only uploaded when `settings.shareNotes` is on (off by default). Her location is blurred before upload.
+* Only the publishable key goes in the app (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` in `.env.local` and Vercel). Never the service_role key.
+* Schema changes go through migrations, also kept in `supabase/migrations/`; check the advisors after each one.
 
 ## 6. iPhone experience and PWA
 

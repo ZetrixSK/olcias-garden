@@ -1,3 +1,5 @@
+import { useWords } from '../i18n';
+
 /** Safari on an iPhone or iPad, not yet opened from the Home Screen. */
 export function canAddToHomeScreen(): boolean {
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -15,6 +17,27 @@ const SHARE = (
 
 /** A one-time note in Safari on iPhone: how to keep the garden on the Home Screen, where it works like an app. */
 export function InstallHint({ onDone }: { onDone: () => void }) {
+  const { pl } = useWords();
+  if (pl) {
+    return (
+      <div className="sheet install-hint" role="dialog" aria-label="Dodaj ogród do ekranu początkowego">
+        <h2>Dodaj ogród do ekranu początkowego</h2>
+        <ol>
+          <li>
+            Stuknij Udostępnij {SHARE} w Safari. Jeśli go nie widać, jest pod <b>⋯</b>
+          </li>
+          <li>
+            Wybierz <b>Do ekranu początkowego</b>
+          </li>
+          <li>Otwieraj ogród z nowej ikonki. Wypełnia cały ekran i działa bez internetu.</li>
+        </ol>
+        <p className="decor-hint">
+          Ogród na ekranie początkowym ma swój własny zapis, osobny od Safari, więc najlepiej dodać go, zanim cokolwiek posadzisz.
+        </p>
+        <button onClick={onDone}>Jasne</button>
+      </div>
+    );
+  }
   return (
     <div className="sheet install-hint" role="dialog" aria-label="Keep the garden on your Home Screen">
       <h2>Keep it on your Home Screen</h2>

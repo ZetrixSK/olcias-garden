@@ -1,24 +1,30 @@
 import { useState } from 'react';
-import { dateOfKey, dayKey, MAX_ENTRY, monthGrid, MOOD_NAMES, MOODS, onThisDay, type Diary, type Mood } from '../garden/diary';
+import { dateOfKey, dayKey, MAX_ENTRY, monthGrid, MOODS, onThisDay, type Diary, type Mood } from '../garden/diary';
+import { useWords, type Words } from '../i18n';
 import { MoodFace } from './Moods';
 
 const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
-const monthTitle = (y: number, m: number) => new Date(y, m, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+const WEEKDAYS_PL = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
+const monthTitle = (y: number, m: number, w: Words) => w.date(new Date(y, m, 1), { month: 'long', year: 'numeric' });
 /** The day's name; a page from an earlier year says which year too. */
-const dayTitle = (key: string) => {
+const dayTitle = (key: string, w: Words) => {
   const d = dateOfKey(key);
   const year = d.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined;
-  return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year });
+  return w.date(d, { weekday: 'long', day: 'numeric', month: 'long', year });
 };
 
 /** The month on one page: each day she wrote shows her mood face, or a little ink mark if she chose none. */
 function Calendar({ diary, today, onOpen, onClose }: { diary: Diary; today: string; onOpen: (key: string) => void; onClose: () => void }) {
-  const t = dateOfKey(today);
-  const [shown, setShown] = useState({ y: t.getFullYear(), m: t.getMonth() });
+  const day = dateOfKey(today);
+  const [shown, setShown] = useState({ y: day.getFullYear(), m: day.getMonth() });
   const turn = (by: number) => setShown(({ y, m }) => ({ y: m + by < 0 ? y - 1 : m + by > 11 ? y + 1 : y, m: (m + by + 12) % 12 }));
-  const atToday = shown.y === t.getFullYear() && shown.m === t.getMonth();
+  const atToday = shown.y === day.getFullYear() && shown.m === day.getMonth();
   const written = Object.keys(diary).filter((k) => k.startsWith(`${shown.y}-${String(shown.m + 1).padStart(2, '0')}`)).length;
   const memories = onThisDay(diary, today);
+  const w = useWords();
+  const { t } = w;
+  const ago = (n: number) =>
+    w.pl ? (n === 1 ? 'Rok temu, tego dnia' : `${n} ${w.plural(n, 'rok', 'lata', 'lat')} temu, tego dnia`) : n === 1 ? 'A year ago today' : `${n} years ago today`;
   return (
     <>
       <div className="book-page diary-page">
@@ -26,18 +32,18 @@ function Calendar({ diary, today, onOpen, onClose }: { diary: Diary; today: stri
           <button key={m.key} className="diary-memory" onClick={() => onOpen(m.key)}>
             <span className="diary-memory-head">
               {m.entry.mood && <MoodFace mood={m.entry.mood} size={22} />}
-              {m.yearsAgo === 1 ? 'A year ago today' : `${m.yearsAgo} years ago today`}
+              {ago(m.yearsAgo)}
             </span>
-            <span className="diary-memory-text">{m.entry.text.trim() || (m.entry.mood ? MOOD_NAMES[m.entry.mood] : '')}</span>
+            <span className="diary-memory-text">{m.entry.text.trim() || (m.entry.mood ? w.mood(m.entry.mood) : '')}</span>
           </button>
         ))}
         <div className="diary-month">
-          <button aria-label="Previous month" onClick={() => turn(-1)}>‹</button>
-          <h2>{monthTitle(shown.y, shown.m)}</h2>
-          <button aria-label="Next month" onClick={() => turn(1)} disabled={atToday}>›</button>
+          <button aria-label={t('Previous month', 'Poprzedni miesiąc')} onClick={() => turn(-1)}>‹</button>
+          <h2>{monthTitle(shown.y, shown.m, w)}</h2>
+          <button aria-label={t('Next month', 'Następny miesiąc')} onClick={() => turn(1)} disabled={atToday}>›</button>
         </div>
         <div className="diary-grid" role="grid">
-          {WEEKDAYS.map((d) => (
+          {(w.pl ? WEEKDAYS_PL : WEEKDAYS).map((d) => (
             <span key={d} className="diary-weekday">{d}</span>
           ))}
           {monthGrid(shown.y, shown.m).flat().map((d, i) => {
@@ -50,7 +56,7 @@ function Calendar({ diary, today, onOpen, onClose }: { diary: Diary; today: stri
                 key={key}
                 className={`diary-day${key === today ? ' today' : ''}${entry ? ' has-entry' : ''}`}
                 disabled={future}
-                aria-label={`${dayTitle(key)}${entry ? `, ${entry.mood ? MOOD_NAMES[entry.mood] : 'written'}` : ''}`}
+                aria-label={`${dayTitle(key, w)}${entry ? `, ${entry.mood ? w.mood(entry.mood) : t('written', 'zapisany')}` : ''}`}
                 onClick={() => onOpen(key)}
               >
                 <span className="diary-num">{d.getDate()}</span>
@@ -59,11 +65,15 @@ function Calendar({ diary, today, onOpen, onClose }: { diary: Diary; today: stri
             );
           })}
         </div>
-        <p className="diary-count">{written ? `${written} ${written === 1 ? 'day' : 'days'} written this month` : 'Nothing written this month yet'}</p>
+        <p className="diary-count">
+          {written
+            ? t(`${written} ${written === 1 ? 'day' : 'days'} written this month`, `W tym miesiącu: ${written} ${w.plural(written, 'dzień', 'dni', 'dni')}`)
+            : t('Nothing written this month yet', 'W tym miesiącu jeszcze nic')}
+        </p>
       </div>
       <div className="letter-actions book-actions">
-        <button className="quiet" onClick={onClose}>Close</button>
-        <button onClick={() => onOpen(today)}>{diary[today] ? 'Open today' : 'Write today'}</button>
+        <button className="quiet" onClick={onClose}>{t('Close', 'Zamknij')}</button>
+        <button onClick={() => onOpen(today)}>{diary[today] ? t('Open today', 'Otwórz dzisiejszy') : t('Write today', 'Napisz dziś')}</button>
       </div>
     </>
   );
@@ -82,16 +92,18 @@ function DayPage({ day, entry, onSave, onDelete, onBack }: {
   const [asking, setAsking] = useState<'leave' | 'delete' | null>(null);
   const dirty = mood !== (entry?.mood ?? null) || text !== (entry?.text ?? '');
   const empty = !mood && !text.trim();
+  const w = useWords();
+  const { t } = w;
   return (
     <>
       <div className="book-page diary-page">
-        <h2 className="diary-day-title">{dayTitle(day)}</h2>
-        <p className="diary-label">How was it?</p>
-        <div className="mood-grid" role="radiogroup" aria-label="Mood">
+        <h2 className="diary-day-title">{dayTitle(day, w)}</h2>
+        <p className="diary-label">{t('How was it?', 'Jak było?')}</p>
+        <div className="mood-grid" role="radiogroup" aria-label={t('Mood', 'Nastrój')}>
           {MOODS.map((m) => (
-            <button key={m} role="radio" aria-checked={mood === m} aria-label={MOOD_NAMES[m]} onClick={() => setMood(mood === m ? null : m)}>
+            <button key={m} role="radio" aria-checked={mood === m} aria-label={w.mood(m)} onClick={() => setMood(mood === m ? null : m)}>
               <MoodFace mood={m} size={30} />
-              <span>{MOOD_NAMES[m]}</span>
+              <span>{w.mood(m)}</span>
             </button>
           ))}
         </div>
@@ -99,29 +111,29 @@ function DayPage({ day, entry, onSave, onDelete, onBack }: {
           className="journal-note diary-text"
           value={text}
           maxLength={MAX_ENTRY}
-          placeholder="Dear diary…"
-          aria-label="Diary entry"
+          placeholder={t('Dear diary…', 'Drogi pamiętniku…')}
+          aria-label={t('Diary entry', 'Wpis')}
           onChange={(e) => setText(e.target.value)}
         />
       </div>
       <div className="letter-actions book-actions">
         {asking === 'leave' ? (
           <>
-            <span>Leave without saving?</span>
-            <button className="danger" onClick={onBack}>Leave</button>
-            <button onClick={() => setAsking(null)}>Stay</button>
+            <span>{t('Leave without saving?', 'Wyjść bez zapisywania?')}</span>
+            <button className="danger" onClick={onBack}>{t('Leave', 'Wyjdź')}</button>
+            <button onClick={() => setAsking(null)}>{t('Stay', 'Zostań')}</button>
           </>
         ) : asking === 'delete' ? (
           <>
-            <span>Tear out this page?</span>
-            <button className="danger" onClick={onDelete}>Yes</button>
-            <button onClick={() => setAsking(null)}>No</button>
+            <span>{t('Tear out this page?', 'Wyrwać tę stronę?')}</span>
+            <button className="danger" onClick={onDelete}>{t('Yes', 'Tak')}</button>
+            <button onClick={() => setAsking(null)}>{t('No', 'Nie')}</button>
           </>
         ) : (
           <>
-            <button className="quiet" onClick={() => (dirty ? setAsking('leave') : onBack())}>Back</button>
-            {entry && <button className="quiet" onClick={() => setAsking('delete')}>Delete</button>}
-            <button data-sound="page" disabled={!dirty || (empty && !entry)} onClick={() => onSave(mood, text)}>Save</button>
+            <button className="quiet" onClick={() => (dirty ? setAsking('leave') : onBack())}>{t('Back', 'Wróć')}</button>
+            {entry && <button className="quiet" onClick={() => setAsking('delete')}>{t('Delete', 'Usuń')}</button>}
+            <button data-sound="page" disabled={!dirty || (empty && !entry)} onClick={() => onSave(mood, text)}>{t('Save', 'Zapisz')}</button>
           </>
         )}
       </div>
@@ -139,10 +151,11 @@ export function DiaryBook({ diary, now, onSave, onDelete, onClose }: {
 }) {
   const today = dayKey(new Date(now));
   const [open, setOpen] = useState<string | null>(null);
+  const { t } = useWords();
   return (
     <>
       <div className="scrim letter-scrim" onClick={open ? undefined : onClose} />
-      <div className="book diary" role="dialog" aria-label="Diary">
+      <div className="book diary" role="dialog" aria-label={t('Diary', 'Pamiętnik')}>
         {open ? (
           <DayPage
             key={open}

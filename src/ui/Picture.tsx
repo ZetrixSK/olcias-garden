@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { snapshotScene } from '../scene/snapshot';
 import { sendFile } from './share';
+import { useWords } from '../i18n';
 
 const fileName = () => {
   const d = new Date();
@@ -16,6 +17,7 @@ export function PictureSheet({ onClose }: { onClose: () => void }) {
   const [pic, setPic] = useState<{ file: File; url: string } | null>(null);
   const [error, setError] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const { t } = useWords();
 
   useEffect(() => {
     let live = true;
@@ -36,26 +38,28 @@ export function PictureSheet({ onClose }: { onClose: () => void }) {
   const save = () => {
     if (!pic) return;
     void sendFile(pic.file, "Olcia's Garden").then((how) => {
-      if (how === 'shared') setNote('Done. "Save Image" keeps it in Photos.');
-      if (how === 'downloaded') setNote(`Saved as ${pic.file.name}, in Downloads.`);
+      if (how === 'shared') setNote(t('Done. "Save Image" keeps it in Photos.', 'Gotowe. „Zachowaj obraz” zapisze go w Zdjęciach.'));
+      if (how === 'downloaded') setNote(t(`Saved as ${pic.file.name}, in Downloads.`, `Zapisano jako ${pic.file.name}, w Pobranych.`));
     });
   };
 
   return (
-    <div className="sheet studio picture" role="dialog" aria-label="A picture of the garden">
+    <div className="sheet studio picture" role="dialog" aria-label={t('A picture of the garden', 'Obrazek ogrodu')}>
       <div className="sheet-head">
-        <h2>A picture</h2>
-        <button className="close" aria-label="Close" onClick={onClose}>×</button>
+        <h2>{t('A picture', 'Obrazek')}</h2>
+        <button className="close" aria-label={t('Close', 'Zamknij')} onClick={onClose}>×</button>
       </div>
       <div className="studio-body">
         {error ? (
-          <p className="decor-error">The picture couldn't be made just now.</p>
+          <p className="decor-error">{t("The picture couldn't be made just now.", 'Nie udało się teraz zrobić obrazka.')}</p>
         ) : (
-          <div className="picture-frame">{pic ? <img src={pic.url} alt="The garden as it is now" /> : <span>Taking it…</span>}</div>
+          <div className="picture-frame">
+            {pic ? <img src={pic.url} alt={t('The garden as it is now', 'Ogród taki, jaki jest teraz')} /> : <span>{t('Taking it…', 'Robię obrazek…')}</span>}
+          </div>
         )}
         {note && <p className="decor-hint">{note}</p>}
         <div className="decor-buttons picture-buttons">
-          <button onClick={save} disabled={!pic}>Save picture</button>
+          <button onClick={save} disabled={!pic}>{t('Save picture', 'Zapisz obrazek')}</button>
         </div>
       </div>
     </div>

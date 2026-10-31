@@ -3,13 +3,13 @@ import { isSoilWet, nextStage, stageAt, waterWouldHelp } from '../garden/growth'
 import { MAX_NAME } from '../garden/pressed';
 import {
   designRef,
-  PANSY_PRESET_NAMES,
   PANSY_PRESETS,
   POT_SHAPES,
   type Designs,
   type PotRef,
 } from '../garden/designs';
-import { SPECIES, SPECIES_IDS, STAGE_LABEL, type SpeciesId, type Stage } from '../garden/species';
+import { SPECIES, SPECIES_IDS, type SpeciesId, type Stage } from '../garden/species';
+import { useWords, words, type Words } from '../i18n';
 import type { Plant } from '../garden/state';
 import { plantLook } from '../plants/looks';
 import { PlantArt } from '../plants/PlantArt';
@@ -52,7 +52,7 @@ function Tile({ label, sub, selected, onPick, onEdit, children }: {
         {sub && <span className="en">{sub}</span>}
       </button>
       {onEdit && (
-        <button className="tile-edit" aria-label={`Change ${label}`} onClick={onEdit}>
+        <button className="tile-edit" aria-label={label} onClick={onEdit}>
           <svg viewBox="-10 -10 20 20" aria-hidden="true">{PENCIL}</svg>
         </button>
       )}
@@ -81,24 +81,26 @@ export function VarietyPicker({ designs, onPick, onDesign, onEdit, onClose }: {
   onEdit: (id: string) => void;
   onClose: () => void;
 }) {
+  const w = useWords();
+  const title = w.lang === 'en' ? 'Which pansy?' : w.t('Which bratek?', 'Jaki bratek?');
   return (
-    <div className="sheet" role="dialog" aria-label="Which bratek?">
+    <div className="sheet" role="dialog" aria-label={title}>
       <div className="sheet-head">
-        <h2>Which bratek?</h2>
-        <button className="close" aria-label="Close" onClick={onClose}>×</button>
+        <h2>{title}</h2>
+        <button className="close" aria-label={w.t('Close', 'Zamknij')} onClick={onClose}>×</button>
       </div>
       <div className="picker scroll">
         {PANSY_PRESETS.map((v) => (
-          <Tile key={v} label={PANSY_PRESET_NAMES[v]} onPick={() => onPick(v)}>
+          <Tile key={v} label={w.preset(v)} onPick={() => onPick(v)}>
             <Preview species="pansy" variety={v} designs={designs} />
           </Tile>
         ))}
         {designs.pansies.map((d) => (
-          <Tile key={d.id} label={d.name || 'Mine'} onPick={() => onPick(designRef(d.id))} onEdit={() => onEdit(d.id)}>
+          <Tile key={d.id} label={d.name || w.t('Mine', 'Mój')} onPick={() => onPick(designRef(d.id))} onEdit={() => onEdit(d.id)}>
             <Preview species="pansy" variety={designRef(d.id)} designs={designs} />
           </Tile>
         ))}
-        <NewTile label="Design one" onClick={onDesign} />
+        <NewTile label={w.t('Design one', 'Zaprojektuj')} onClick={onDesign} />
       </div>
     </div>
   );
@@ -117,17 +119,18 @@ export function StyleSheet({ plant, designs, now, onPot, onVariety, onPaint, onE
   onEditPansy: (id: string) => void;
   onClose: () => void;
 }) {
+  const w = useWords();
   const stage = stageAt(plant.species, plant, now);
   const variety = plant.variety ?? 'mix';
   return (
-    <div className="sheet" role="dialog" aria-label="Style">
+    <div className="sheet" role="dialog" aria-label={w.t('Style', 'Wygląd')}>
       <div className="sheet-head">
         <h2>
-          {SPECIES[plant.species].polish} <small>style</small>
+          {w.flower(plant.species)} <small>{w.t('style', 'wygląd')}</small>
         </h2>
-        <button className="close" aria-label="Close" onClick={onClose}>×</button>
+        <button className="close" aria-label={w.t('Close', 'Zamknij')} onClick={onClose}>×</button>
       </div>
-      <h3 className="sheet-sub">Pot</h3>
+      <h3 className="sheet-sub">{w.t('Pot', 'Doniczka')}</h3>
       <div className="picker scroll">
         {POT_SHAPES.map((pot) => (
           <Tile key={pot} label="" selected={plant.pot === pot} onPick={() => onPot(pot)}>
@@ -139,28 +142,34 @@ export function StyleSheet({ plant, designs, now, onPot, onVariety, onPaint, onE
             <Preview species={plant.species} stage={stage} pot={designRef(d.id)} variety={plant.variety} designs={designs} />
           </Tile>
         ))}
-        <NewTile label="Paint one" onClick={onPaint} />
+        <NewTile label={w.t('Paint one', 'Pomaluj')} onClick={onPaint} />
       </div>
       {plant.species === 'pansy' && (
         <>
-          <h3 className="sheet-sub">Flowers</h3>
+          <h3 className="sheet-sub">{w.t('Flowers', 'Kwiaty')}</h3>
           <div className="picker scroll">
             {PANSY_PRESETS.map((v) => (
-              <Tile key={v} label={PANSY_PRESET_NAMES[v]} selected={variety === v} onPick={() => onVariety(v)}>
+              <Tile key={v} label={w.preset(v)} selected={variety === v} onPick={() => onVariety(v)}>
                 <Preview species="pansy" pot={plant.pot} variety={v} designs={designs} />
               </Tile>
             ))}
             {designs.pansies.map((d) => (
-              <Tile key={d.id} label={d.name || 'Mine'} selected={variety === designRef(d.id)} onPick={() => onVariety(designRef(d.id))} onEdit={() => onEditPansy(d.id)}>
+              <Tile key={d.id} label={d.name || w.t('Mine', 'Mój')} selected={variety === designRef(d.id)} onPick={() => onVariety(designRef(d.id))} onEdit={() => onEditPansy(d.id)}>
                 <Preview species="pansy" pot={plant.pot} variety={designRef(d.id)} designs={designs} />
               </Tile>
             ))}
-            <NewTile label="Design one" onClick={onDesignPansy} />
+            <NewTile label={w.t('Design one', 'Zaprojektuj')} onClick={onDesignPansy} />
           </div>
         </>
       )}
     </div>
   );
+}
+
+/** A long single word is set a little smaller so it fits its tile; names of two words wrap instead. */
+function fitName(name: string): { fontSize: string } | undefined {
+  const longest = Math.max(...name.split(' ').map((part) => part.length));
+  return longest > 8 ? { fontSize: `${Math.max(10.5, (14 * 8.4) / longest).toFixed(1)}px` } : undefined;
 }
 
 const WINDOW_ICON = <path d="M-8,10 L-8,-2 A8,8 0 0 1 8,-2 L8,10 Z M0,-10 L0,10 M-8,2 L8,2" />;
@@ -173,20 +182,21 @@ export function PlantPicker({ onPick, onDrawing, busy, error, onClose }: {
   error: string | null;
   onClose: () => void;
 }) {
+  const w = useWords();
   return (
-    <div className="sheet" role="dialog" aria-label="Plant something">
+    <div className="sheet" role="dialog" aria-label={w.t('Plant something', 'Posadź coś')}>
       <div className="sheet-head">
-        <h2>What shall we plant?</h2>
-        <button className="close" aria-label="Close" onClick={onClose}>×</button>
+        <h2>{w.t('What shall we plant?', 'Co posadzimy?')}</h2>
+        <button className="close" aria-label={w.t('Close', 'Zamknij')} onClick={onClose}>×</button>
       </div>
       <div className="picker">
         {SPECIES_IDS.map((s) => (
           <button key={s} data-sound="soil" onClick={() => onPick(s)}>
             <Preview species={s} />
-            <span className="pl" style={SPECIES[s].polish.length > 9 ? { fontSize: '0.82em' } : undefined}>
-              {SPECIES[s].polish}
+            <span className="pl" style={fitName(w.flower(s))}>
+              {w.flower(s)}
             </span>
-            <span className="en">{SPECIES[s].name}</span>
+            {w.flowerSub(s) && <span className="en">{w.flowerSub(s)}</span>}
           </button>
         ))}
       </div>
@@ -197,7 +207,7 @@ export function PlantPicker({ onPick, onDrawing, busy, error, onClose }: {
               <path d="M-10,-9 L10,-9 L10,9 L-10,9 Z M-10,5 L-3,-1 L2,4 L5,1 L10,6" />
               <circle cx="4" cy="-4" r="2" />
             </svg>
-            {busy ? 'Adding…' : 'One of my drawings'}
+            {busy ? w.t('Adding…', 'Dodaję…') : w.t('One of my drawings', 'Mój rysunek')}
           </button>
           {error && <p className="decor-error">{error}</p>}
         </div>
@@ -207,40 +217,43 @@ export function PlantPicker({ onPick, onDrawing, busy, error, onClose }: {
 }
 
 const NEXT_VERB: Record<Stage, string> = { seed: '', seedling: 'Sprouts', bud: 'Buds', bloom: 'Blooms' };
+const NEXT_VERB_PL: Record<Stage, string> = { seed: '', seedling: 'Wykiełkuje', bud: 'Wypuści pąki', bloom: 'Zakwitnie' };
 const HOUR = 3_600_000;
 
 /**
  * Roughly when something will happen, in words rather than a countdown: "any moment now",
  * "in a couple of hours", "tomorrow morning", "in about 3 days".
  */
-export function whenText(inMs: number, now: number): string {
+export function whenText(inMs: number, now: number, w: Words = words('mixed')): string {
+  const { t } = w;
   const min = inMs / 60_000;
-  if (min <= 2) return 'any moment now';
-  if (min < 15) return 'in a few minutes';
-  if (min < 50) return 'within the hour';
-  if (inMs < 2.5 * HOUR) return 'in a couple of hours';
-  if (inMs < 6 * HOUR) return 'in a few hours';
+  if (min <= 2) return t('any moment now', 'lada chwila');
+  if (min < 15) return t('in a few minutes', 'za kilka minut');
+  if (min < 50) return t('within the hour', 'w ciągu godziny');
+  if (inMs < 2.5 * HOUR) return t('in a couple of hours', 'za parę godzin');
+  if (inMs < 6 * HOUR) return t('in a few hours', 'za kilka godzin');
   const at = new Date(now + inMs);
   const today = new Date(now);
   const days = Math.round((new Date(at).setHours(0, 0, 0, 0) - new Date(today).setHours(0, 0, 0, 0)) / 86_400_000);
   const h = at.getHours();
   const part = h < 5 ? 'night' : h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
-  if (days === 0) return part === 'evening' ? 'this evening' : 'later today';
-  if (days === 1) return part === 'night' ? 'overnight' : `tomorrow ${part}`;
-  return `in about ${days} days`;
+  const partPl = { night: 'w nocy', morning: 'rano', afternoon: 'po południu', evening: 'wieczorem' }[part];
+  if (days === 0) return part === 'evening' ? t('this evening', 'dziś wieczorem') : t('later today', 'jeszcze dziś');
+  if (days === 1) return part === 'night' ? t('overnight', 'w nocy') : t(`tomorrow ${part}`, `jutro ${partPl}`);
+  return t(`in about ${days} days`, `za jakieś ${days} dni`);
 }
 
 /** The line on a plant's card that says roughly when it grows next. */
-export function growthText(plant: Plant, now: number): string {
+export function growthText(plant: Plant, now: number, w: Words = words('mixed')): string {
   const next = nextStage(plant.species, plant, now);
-  if (!next) return 'In full bloom';
-  const sooner = waterWouldHelp(plant, now) && next.inMs > 30 * 60_000 ? ' · sooner with water' : '';
-  return `${NEXT_VERB[next.stage]} ${whenText(next.inMs, now)}${sooner}`;
+  if (!next) return w.t('In full bloom', 'W pełnym rozkwicie');
+  const sooner = waterWouldHelp(plant, now) && next.inMs > 30 * 60_000 ? w.t(' · sooner with water', ' · szybciej po podlaniu') : '';
+  return `${(w.pl ? NEXT_VERB_PL : NEXT_VERB)[next.stage]} ${whenText(next.inMs, now, w)}${sooner}`;
 }
 
 /** The plant's name in its card's title, editable in place. */
 function PlantTitle({ plant, onName }: { plant: Plant; onName: (name: string) => void }) {
-  const info = SPECIES[plant.species];
+  const w = useWords();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(plant.name ?? '');
   const save = () => {
@@ -260,12 +273,12 @@ function PlantTitle({ plant, onName }: { plant: Plant; onName: (name: string) =>
           autoFocus
           value={draft}
           maxLength={MAX_NAME}
-          placeholder={`Name this ${info.polish}`}
-          aria-label="Name"
+          placeholder={w.t(`Name this ${w.marker(plant.species)}`, 'Nadaj imię')}
+          aria-label={w.t('Name', 'Imię')}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={save}
         />
-        <button type="submit">Done</button>
+        <button type="submit">{w.t('Done', 'Gotowe')}</button>
       </form>
     );
   }
@@ -273,14 +286,14 @@ function PlantTitle({ plant, onName }: { plant: Plant; onName: (name: string) =>
     <h2>
       {plant.name ? (
         <>
-          {plant.name} <small>{info.polish}</small>
+          {plant.name} <small>{w.marker(plant.species)}</small>
         </>
       ) : (
         <>
-          {info.polish} <small>{info.name}</small>
+          {w.flower(plant.species)} {w.flowerSub(plant.species) && <small>{w.flowerSub(plant.species)}</small>}
         </>
       )}
-      <button className="name-pencil" aria-label={plant.name ? 'Rename' : 'Give it a name'} onClick={() => setEditing(true)}>
+      <button className="name-pencil" aria-label={plant.name ? w.t('Rename', 'Zmień imię') : w.t('Give it a name', 'Nadaj imię')} onClick={() => setEditing(true)}>
         <svg viewBox="-14 -14 28 28" aria-hidden="true">
           <path d="M-7,7 L-6,2 L5,-9 L9,-5 L-2,6 Z M2,-6 L6,-2" />
         </svg>
@@ -289,11 +302,11 @@ function PlantTitle({ plant, onName }: { plant: Plant; onName: (name: string) =>
   );
 }
 
-function plantedText(plant: Plant, now: number): string {
+function plantedText(plant: Plant, now: number, w: Words): string {
   const days = Math.floor((now - plant.plantedAt) / 86_400_000);
-  if (days <= 0) return 'Planted today';
-  if (days === 1) return 'Planted yesterday';
-  return `Planted ${days} days ago`;
+  if (days <= 0) return w.t('Planted today', 'W ziemi od dziś');
+  if (days === 1) return w.t('Planted yesterday', 'W ziemi od wczoraj');
+  return w.t(`Planted ${days} days ago`, `W ziemi od ${days} dni`);
 }
 
 /** Which of her plants goes into an empty window spot. */
@@ -305,24 +318,25 @@ export function WindowChooser({ plants, now, designs, onPick, onShelves, onClose
   onShelves: () => void;
   onClose: () => void;
 }) {
+  const w = useWords();
   return (
-    <div className="sheet" role="dialog" aria-label="Put a plant in the window">
+    <div className="sheet" role="dialog" aria-label={w.t('Put a plant in the window', 'Postaw roślinę w oknie')}>
       <div className="sheet-head">
-        <h2>Which one goes here?</h2>
-        <button className="close" aria-label="Close" onClick={onClose}>×</button>
+        <h2>{w.t('Which one goes here?', 'Która tu stanie?')}</h2>
+        <button className="close" aria-label={w.t('Close', 'Zamknij')} onClick={onClose}>×</button>
       </div>
       {plants.length === 0 ? (
         <div className="empty-note">
-          <p>Everything on the shelves is already in the window.</p>
-          <button onClick={onShelves}>Plant something new</button>
+          <p>{w.t('Everything on the shelves is already in the window.', 'Wszystko z półek stoi już w oknie.')}</p>
+          <button onClick={onShelves}>{w.t('Plant something new', 'Posadź coś nowego')}</button>
         </div>
       ) : (
         <div className="picker scroll">
           {plants.map((p) => (
             <button key={p.id} onClick={() => onPick(p.id)}>
               <Preview species={p.species} stage={stageAt(p.species, p, now)} pot={p.pot} variety={p.variety} designs={designs} />
-              <span className="pl">{SPECIES[p.species].polish}</span>
-              <span className="en">{STAGE_LABEL[stageAt(p.species, p, now)]}</span>
+              <span className="pl">{w.flower(p.species)}</span>
+              <span className="en">{w.stage(stageAt(p.species, p, now))}</span>
             </button>
           ))}
         </div>
@@ -358,40 +372,43 @@ export function PlantCard({ plant, now, inWindowView, onWater, onMove, onWindow,
   onClose: () => void;
 }) {
   const [confirm, setConfirm] = useState(false);
-  const info = SPECIES[plant.species];
+  const w = useWords();
+  const { t } = w;
   const stage = stageAt(plant.species, plant, now);
   return (
-    <div className="sheet" role="dialog" aria-label={info.name}>
+    <div className="sheet" role="dialog" aria-label={w.flower(plant.species)}>
       <div className="sheet-head">
         <PlantTitle plant={plant} onName={onName} />
-        <button className="close" aria-label="Close" onClick={onClose}>×</button>
+        <button className="close" aria-label={t('Close', 'Zamknij')} onClick={onClose}>×</button>
       </div>
       <p className="meta">
-        {STAGE_LABEL[stage]} · {plantedText(plant, now)}
-        {!inWindowView && plant.display && ' · in the window'}
-        {plant.vine && ' · climbing'}
+        {w.stage(stage)} · {plantedText(plant, now, w)}
+        {!inWindowView && plant.display && t(' · in the window', ' · w oknie')}
+        {plant.vine && t(' · climbing', ' · pnie się')}
       </p>
       <p className="meta growth-line">
-        <span className={isSoilWet(plant, now) ? 'tag wet' : 'tag dry'}>{isSoilWet(plant, now) ? 'Watered' : 'Not watered yet'}</span>
-        <span>{growthText(plant, now)}</span>
+        <span className={isSoilWet(plant, now) ? 'tag wet' : 'tag dry'}>
+          {isSoilWet(plant, now) ? t('Watered', 'Ma wodę') : t('Not watered yet', 'Czeka na wodę')}
+        </span>
+        <span>{growthText(plant, now, w)}</span>
       </p>
       <div className={!inWindowView || (inWindowView && onTrim) ? 'actions five' : 'actions'}>
         <button data-sound="water" onClick={onWater}>
           <svg viewBox="-14 -14 28 28" aria-hidden="true">
             <path d="M-2,8 L-1,-3 C-1,-5 9,-5 9,-3 L10,8 Z M-1,0 L-11,-8 M-13,-10 L-9,-6 M9,-2 C14,-3 14,5 9.6,5" />
           </svg>
-          Water
+          {t('Water', 'Podlej')}
         </button>
         <button onClick={onMove}>
           <svg viewBox="-14 -14 28 28" aria-hidden="true">
             <path d="M-10,0 L10,0 M6,-4 L10,0 L6,4 M-6,-4 L-10,0 L-6,4" />
           </svg>
-          Move
+          {t('Move', 'Przesuń')}
         </button>
         {!inWindowView && (
           <button onClick={onWindow}>
             <svg viewBox="-14 -14 28 28" aria-hidden="true">{WINDOW_ICON}</svg>
-            {plant.display ? 'Take down' : 'Window'}
+            {plant.display ? t('Take down', 'Zdejmij') : t('Window', 'Do okna')}
           </button>
         )}
         {inWindowView && onTrim && (
@@ -399,28 +416,28 @@ export function PlantCard({ plant, now, inWindowView, onWater, onMove, onWindow,
             <svg viewBox="-14 -14 28 28" aria-hidden="true">
               <path d="M-8,-9 L5,5 M8,-9 L-5,5 M-5,5 A3.4,3.4 0 1 0 -5.01,5 M5,5 A3.4,3.4 0 1 0 5.01,5" />
             </svg>
-            Trim
+            {t('Trim', 'Przytnij')}
           </button>
         )}
         <button onClick={onStyle}>
           <svg viewBox="-14 -14 28 28" aria-hidden="true">
             <path d="M-9,9 C-9,5 -6,3 -3,4 C-1,5 -1,8 -3,9 C-5,10 -8,10 -9,9 Z M-2,3 L8,-8 C9,-9 10,-8 9,-7 L-1,5" />
           </svg>
-          Style
+          {t('Style', 'Wygląd')}
         </button>
         {inWindowView ? (
           <button onClick={onWindow}>
             <svg viewBox="-14 -14 28 28" aria-hidden="true">
               <path d="M0,-9 L0,7 M-5,2 L0,7 L5,2 M-9,10 L9,10" />
             </svg>
-            Take down
+            {t('Take down', 'Zdejmij')}
           </button>
         ) : (
           <button className={confirm ? 'danger' : undefined} onClick={() => (confirm ? onRemove() : setConfirm(true))}>
             <svg viewBox="-14 -14 28 28" aria-hidden="true">
               <path d="M-8,-6 L8,-6 M-3,-6 L-3,-9 L3,-9 L3,-6 M-6,-6 L-5,9 L5,9 L6,-6" />
             </svg>
-            {confirm ? 'Sure?' : 'Remove'}
+            {confirm ? t('Sure?', 'Na pewno?') : t('Remove', 'Usuń')}
           </button>
         )}
       </div>
@@ -429,12 +446,12 @@ export function PlantCard({ plant, now, inWindowView, onWater, onMove, onWindow,
           {onPress ? (
             <button data-sound="page" onClick={onPress}>
               <svg viewBox="-14 -14 28 28" aria-hidden="true">{PRESS_ICON}</svg>
-              Press a flower for the book
+              {t('Press a flower for the book', 'Zasusz kwiatek do zielnika')}
             </button>
           ) : (
             <button className="quiet" onClick={onBook}>
               <svg viewBox="-14 -14 28 28" aria-hidden="true">{PRESS_ICON}</svg>
-              Pressed today · open the book
+              {t('Pressed today · open the book', 'Zasuszony dziś · otwórz zielnik')}
             </button>
           )}
         </div>
@@ -444,10 +461,11 @@ export function PlantCard({ plant, now, inWindowView, onWater, onMove, onWindow,
 }
 
 export function MoveBanner({ text, onCancel }: { text: string; onCancel: () => void }) {
+  const w = useWords();
   return (
     <div className="banner" role="status">
       <span>{text}</span>
-      <button onClick={onCancel}>Cancel</button>
+      <button onClick={onCancel}>{w.t('Cancel', 'Anuluj')}</button>
     </div>
   );
 }

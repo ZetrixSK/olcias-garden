@@ -3,6 +3,7 @@ import { plantedAtForStage, stageAt } from './growth';
 import { MAX_DRAWINGS, NO_DECOR, parseDecor, type Decor, type Drawing, type Photo, type Wallpaper } from './decor';
 import { MAX_NAME, MAX_NOTE, MAX_PRESSED, parsePressed, pressedToday, pressingOf, type Pressing } from './pressed';
 import { parseOwnRoom, type OwnRoom } from '../theme/ownRoom';
+import { parseLang, type Lang } from '../i18n';
 import { parseCandle, parseCandleLit, type CandleLit, type CandleLook } from './candle';
 import { parseDiary, withEntry, withoutEntry, type Diary, type Mood } from './diary';
 import { designId, NO_DESIGNS, PANSY_PRESETS, parseDesigns, upsert, type Designs, type PansyDesign, type PotDesign, type PotRef } from './designs';
@@ -67,6 +68,10 @@ export type Settings = {
   candleLit: CandleLit;
   /** Soft sounds of the weather and the room. Off unless she turns them on. */
   sound: boolean;
+  /** Polish, English, or English with Polish flower names (the first, and still the default). */
+  lang: Lang;
+  /** Whether her diary and pressed-flower notes go up with the shared garden. Off unless both agree. */
+  shareNotes: boolean;
 };
 
 export const SAVE_VERSION = 4;
@@ -103,6 +108,8 @@ export const DEFAULT_SETTINGS: Settings = {
   candle: null,
   candleLit: null,
   sound: false,
+  lang: 'mixed',
+  shareNotes: false,
 };
 
 export function newId(): string {
@@ -412,6 +419,8 @@ function parseSettings(v: unknown): Settings {
     candle: parseCandle(s.candle),
     candleLit: parseCandleLit(s.candleLit),
     sound: s.sound === true,
+    lang: parseLang(s.lang),
+    shareNotes: s.shareNotes === true,
   };
 }
 

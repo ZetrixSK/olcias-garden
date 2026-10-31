@@ -1,5 +1,6 @@
 import { imagesInUse } from './decor';
 import { parseSave, type GardenState } from './state';
+import { words, type Words } from '../i18n';
 
 /**
  * A backup is one plain file: the whole garden save, with her pictures written into it as text,
@@ -71,12 +72,13 @@ export function backupName(now: number): string {
 }
 
 /** What's in a backup, to say before restoring it. */
-export function backupSummary(r: Restored): string {
-  const n = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+export function backupSummary(r: Restored, w: Words = words('mixed')): string {
+  const n = (count: number, en: [string, string], pl: [string, string, string]) =>
+    `${count} ${w.pl ? w.plural(count, ...pl) : count === 1 ? en[0] : en[1]}`;
   return [
-    n(r.garden.plants.length, 'plant', 'plants'),
-    n(Object.keys(r.garden.diary).length, 'diary page', 'diary pages'),
-    n(r.garden.pressed.length, 'pressed flower', 'pressed flowers'),
-    n(Object.keys(r.images).length, 'picture', 'pictures'),
+    n(r.garden.plants.length, ['plant', 'plants'], ['roślina', 'rośliny', 'roślin']),
+    n(Object.keys(r.garden.diary).length, ['diary page', 'diary pages'], ['strona pamiętnika', 'strony pamiętnika', 'stron pamiętnika']),
+    n(r.garden.pressed.length, ['pressed flower', 'pressed flowers'], ['zasuszony kwiat', 'zasuszone kwiaty', 'zasuszonych kwiatów']),
+    n(Object.keys(r.images).length, ['picture', 'pictures'], ['obrazek', 'obrazki', 'obrazków']),
   ].join(', ');
 }

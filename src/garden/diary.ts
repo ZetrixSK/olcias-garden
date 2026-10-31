@@ -12,6 +12,13 @@ export const MOOD_NAMES: Record<Mood, string> = {
   teary: 'Teary', angry: 'Angry', anxious: 'Anxious', unwell: 'Unwell',
 };
 
+/** The moods in Polish, as she'd say them of herself. */
+export const MOOD_NAMES_PL: Record<Mood, string> = {
+  happy: 'Szczęśliwa', joy: 'W siódmym niebie', love: 'Zakochana', calm: 'Spokojna', proud: 'Dumna', excited: 'Podekscytowana',
+  silly: 'Rozbawiona', grateful: 'Wdzięczna', sleepy: 'Śpiąca', tired: 'Zmęczona', meh: 'Tak sobie', sad: 'Smutna',
+  teary: 'Zapłakana', angry: 'Zła', anxious: 'Niespokojna', unwell: 'Chora',
+};
+
 export type DiaryEntry = { mood: Mood | null; text: string; savedAt: number };
 /** Keyed by the local date, `YYYY-MM-DD`. */
 export type Diary = Record<string, DiaryEntry>;

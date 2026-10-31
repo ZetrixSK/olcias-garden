@@ -9,6 +9,7 @@ import { DIARY_ICON } from './Diary';
 import { BACKUP_ICON } from './Backup';
 import { CAMERA_ICON } from './Picture';
 import { ambience } from '../sound/ambience';
+import { LANGS, useWords, type Lang } from '../i18n';
 
 const SUN = (
   <g>
@@ -40,7 +41,7 @@ export function weatherIcon(w: Weather): JSX.Element {
 }
 
 const SKY_ICON: Record<SkyKind, JSX.Element> = { clear: SUN, cloudy: CLOUD, rain: RAIN };
-const SKY_NAME: Record<SkyKind, string> = { clear: 'Clear', cloudy: 'Cloudy', rain: 'Rain' };
+const SKY_NAME: Record<SkyKind, [string, string]> = { clear: ['Clear', 'Pogodnie'], cloudy: ['Cloudy', 'Pochmurno'], rain: ['Rain', 'Deszcz'] };
 
 const VIEW_ICON: Record<View, JSX.Element> = {
   room: <path d="M-9,10 L-9,-2 A9,9 0 0 1 9,-2 L9,10 Z M0,-11 L0,10 M-9,2 L9,2" />,
@@ -53,11 +54,19 @@ function Icon({ children }: { children: JSX.Element }) {
   return <svg viewBox="-14 -14 28 28">{children}</svg>;
 }
 
-const STATUS_TEXT: Record<WeatherStatus, string> = {
-  live: 'Live weather',
-  offline: 'Live weather · offline for now',
-  clock: 'Following the clock',
-  manual: 'Chosen by you',
+const STATUS_TEXT: Record<WeatherStatus, [string, string]> = {
+  live: ['Live weather', 'Prawdziwa pogoda'],
+  offline: ['Live weather · offline for now', 'Prawdziwa pogoda · na razie bez internetu'],
+  clock: ['Following the clock', 'Według zegara'],
+  manual: ['Chosen by you', 'Wybrana przez Ciebie'],
+};
+
+/** Each language, named in itself, and what it means. */
+const LANG_NAME: Record<Lang, string> = { pl: 'Polski', en: 'English', mixed: 'EN+PL' };
+const LANG_ABOUT: Record<Lang, string> = {
+  pl: 'Wszystko po polsku',
+  en: 'Everything in English',
+  mixed: 'English, with Polish flower names',
 };
 
 export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onDiary, memory, onBook, onBackup, onPicture, onDecorate, onClock, onStudio, onOwnRoom }: {
@@ -85,11 +94,14 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
   const manual = settings.weatherMode === 'manual';
   // picking a sky keeps the current day or night, and the other way round
   const choose = (patch: Partial<Weather>) => onSettings({ weatherMode: 'manual', manual: { ...weather, ...patch } });
+  const w = useWords();
+  const { t } = w;
+  const menuName = t('Weather and room', 'Pogoda i pokój');
   return (
     <>
       <button
         className="fab left"
-        aria-label={other === 'shelves' ? 'Go to the shelves' : 'Go to the window'}
+        aria-label={other === 'shelves' ? t('Go to the shelves', 'Idź do półek') : t('Go to the window', 'Idź do okna')}
         onClick={() => onSettings({ view: other })}
       >
         <Icon>{VIEW_ICON[other]}</Icon>
@@ -97,28 +109,28 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
       {settings.letter !== 'deleted' && (
         <button
           className={settings.letter === 'unread' ? 'fab left second letter-fab unread' : 'fab left second letter-fab'}
-          aria-label="A letter"
+          aria-label={t('A letter', 'List')}
           onClick={onLetter}
         >
           <Icon>{ENVELOPE_ICON}</Icon>
         </button>
       )}
-      <button className={settings.letter !== 'deleted' ? 'fab left third' : 'fab left second'} aria-label="Diary" data-sound="page" onClick={onDiary}>
+      <button className={settings.letter !== 'deleted' ? 'fab left third' : 'fab left second'} aria-label={t('Diary', 'Pamiętnik')} data-sound="page" onClick={onDiary}>
         <Icon>{DIARY_ICON}</Icon>
         {memory && <span className="memory-dot" />}
       </button>
-      <button className="fab right second" aria-label="While you were away" onClick={onClock}>
+      <button className="fab right second" aria-label={t('While you were away', 'Kiedy Cię nie było')} onClick={onClock}>
         <Icon>{CLOCK_ICON}</Icon>
       </button>
-      <button className="fab right" aria-label="Weather and room" aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
+      <button className="fab right" aria-label={menuName} aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
         <Icon>{weatherIcon(weather)}</Icon>
         {status === 'live' && <span className="live-dot" />}
       </button>
       {menu && (
         <>
           <div className="scrim" onClick={() => setMenu(false)} />
-          <div className="weather-menu" role="dialog" aria-label="Weather and room">
-            <p className="hint">{STATUS_TEXT[status]}</p>
+          <div className="weather-menu" role="dialog" aria-label={menuName}>
+            <p className="hint">{t(...STATUS_TEXT[status])}</p>
             <button
               className="wide"
               aria-pressed={settings.weatherMode === 'live'}
@@ -128,23 +140,27 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
               }}
               disabled={locating}
             >
-              {locating ? 'Finding you…' : settings.location ? 'Live weather' : 'Live weather · uses location'}
+              {locating
+                ? t('Finding you…', 'Szukam Cię…')
+                : settings.location
+                  ? t('Live weather', 'Prawdziwa pogoda')
+                  : t('Live weather · uses location', 'Pogoda z lokalizacji')}
             </button>
             <button className="wide" aria-pressed={settings.weatherMode === 'clock'} onClick={() => onSettings({ weatherMode: 'clock' })}>
-              Follow the clock
+              {t('Follow the clock', 'Według zegara')}
             </button>
             <div className="row three">
               {SKY_KINDS.map((k) => (
-                <button key={k} aria-label={SKY_NAME[k]} aria-pressed={manual && weather.sky === k} onClick={() => choose({ sky: k })}>
+                <button key={k} aria-label={t(...SKY_NAME[k])} aria-pressed={manual && weather.sky === k} onClick={() => choose({ sky: k })}>
                   <Icon>{SKY_ICON[k]}</Icon>
                 </button>
               ))}
             </div>
             <div className="row two">
-              <button aria-label="Day" aria-pressed={manual && !weather.night} onClick={() => choose({ night: false })}>
+              <button aria-label={t('Day', 'Dzień')} aria-pressed={manual && !weather.night} onClick={() => choose({ night: false })}>
                 <Icon>{SUN}</Icon>
               </button>
-              <button aria-label="Night" aria-pressed={manual && weather.night} onClick={() => choose({ night: true })}>
+              <button aria-label={t('Night', 'Noc')} aria-pressed={manual && weather.night} onClick={() => choose({ night: true })}>
                 <Icon>{MOON}</Icon>
               </button>
             </div>
@@ -156,7 +172,7 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
               }}
             >
               <Icon>{BOOK_ICON}</Icon>
-              Pressed flowers
+              {t('Pressed flowers', 'Zielnik')}
             </button>
             <button
               className="wide with-icon"
@@ -166,9 +182,9 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
               }}
             >
               <Icon>{CAMERA_ICON}</Icon>
-              Save a picture
+              {t('Save a picture', 'Zapisz obrazek')}
             </button>
-            <p className="hint">Make your own</p>
+            <p className="hint">{t('Make your own', 'Zrób coś swojego')}</p>
             <button
               className="wide two-line"
               onClick={() => {
@@ -176,15 +192,15 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
                 onDecorate();
               }}
             >
-              Decorate
-              <small>wallpaper, photo, drawings</small>
+              {t('Decorate', 'Ozdabianie')}
+              <small>{t('wallpaper, photo, drawings', 'tapeta, zdjęcie, rysunki')}</small>
             </button>
             <div className="row three">
               {(
                 [
-                  ['pansy', 'Bratek'],
-                  ['pot', 'Pot'],
-                  ['candle', 'Candle'],
+                  ['pansy', w.lang === 'en' ? 'Pansy' : t('Bratek', 'Bratek')],
+                  ['pot', t('Pot', 'Doniczka')],
+                  ['candle', t('Candle', 'Świeca')],
                 ] as const
               ).map(([what, name]) => (
                 <button
@@ -198,7 +214,7 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
                 </button>
               ))}
             </div>
-            <p className="hint">Sounds</p>
+            <p className="hint">{t('Sounds', 'Dźwięki')}</p>
             <div className="row two">
               <button
                 aria-pressed={settings.sound}
@@ -208,28 +224,28 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
                   onSettings({ sound: true });
                 }}
               >
-                On
+                {t('On', 'Wł.')}
               </button>
               <button aria-pressed={!settings.sound} onClick={() => onSettings({ sound: false })}>
-                Off
+                {t('Off', 'Wył.')}
               </button>
             </div>
-            <p className="hint">Climbing vines</p>
+            <p className="hint">{t('Climbing vines', 'Pnącza')}</p>
             <div className="row two">
               <button aria-pressed={settings.vines} onClick={() => onSettings({ vines: true })}>
-                On
+                {t('On', 'Wł.')}
               </button>
               <button aria-pressed={!settings.vines} onClick={() => onSettings({ vines: false })}>
-                Off
+                {t('Off', 'Wył.')}
               </button>
             </div>
-            <p className="hint">Room</p>
+            <p className="hint">{t('Room', 'Pokój')}</p>
             <div className="row three">
               <button aria-pressed={!settings.useOwn && settings.theme === 'cozy'} onClick={() => onSettings({ theme: 'cozy', useOwn: false })}>
-                Cozy
+                {t('Cozy', 'Przytulny')}
               </button>
               <button aria-pressed={!settings.useOwn && settings.theme === 'witchy'} onClick={() => onSettings({ theme: 'witchy', useOwn: false })}>
-                Witchy
+                {t('Witchy', 'Wiedźmowy')}
               </button>
               <button
                 aria-pressed={settings.useOwn}
@@ -238,7 +254,7 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
                   onOwnRoom(false);
                 }}
               >
-                Mine
+                {t('Mine', 'Mój')}
               </button>
             </div>
             {settings.useOwn && (
@@ -249,10 +265,10 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
                   onOwnRoom(true);
                 }}
               >
-                Change my room's colours
+                {t("Change my room's colours", 'Zmień kolory pokoju')}
               </button>
             )}
-            <p className="hint">Keep it safe</p>
+            <p className="hint">{t('Keep it safe', 'Kopia zapasowa')}</p>
             <button
               className="wide with-icon"
               onClick={() => {
@@ -261,8 +277,17 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
               }}
             >
               <Icon>{BACKUP_ICON}</Icon>
-              Backup · save or restore
+              {t('Backup · save or restore', 'Zapisz albo przywróć')}
             </button>
+            <p className="hint">Language · Język</p>
+            <div className="row three">
+              {LANGS.map((l) => (
+                <button key={l} lang={l === 'pl' ? 'pl' : 'en'} aria-pressed={settings.lang === l} aria-label={`${LANG_NAME[l]}: ${LANG_ABOUT[l]}`} onClick={() => onSettings({ lang: l })}>
+                  {LANG_NAME[l]}
+                </button>
+              ))}
+            </div>
+            <p className="hint lang-about">{LANG_ABOUT[settings.lang]}</p>
           </div>
         </>
       )}

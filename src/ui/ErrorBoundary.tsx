@@ -20,7 +20,8 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { failed: 
     return (
       <div className="oops" role="alert">
         <p>The garden stumbled for a moment.</p>
-        <button onClick={() => window.location.reload()}>Open it again</button>
+        <p lang="pl">Ogród na chwilę się potknął.</p>
+        <button onClick={() => window.location.reload()}>Open it again · Otwórz ponownie</button>
       </div>
     );
   }
