@@ -526,14 +526,42 @@ body {
   stroke-linejoin: round;
 }
 
-.view {
+.pager {
   position: absolute;
   inset: 0;
-  animation: view-in 0.6s ease-out;
+  overflow: hidden;
+  /* sideways swipes move between the window and the shelves */
+  touch-action: none;
+}
+.pager-track {
+  position: absolute;
+  inset: 0;
+}
+.pager-track.moving {
+  will-change: transform;
+}
+/* the two views side by side on the track; the one out of sight isn't painted unless sliding */
+.view {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  animation: view-in 0.45s ease-out;
+}
+.view:not(.current) {
+  visibility: hidden;
+}
+.pager-track.moving .view {
+  visibility: visible;
 }
 @keyframes view-in {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .view {
+    animation: none;
+  }
 }
 
 .live-dot {
@@ -2195,4 +2223,36 @@ body {
 }
 .people button {
   min-height: 44px;
+}
+
+/* small touches that make it feel alive under the finger */
+.weather-menu {
+  transform-origin: top right;
+  animation: menu-in 0.22s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+@keyframes menu-in {
+  from { transform: scale(0.92) translateY(-6px); opacity: 0; }
+}
+.sheet {
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.fab,
+.visit-bar button,
+.weather-menu button {
+  transition: transform 90ms ease-out, background-color 150ms ease-out;
+}
+.fab:active,
+.visit-bar button:active,
+.weather-menu button:active {
+  transform: scale(0.94);
+}
+@media (prefers-reduced-motion: reduce) {
+  .weather-menu {
+    animation: none;
+  }
+  .fab:active,
+  .visit-bar button:active,
+  .weather-menu button:active {
+    transform: none;
+  }
 }

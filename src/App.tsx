@@ -68,6 +68,7 @@ import { canAddToHomeScreen, Welcome } from './ui/InstallHint';
 import { BouquetCard, BouquetStudio, ParcelsSheet } from './ui/Bouquets';
 import { arrivalNotice, NoticeNote, PostSheet, type Notice } from './ui/Post';
 import { VisitView, visitorNotice, type Visiting } from './ui/Visit';
+import { ViewSwiper } from './ui/ViewSwiper';
 import { applyAction } from './remote/actions';
 import { useMail } from './remote/useMail';
 import { accessRules, blockedTags, claimTag, sendMail, setAccess, setBlocked, visitAction, visitGarden, type PostError } from './remote/client';
@@ -669,14 +670,27 @@ export function App() {
   const stylePlant = mode.kind === 'style' ? garden.plants.find((p) => p.id === mode.id) : undefined;
   const studioPlant = mode.kind === 'potStudio' && mode.forPlant ? garden.plants.find((p) => p.id === mode.forPlant) : undefined;
 
+  // in someone else's garden only theirs is drawn: two gardens on the page would mix their skies
+  if (mode.kind === 'visit') {
+    return (
+      <LangProvider value={settings.lang}>
+        <VisitView visit={mode.visit} now={now} viewH={viewH} onAct={visitAct} onLeave={() => setMode({ kind: 'idle' })} />
+        {notice && <NoticeNote notice={notice} onDone={closeNotice} />}
+      </LangProvider>
+    );
+  }
+
   return (
     <LangProvider value={settings.lang}>
       <div
         className={`garden theme-${theme}${uiDark ? ' ui-dark' : ''}${weather.night ? ' night' : ''}${weather.twilight === 'dusk' ? ' dusk' : ''}${lapse ? ' replaying' : ''}`}
         style={paletteVars(theme, weather, seasonShown(now), own)}
       >
-        <div className="view" key={settings.view}>
-          {settings.view === 'room' ? (
+        <ViewSwiper
+          view={settings.view}
+          enabled={mode.kind === 'idle' && !lapse && !letterOpen && !diaryOpen && !bookOpen && !welcoming}
+          onChange={(view) => setSettings({ view })}
+          room={
             <Scene
               theme={theme}
               weather={weather}
@@ -706,7 +720,8 @@ export function App() {
               wateringId={wateringId}
               onSpot={onSpot}
             />
-          ) : (
+          }
+          shelves={
             <ShelfView
               theme={theme}
               weather={weather}
@@ -727,8 +742,8 @@ export function App() {
               wateringId={wateringId}
               onSlot={onSlot}
             />
-          )}
-        </div>
+          }
+        />
         <div className="grain" style={{ backgroundImage: `url(${grain})` }} />
         <Toolbar
           settings={settings}
@@ -911,9 +926,6 @@ export function App() {
             onSetAccess={setAccess}
             onClose={() => setMode({ kind: 'idle' })}
           />
-        )}
-        {mode.kind === 'visit' && (
-          <VisitView visit={mode.visit} now={now} viewH={viewH} onAct={visitAct} onLeave={() => setMode({ kind: 'idle' })} />
         )}
         {notice && <NoticeNote notice={notice} onDone={closeNotice} />}
         {mode.kind === 'parcels' && (

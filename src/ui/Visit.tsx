@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { stageAt } from '../garden/growth';
 import { SPECIES, STAGE_LABEL, type SpeciesId } from '../garden/species';
-import { freeShelfSlots, isHanging, type GardenState, type SlotId, type WindowSpot } from '../garden/state';
+import { freeShelfSlots, isHanging, newId, type GardenState, type SlotId, type WindowSpot } from '../garden/state';
+import { ViewSwiper } from './ViewSwiper';
 import { flameOn } from '../garden/candle';
 import type { Words } from '../i18n';
 import { useWords } from '../i18n';
@@ -201,13 +202,14 @@ export function VisitView({ visit, now, viewH, onAct, onLeave }: { visit: Visiti
   return (
     <div className="visit-layer">
       <div className={`garden theme-${theme}${weather.night ? ' night' : ''}${weather.twilight === 'dusk' ? ' dusk' : ''}`} style={paletteVars(theme, weather, seasonShown(now), own)}>
-        <div className="view" key={view}>
-          {view === 'room' ? (
+        <ViewSwiper view={view} enabled={!picked} onChange={setView}
+          room={
             <Scene theme={theme} weather={weather} viewH={viewH} vines={vineSpecs(g)} candle={s.candle} candleOn={candleOn} garden={g} now={now} selectedId={plant?.id ?? null} placingId={null} wateringId={watering} onSpot={onSpot} />
-          ) : (
+          }
+          shelves={
             <ShelfView theme={theme} weather={weather} viewH={viewH} garden={g} now={now} selectedId={plant?.id ?? null} movingId={null} candle={s.candle} candleOn={candleOn} wateringId={watering} onSlot={onSlot} />
-          )}
-        </div>
+          }
+        />
       </div>
       <div className="visit-bar">
         <div>
@@ -245,7 +247,8 @@ export function VisitView({ visit, now, viewH, onAct, onLeave }: { visit: Visiti
       )}
       {picked?.kind === 'slot' && (
         <PlantPicker
-          onPick={(species) => void act('plant', { slot: picked.slot, species })}
+          // its id is chosen here, so it stays the same plant while their garden is looked at again
+          onPick={(species) => void act('plant', { id: newId(), slot: picked.slot, species })}
           onDrawing={null}
           busy={false}
           error={error ? postMessage(error, w) : null}

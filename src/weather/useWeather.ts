@@ -11,7 +11,13 @@ export type WeatherStatus = 'clock' | 'live' | 'offline' | 'manual';
  */
 export function useWeather(settings: Settings, now: number): { weather: Weather; status: WeatherStatus } {
   const { weatherMode, location, manual } = settings;
-  const [live, setLive] = useState<{ weather: Weather; ok: boolean } | null>(null);
+  // the last reading for this place shows from the first frame, rather than the clock's guess
+  // and then a jump once the weather has been fetched
+  const [live, setLive] = useState<{ weather: Weather; ok: boolean } | null>(() => {
+    if (weatherMode !== 'live' || !location) return null;
+    const { weather, needsFetch } = pickWeather(readCache(), location.lat, location.lon, Date.now());
+    return needsFetch && !readCache() ? null : { weather, ok: !needsFetch };
+  });
 
   useEffect(() => {
     if (weatherMode !== 'live' || !location) return;

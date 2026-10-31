@@ -137,6 +137,7 @@ The one approved backend is Supabase (project `bnzwavfiltdemetdmmvg`), used only
 * Schema changes go through migrations, also kept in `supabase/migrations/`; check the advisors after each one.
 * The post (bouquets sent between gardens by tag) uses `mailboxes`, `mail` and `mail_blocks`. Phones never see each other's ids: tags are taken and mail is sent only through the `claim_tag` and `send_mail` functions (rate-limited, blocked senders dropped silently). Anything received is parsed defensively (`parseBouquet`) before it touches her garden.
 * Visiting: owners set levels in `garden_access` ('*' for anyone with their tag, or per tag; 0 can't visit, 1 look, 2 water, 3 tend, 4 everything). Gardens are private by default. Visitors only go through `visit_garden` / `visit_action`, which check the level each time; a visitor's action is an ordinary row in `actions` (with `from_tag`) carried out by the owner's phone.
+* Only one garden may be drawn on a page at a time: the drawings share SVG ids (sky, clips, glows), so a second garden would borrow the first one's sky. The two views of the same garden can be on the page together (they draw identical shared parts).
 * The admin page is a separate entry (`admin.html`, `src/admin/`), kept out of her app's bundle and offline cache. Its sign-in uses its own storage key so it never replaces a device's anonymous session. In dev, `/admin.html?demo` runs it on a local garden without the database.
 
 ## 6. iPhone experience and PWA

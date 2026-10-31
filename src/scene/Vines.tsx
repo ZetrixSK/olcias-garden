@@ -320,13 +320,30 @@ function Growth({ rose, pts, length, s0, s1, seed, palette }: {
 
 type Shaped = { pts: Pt[]; length: number; total: number; runnerEnd: number; rose: boolean; seed: number; color: string; palette: PansyColors[] };
 
+/**
+ * A route with its wander depends only on where it goes, never on how far the vine has grown, so
+ * it's worked out once and kept: a growing vine (during a replay, say) only cuts it shorter.
+ */
+const routes = new Map<string, { route: Pt[]; wandered: Pt[] }>();
+function routeFor(kind: RouteKind, start: Start, phase: number, rose: boolean) {
+  const key = `${kind}|${start.x.toFixed(1)}|${start.y.toFixed(1)}|${phase}|${rose}`;
+  let r = routes.get(key);
+  if (!r) {
+    const route = resample(ROUTE_SHAPES[kind](start));
+    r = { route, wandered: wander(route, phase, rose) };
+    if (routes.size > 60) routes.clear();
+    routes.set(key, r);
+  }
+  return r;
+}
+
 function shape(vine: VineSpec, kind: RouteKind, start: Start, phase: number): Shaped | null {
   if (vine.length <= 0) return null;
-  const route = resample(ROUTE_SHAPES[kind](start));
+  const rose = vine.species === 'rose';
+  const { route, wandered } = routeFor(kind, start, phase, rose);
   const total = route[route.length - 1]!.s;
   const length = Math.min(1, vine.length) * total;
-  const rose = vine.species === 'rose';
-  const pts = wander(route, phase, rose).filter((p) => p.s <= length);
+  const pts = wandered.filter((p) => p.s <= length);
   if (pts.length < 2) return null;
   const runnerEnd = route.find((p) => p.kind !== 'runner')?.s ?? total;
   const seed = [...vine.id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
