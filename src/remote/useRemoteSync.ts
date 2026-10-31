@@ -17,6 +17,8 @@ export function useRemoteSync(garden: GardenState | null, enabled: boolean): voi
   const uploader = useRef<Uploader | null>(null);
   const latest = useRef<GardenState | null>(null);
   latest.current = garden;
+  // the first garden after loading (or after sharing starts) is the opening; every one after it is a change
+  const first = useRef(true);
 
   useEffect(() => {
     if (!on) return;
@@ -24,6 +26,11 @@ export function useRemoteSync(garden: GardenState | null, enabled: boolean): voi
     const label = deviceLabel(navigator.userAgent, standalone);
     const up = createUploader((g, opened) => uploadGarden(g, SAVE_VERSION, opened, label));
     uploader.current = up;
+    // switched on after the garden had already loaded (a welcome was showing): this is the opening
+    if (latest.current && first.current) {
+      first.current = false;
+      up.opened(sharedGarden(latest.current));
+    }
     let hiddenAt: number | null = null;
     const onVisibility = () => {
       const g = latest.current;
@@ -50,8 +57,6 @@ export function useRemoteSync(garden: GardenState | null, enabled: boolean): voi
     };
   }, [on]);
 
-  // the first garden after loading is the opening; every one after it is a change
-  const first = useRef(true);
   useEffect(() => {
     const up = uploader.current;
     if (!up || !garden) return;

@@ -54,7 +54,7 @@ import { Letter } from './ui/Letter';
 import { PressedBook } from './ui/PressedBook';
 import { DiaryBook } from './ui/Diary';
 import { BackupSheet } from './ui/Backup';
-import { canAddToHomeScreen, InstallHint } from './ui/InstallHint';
+import { canAddToHomeScreen, Welcome } from './ui/InstallHint';
 import { dayKey, onThisDay } from './garden/diary';
 import type { Restored } from './garden/backup';
 import { pressedToday } from './garden/pressed';
@@ -216,7 +216,14 @@ export function App() {
   const loaded = useRef(false);
   const gardenRef = useRef<GardenState | null>(null);
   gardenRef.current = garden;
-  useRemoteSync(garden, SYNC);
+  // in Safari on an iPhone a welcome comes first, instead of the garden: it belongs on the Home
+  // Screen, which keeps a save of its own, so the letter waits for her there
+  const installPreview = useMemo(() => new URLSearchParams(window.location.search).has('installhint'), []);
+  const [installHidden, setInstallHidden] = useState(false);
+  const welcoming = !!garden && !installHidden && (installPreview || (!garden.settings.installHint && canAddToHomeScreen()));
+  // nothing is shared until her garden has loaded and is known not to be waiting behind the welcome
+  const sharing = SYNC && garden !== null && !welcoming;
+  useRemoteSync(garden, sharing);
   const [lapse, setLapse] = useState<Lapse | null>(null);
   /** The watering can and droplets over a plant, whether she watered it or it came from the admin page. */
   const showWatering = useCallback((id: string) => {
@@ -232,8 +239,6 @@ export function App() {
   /** The day she last opened the diary, so its "on this day" mark goes once she's seen it. */
   const [diarySeenOn, setDiarySeenOn] = useState<string | null>(null);
   // ?installhint shows the iPhone Home Screen note on any phone, to see how it looks
-  const installPreview = useMemo(() => new URLSearchParams(window.location.search).has('installhint'), []);
-  const [installHidden, setInstallHidden] = useState(false);
   const openBook = useCallback(() => setBookOpen(true), []);
   const [pictures, setPictures] = useState<Pictures>({});
   const [adding, setAdding] = useState<'wallpaper' | 'photo' | 'drawing' | null>(null);
@@ -337,18 +342,14 @@ export function App() {
     window.setTimeout(() => setLapse((l) => (l?.skipped ? null : l)), 900);
   };
 
-  // in Safari on iPhone, a note on keeping the garden on the Home Screen comes first, once
-  const offerInstall =
-    !!garden && !installHidden && lapse === null && (installPreview || (!garden.settings.installHint && canAddToHomeScreen()));
-
   // the letter opens by itself the first time, once any replay has finished
   const letterUnread = garden?.settings.letter === 'unread';
   const replaying = lapse !== null;
   useEffect(() => {
-    if (!letterUnread || replaying || offerInstall) return;
+    if (!letterUnread || replaying || welcoming) return;
     const t = window.setTimeout(() => setLetterOpen(true), 700);
     return () => window.clearTimeout(t);
-  }, [letterUnread, replaying, offerInstall]);
+  }, [letterUnread, replaying, welcoming]);
 
   const update = useCallback((fn: (g: GardenState) => GardenState) => setGarden((g) => (g ? fn(g) : g)), []);
 
@@ -382,7 +383,7 @@ export function App() {
   const moments = useMemo(() => MOMENTS.filter((m) => (sent[m] ?? 0) > now), [sent, now]);
   // changes sent from the admin page wait until the garden is open and no replay is playing
   useRemoteActions(
-    SYNC,
+    sharing,
     garden !== null && lapse === null,
     gardenRef,
     setGarden,
@@ -717,9 +718,9 @@ export function App() {
           />
         )}
         {mode.kind === 'backup' && <BackupSheet garden={garden} onRestore={restore} onClose={() => setMode({ kind: 'idle' })} />}
-        {offerInstall && (
-          <InstallHint
-            onDone={() => {
+        {welcoming && (
+          <Welcome
+            onStayHere={() => {
               setInstallHidden(true);
               setSettings({ installHint: true });
             }}

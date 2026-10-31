@@ -1722,18 +1722,55 @@ body {
   margin-top: 12px;
 }
 
-/* the one-time note in Safari on iPhone */
-.sheet.install-hint {
-  z-index: 30;
-  padding: 14px 18px 16px;
+/* in Safari on an iPhone, before the garden: the way to the Home Screen, where the letter waits */
+.welcome {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: calc(env(safe-area-inset-top, 0px) + 24px) 22px calc(env(safe-area-inset-bottom, 0px) + 24px);
+  background: #f3ead6;
+  color: #3d2633;
+  font-family: 'Kalam', system-ui, sans-serif;
+  text-align: center;
 }
-.install-hint ol {
-  margin: 8px 0 4px;
-  padding-left: 22px;
-  font-size: 17px;
+.welcome-inner {
+  width: min(360px, 100%);
+  animation: letter-in 0.8s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.welcome-art {
+  width: min(250px, 72vw);
+  height: auto;
+  overflow: visible;
+}
+.welcome h1,
+.welcome-lead {
+  text-wrap: balance;
+}
+.welcome h1 {
+  margin: 14px 0 4px;
+  font-size: 30px;
+  line-height: 1.15;
+}
+.welcome-lead {
+  margin: 0 0 14px;
+  font-size: 18px;
+  line-height: 1.4;
+}
+.welcome ol {
+  margin: 0 auto;
+  padding: 14px 18px 12px 40px;
+  text-align: left;
+  font-size: 18px;
   line-height: 1.45;
+  background: #f8f1e4;
+  border: 1.5px solid #3d2633;
+  border-radius: 6px 12px 8px 12px;
+  box-shadow: 0 3px 0 rgba(61, 38, 51, 0.22);
 }
-.install-hint li {
+.welcome li {
   margin-bottom: 4px;
 }
 .install-share {
@@ -1746,10 +1783,22 @@ body {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.install-hint > button {
-  width: 100%;
-  margin-top: 10px;
-  font-size: 17px;
+.welcome-here {
+  min-height: 44px;
+  margin-top: 18px;
+  padding: 0 12px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 16px;
+  color: #7a5a6a;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-inner {
+    animation: none;
+  }
 }
 
 /* her candle: the flame catches when lit, and a curl of smoke rises when it's blown out */
