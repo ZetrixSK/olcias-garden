@@ -18,6 +18,7 @@ import { moonPhase } from '../weather/moon';
 import { occasionShown, seasonShown } from '../theme/seasons';
 import { Bats, JackOLantern, LanternLight } from './Halloween';
 import { OwnWallpaper, ShelfDrawing, wallFill, type OwnPaper } from './OwnDecor';
+import { BouquetArt } from '../plants/Bouquet';
 import { HangingBat } from './HangingBat';
 
 /** The shelf wall is drawn in a 400 x 760 frame; taller screens show more wall above and more dog below. */
@@ -97,7 +98,7 @@ function Hanger({ x, rimY }: { x: number; rimY: number }) {
   );
 }
 
-export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movingId, wateringId, onSlot, paper = null, pictures = {}, drawingId = null, rainbow = false, moments = [], candle = null, candleOn, onCandle }: {
+export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movingId, wateringId, onSlot, paper = null, pictures = {}, drawingId = null, bouquetId = null, rainbow = false, moments = [], candle = null, candleOn, onCandle }: {
   theme: Theme;
   weather: Weather;
   viewH: number;
@@ -112,6 +113,8 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
   pictures?: Record<string, string>;
   /** The drawing whose card is open. */
   drawingId?: string | null;
+  /** The bouquet whose card is open. */
+  bouquetId?: string | null;
   rainbow?: boolean;
   /** Moments sent from the admin page that are showing now. */
   moments?: readonly Moment[];
@@ -189,6 +192,7 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
         const pos = SLOT_POS[slot];
         const plant = bySlot.get(slot);
         const drawing = plant ? undefined : garden.decor.drawings.find((d) => d.slot === slot);
+        const bouquet = plant || drawing ? undefined : garden.bouquets.find((b) => b.slot === slot);
         const potH = plant ? POT_HEIGHT[plantLook(plant, garden.designs).shape] * PLANT_SCALE : 30;
         const rimY = pos.y - potH;
         return (
@@ -203,6 +207,14 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
                   selected={drawing.id === drawingId}
                   moving={drawing.id === movingId}
                 />
+              ) : bouquet ? (
+                <g className={bouquet.id === movingId ? 'moving' : undefined}>
+                  <ellipse cx="0" cy="0" rx="16" ry="3.4" fill="#000" opacity="0.12" />
+                  <g transform="scale(1.2)">
+                    <BouquetArt bouquet={bouquet} />
+                  </g>
+                  {bouquet.id === bouquetId && <ellipse cx="0" cy="4" rx="34" ry="6" fill="none" className="ink selected-ring" strokeDasharray="4 5" />}
+                </g>
               ) : plant ? (
                 <GardenPlanter
                   plant={plant}

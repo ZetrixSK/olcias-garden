@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   addDrawing,
+  bouquetAt,
+  rememberContact,
+  setTag,
+  cutStems,
+  moveBouquet,
+  receiveBouquet,
+  removeBouquet,
+  unpackParcel,
   addPlant,
   canPress,
   catchUpNights,
@@ -55,6 +63,10 @@ import { PressedBook } from './ui/PressedBook';
 import { DiaryBook } from './ui/Diary';
 import { BackupSheet } from './ui/Backup';
 import { canAddToHomeScreen, Welcome } from './ui/InstallHint';
+import { BouquetCard, BouquetStudio, ParcelsSheet } from './ui/Bouquets';
+import { arrivalNotice, NoticeNote, PostSheet, type Notice } from './ui/Post';
+import { useMail } from './remote/useMail';
+import { blockedTags, claimTag, sendMail, setBlocked } from './remote/client';
 import { dayKey, onThisDay } from './garden/diary';
 import type { Restored } from './garden/backup';
 import { pressedToday } from './garden/pressed';
@@ -179,6 +191,11 @@ type Mode =
   | { kind: 'decorate' }
   /** one of her drawings on the shelves */
   | { kind: 'drawing'; id: string }
+  /** making a bouquet, looking at one on the shelves, or the box of parcels on the floor */
+  | { kind: 'bouquetStudio' }
+  | { kind: 'bouquet'; id: string }
+  | { kind: 'parcels' }
+  | { kind: 'post' }
   /** painting her own room; `draft` shows in the room until she saves or closes */
   | { kind: 'roomStudio'; draft: OwnRoom; editing: boolean }
   /** saving the garden to a file, or bringing one back */
@@ -381,6 +398,18 @@ export function App() {
   // moments sent from the admin page (a rainbow, a visitor at the lake...) and when each one ends
   const [sent, setSent] = useState<Partial<Record<Moment, number>>>({});
   const moments = useMemo(() => MOMENTS.filter((m) => (sent[m] ?? 0) > now), [sent, now]);
+  // post sent to her tag: bouquets come in once the garden is open and no replay is playing
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const closeNotice = useCallback(() => setNotice(null), []);
+  useMail(sharing, garden !== null && lapse === null, gardenRef, setGarden, (a) => setNotice(arrivalNotice(a, words(gardenRef.current?.settings.lang ?? 'mixed'))));
+  const loadBlocked = useCallback(() => blockedTags().catch(() => null), []);
+  /** Takes (or changes) her tag in the post; resolves with why not, or null. */
+  const claim = useCallback(async (tag: string) => {
+    const r = await claimTag(tag);
+    if ('error' in r) return r.error;
+    setGarden((g) => (g ? setTag(g, r.tag) : g));
+    return null;
+  }, []);
   // changes sent from the admin page wait until the garden is open and no replay is playing
   useRemoteActions(
     sharing,
@@ -452,14 +481,19 @@ export function App() {
   const onSlot = (slot: SlotId) => {
     const here = plantAt(garden, slot);
     const drawing = drawingAt(garden, slot);
+    const bouquet = bouquetAt(garden, slot);
     if (mode.kind === 'move') {
       const id = mode.id;
-      update((g) => (g.decor.drawings.some((d) => d.id === id) ? moveDrawing(g, id, slot) : movePlant(g, id, slot)));
+      update((g) =>
+        g.decor.drawings.some((d) => d.id === id) ? moveDrawing(g, id, slot) : g.bouquets.some((b) => b.id === id) ? moveBouquet(g, id, slot) : movePlant(g, id, slot),
+      );
       setMode({ kind: 'idle' });
     } else if (here) {
       setMode(mode.kind === 'card' && mode.id === here.id ? { kind: 'idle' } : { kind: 'card', id: here.id });
     } else if (drawing) {
       setMode(mode.kind === 'drawing' && mode.id === drawing.id ? { kind: 'idle' } : { kind: 'drawing', id: drawing.id });
+    } else if (bouquet) {
+      setMode(mode.kind === 'bouquet' && mode.id === bouquet.id ? { kind: 'idle' } : { kind: 'bouquet', id: bouquet.id });
     } else {
       setMode({ kind: 'pick', slot });
     }
@@ -589,6 +623,7 @@ export function App() {
               paper={paper}
               photoUrl={garden.decor.photo ? (pictures[garden.decor.photo.img] ?? null) : null}
               onFrame={openDecorate}
+              onParcels={() => setMode({ kind: 'parcels' })}
               rainbow={rainbow}
               moments={moments}
               candle={candle}
@@ -614,6 +649,7 @@ export function App() {
               paper={paper}
               pictures={pictures}
               drawingId={mode.kind === 'drawing' ? mode.id : null}
+              bouquetId={mode.kind === 'bouquet' ? mode.id : null}
               rainbow={rainbow}
               moments={moments}
               candle={candle}
@@ -642,6 +678,9 @@ export function App() {
           onPicture={() => setMode({ kind: 'picture' })}
           onBook={openBook}
           onDecorate={openDecorate}
+          onBouquet={() => setMode({ kind: 'bouquetStudio' })}
+          onPost={() => setMode({ kind: 'post' })}
+          postTag={garden.post.tag}
           onOwnRoom={(edit) => {
             if (settings.own && !edit) setSettings({ useOwn: true });
             else setMode({ kind: 'roomStudio', draft: settings.own ?? startingRoom(settings.theme), editing: !!settings.own });
@@ -735,6 +774,78 @@ export function App() {
               setSettings({ own: mode.draft, useOwn: true });
               setMode({ kind: 'idle' });
             }}
+            onClose={() => setMode({ kind: 'idle' })}
+          />
+        )}
+        {mode.kind === 'bouquetStudio' && (
+          <BouquetStudio
+            garden={garden}
+            now={now}
+            canSend={sharing}
+            onClaim={claim}
+            onSend={async (b, cutFrom, to) => {
+              const { stems, vase, ribbon, note, seed } = b;
+              const error = await sendMail(to, 'bouquet', { stems, vase, ribbon, note, seed });
+              if (error) return error;
+              update((g) => rememberContact(cutStems(g, cutFrom, Date.now()), to));
+              setMode({ kind: 'idle' });
+              const w = words(settings.lang);
+              setNotice({ title: w.t(`On its way to #${to}`, `W drodze do #${to}`), text: w.t('It will be there when they next open their garden.', 'Dotrze, gdy następnym razem otworzą swój ogród.') });
+              return null;
+            }}
+            onKeep={(b, cutFrom) => {
+              const t = Date.now();
+              update((g) => receiveBouquet(cutStems(g, cutFrom, t), { ...b, at: t }));
+              setMode({ kind: 'idle' });
+            }}
+            onClose={() => setMode({ kind: 'idle' })}
+          />
+        )}
+        {mode.kind === 'bouquet' && garden.bouquets.some((b) => b.id === mode.id) && (
+          <BouquetCard
+            bouquet={garden.bouquets.find((b) => b.id === mode.id)!}
+            onMove={() => setMode({ kind: 'move', id: mode.id })}
+            onRemove={() => {
+              update((g) => removeBouquet(g, mode.id));
+              setMode({ kind: 'idle' });
+            }}
+            onBlock={
+              sharing
+                ? async () => {
+                    const from = garden.bouquets.find((b) => b.id === mode.id)?.from;
+                    if (!from) return;
+                    const ok = await setBlocked(from, true);
+                    if (ok) setMode({ kind: 'idle' });
+                    const w = words(settings.lang);
+                    setNotice(
+                      ok
+                        ? { title: w.t(`No more post from #${from}`, `Bez poczty od #${from}`), text: w.t('You can unblock them in the post box.', 'Możesz to cofnąć w skrzynce pocztowej.') }
+                        : { title: w.t('Not blocked', 'Nie zablokowano'), text: w.t("Couldn't reach the post. Try again when you're online.", 'Nie udało się połączyć z pocztą. Spróbuj, gdy będzie internet.') },
+                    );
+                  }
+                : undefined
+            }
+            onClose={() => setMode({ kind: 'idle' })}
+          />
+        )}
+        {mode.kind === 'post' && (
+          <PostSheet
+            tag={garden.post.tag}
+            contacts={garden.post.contacts}
+            parcels={garden.parcels.length}
+            onClaim={claim}
+            onParcels={() => setMode({ kind: 'parcels' })}
+            loadBlocked={loadBlocked}
+            onUnblock={(tag) => setBlocked(tag, false)}
+            onClose={() => setMode({ kind: 'idle' })}
+          />
+        )}
+        {notice && <NoticeNote notice={notice} onDone={closeNotice} />}
+        {mode.kind === 'parcels' && (
+          <ParcelsSheet
+            garden={garden}
+            onUnpack={(id) => update((g) => unpackParcel(g, id))}
+            onRemove={(id) => update((g) => removeBouquet(g, id))}
             onClose={() => setMode({ kind: 'idle' })}
           />
         )}

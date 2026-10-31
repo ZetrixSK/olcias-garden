@@ -10,7 +10,7 @@ import '@fontsource/grenze-gotisch/latin-ext-600.css';
 import './styles.css';
 import { App } from './App';
 import { ErrorBoundary } from './ui/ErrorBoundary';
-import { Gallery, IconArt, PressedGallery } from './Gallery';
+import { BouquetGallery, Gallery, IconArt, PressedGallery } from './Gallery';
 import { paletteVars } from './theme/palettes';
 
 if (import.meta.env.PROD) {
@@ -27,6 +27,10 @@ createRoot(document.getElementById('root')!).render(
     ) : import.meta.env.DEV && location.search.includes('pressed') ? (
       <div className="garden" style={paletteVars('cozy', { sky: 'clear', night: false })}>
         <PressedGallery />
+      </div>
+    ) : import.meta.env.DEV && location.search.includes('bouquets') ? (
+      <div className="garden" style={paletteVars('cozy', { sky: 'clear', night: false })}>
+        <BouquetGallery />
       </div>
     ) : import.meta.env.DEV && location.search.includes('gallery') ? (
       <div className="garden" style={paletteVars('cozy', { sky: 'clear', night: false })}>

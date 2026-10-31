@@ -8,6 +8,7 @@ import { parseCandle, parseCandleLit, type CandleLit, type CandleLook } from './
 import { parseDiary, withEntry, withoutEntry, type Diary, type Mood } from './diary';
 import { designId, NO_DESIGNS, PANSY_PRESETS, parseDesigns, upsert, type Designs, type PansyDesign, type PotDesign, type PotRef } from './designs';
 import { lastNight, runNights, settleMiddleDir, trimmed, type Vine } from './vines';
+import { parseCuttings, parseParcels, parsePlaced, pruneCuttings, type Bouquet, type Cutting, type PlacedBouquet } from './bouquets';
 import { POT_KINDS, SPECIES, SPECIES_IDS, type GardenPot, type SpeciesId, type Stage } from './species';
 
 export const SLOT_IDS = [
@@ -94,7 +95,19 @@ export type GardenState = {
   diary: Diary;
   /** Changes sent from the admin page that have been handled here, newest last, so none is ever done twice. */
   remoteDone: RemoteDone[];
+  /** Bouquets standing on the shelves. */
+  bouquets: PlacedBouquet[];
+  /** Bouquets waiting in a box on the floor, until there's room on the shelves. */
+  parcels: Bouquet[];
+  /** Stems cut today (and yesterday), so each plant only gives a few a day. */
+  cuttings: Cutting[];
+  /** Her post box: her own tag, and the tags she has sent to, most recent first. */
+  post: Post;
 };
+
+export type Post = { tag: string | null; contacts: string[] };
+const TAG = /^[a-z0-9_]{3,20}$/;
+export const MAX_CONTACTS = 8;
 
 /** What became of an action sent to this garden: done, or skipped and why. */
 export type RemoteDone = { id: string; status: 'applied' | 'skipped'; reason: string | null };
@@ -158,6 +171,10 @@ export function starterGarden(now: number): GardenState {
     decor: NO_DECOR,
     diary: {},
     remoteDone: [],
+    bouquets: [],
+    parcels: [],
+    cuttings: [],
+    post: { tag: null, contacts: [] },
   };
 }
 
@@ -169,8 +186,26 @@ export function drawingAt(state: GardenState, slot: SlotId): Drawing | undefined
   return state.decor.drawings.find((d) => d.slot === slot);
 }
 
+export function bouquetAt(state: GardenState, slot: SlotId): PlacedBouquet | undefined {
+  return state.bouquets.find((b) => b.slot === slot);
+}
+
+/** Places on the shelves where a vase or a drawing could stand: not the hanging pots, and nothing there yet. */
+export function freeShelfSlots(state: GardenState): SlotId[] {
+  return SLOT_IDS.filter((slot) => !isHanging(slot) && !plantAt(state, slot) && !drawingAt(state, slot) && !bouquetAt(state, slot));
+}
+
+/** Moves whatever stands in one place to another (a plant, a drawing or a bouquet), as part of a swap. */
+function relocate(state: GardenState, from: SlotId, to: SlotId): Pick<GardenState, 'plants' | 'decor' | 'bouquets'> {
+  return {
+    plants: state.plants.map((p) => (p.slot === from ? { ...p, slot: to } : p)),
+    decor: { ...state.decor, drawings: state.decor.drawings.map((d) => (d.slot === from ? { ...d, slot: to } : d)) },
+    bouquets: state.bouquets.map((b) => (b.slot === from ? { ...b, slot: to } : b)),
+  };
+}
+
 export function addPlant(state: GardenState, slot: SlotId, species: SpeciesId, now: number, id = newId(), variety: string | null = null): GardenState {
-  if (plantAt(state, slot) || drawingAt(state, slot)) return state;
+  if (plantAt(state, slot) || drawingAt(state, slot) || bouquetAt(state, slot)) return state;
   const plant: Plant = {
     id, species, slot, pot: SPECIES[species].pot, variety: species === 'pansy' ? variety : null,
     plantedAt: now, waterings: [], display: null, vine: null, name: null,
@@ -193,19 +228,16 @@ export function movePlant(state: GardenState, id: string, to: SlotId): GardenSta
   const moving = state.plants.find((p) => p.id === id);
   if (!moving || moving.slot === to) return state;
   const from = moving.slot;
-  const drawing = drawingAt(state, to);
-  if (drawing && isHanging(from)) return state;
-  return {
-    ...state,
-    plants: state.plants.map((p) => (p.id === id ? { ...p, slot: to } : p.slot === to ? { ...p, slot: from } : p)),
-    decor: drawing ? { ...state.decor, drawings: state.decor.drawings.map((d) => (d === drawing ? { ...d, slot: from } : d)) } : state.decor,
-  };
+  // drawings and vases can't be swapped up into a hanging pot
+  if ((drawingAt(state, to) || bouquetAt(state, to)) && isHanging(from)) return state;
+  const swapped = relocate(state, to, from);
+  return { ...state, ...swapped, plants: swapped.plants.map((p) => (p.id === id ? { ...p, slot: to } : p)) };
 }
 
 /** Stands one of her drawings in an empty spot on the shelves. */
 export function addDrawing(state: GardenState, drawing: Drawing): GardenState {
   const slot = drawing.slot as SlotId;
-  if (!SLOT_IDS.includes(slot) || isHanging(slot) || plantAt(state, slot) || drawingAt(state, slot)) return state;
+  if (!SLOT_IDS.includes(slot) || isHanging(slot) || plantAt(state, slot) || drawingAt(state, slot) || bouquetAt(state, slot)) return state;
   if (state.decor.drawings.length >= MAX_DRAWINGS) return state;
   return { ...state, decor: { ...state.decor, drawings: [...state.decor.drawings, drawing] } };
 }
@@ -214,15 +246,56 @@ export function addDrawing(state: GardenState, drawing: Drawing): GardenState {
 export function moveDrawing(state: GardenState, id: string, to: SlotId): GardenState {
   const moving = state.decor.drawings.find((d) => d.id === id);
   if (!moving || moving.slot === to || isHanging(to)) return state;
-  const from = moving.slot as SlotId;
-  return {
-    ...state,
-    plants: state.plants.map((p) => (p.slot === to ? { ...p, slot: from } : p)),
-    decor: {
-      ...state.decor,
-      drawings: state.decor.drawings.map((d) => (d.id === id ? { ...d, slot: to } : d.slot === to ? { ...d, slot: from } : d)),
-    },
-  };
+  const swapped = relocate(state, to, moving.slot as SlotId);
+  return { ...state, ...swapped, decor: { ...swapped.decor, drawings: swapped.decor.drawings.map((d) => (d.id === id ? { ...d, slot: to } : d)) } };
+}
+
+/**
+ * A bouquet arrives on the shelves: in the first free place, or, with no room, in a box on the
+ * floor so it's never lost. Each bouquet only ever arrives once.
+ */
+export function receiveBouquet(state: GardenState, bouquet: Bouquet): GardenState {
+  if (state.bouquets.some((b) => b.id === bouquet.id) || state.parcels.some((b) => b.id === bouquet.id)) return state;
+  const slot = freeShelfSlots(state)[0];
+  return slot ? { ...state, bouquets: [...state.bouquets, { ...bouquet, slot }] } : { ...state, parcels: [...state.parcels, bouquet] };
+}
+
+/** Notes the stems cut from her plants for a bouquet, so each plant only gives a few a day. */
+export function cutStems(state: GardenState, plantIds: string[], now: number): GardenState {
+  return { ...state, cuttings: pruneCuttings([...state.cuttings, ...plantIds.map((plant) => ({ plant, at: now }))], now) };
+}
+
+/** Takes a bouquet out of its box and stands it on the shelves; nothing happens without a free place. */
+export function unpackParcel(state: GardenState, id: string): GardenState {
+  const parcel = state.parcels.find((b) => b.id === id);
+  const slot = freeShelfSlots(state)[0];
+  if (!parcel || !slot) return state;
+  return { ...state, parcels: state.parcels.filter((b) => b.id !== id), bouquets: [...state.bouquets, { ...parcel, slot }] };
+}
+
+/** Moves a bouquet along the shelves, swapping with whatever stands there; never into a hanging pot. */
+export function moveBouquet(state: GardenState, id: string, to: SlotId): GardenState {
+  const moving = state.bouquets.find((b) => b.id === id);
+  if (!moving || moving.slot === to || isHanging(to)) return state;
+  const swapped = relocate(state, to, moving.slot as SlotId);
+  return { ...state, ...swapped, bouquets: swapped.bouquets.map((b) => (b.id === id ? { ...b, slot: to } : b)) };
+}
+
+/** Her own tag, as the post box took it. */
+export function setTag(state: GardenState, tag: string | null): GardenState {
+  return { ...state, post: { ...state.post, tag } };
+}
+
+/** Someone she has sent to goes to the front of her list. */
+export function rememberContact(state: GardenState, tag: string): GardenState {
+  const t = tag.replace(/^#/, '').toLowerCase();
+  if (!TAG.test(t)) return state;
+  return { ...state, post: { ...state.post, contacts: [t, ...state.post.contacts.filter((c) => c !== t)].slice(0, MAX_CONTACTS) } };
+}
+
+/** A bouquet is put away for good. */
+export function removeBouquet(state: GardenState, id: string): GardenState {
+  return { ...state, bouquets: state.bouquets.filter((b) => b.id !== id), parcels: state.parcels.filter((b) => b.id !== id) };
 }
 
 export function removeDrawing(state: GardenState, id: string): GardenState {
@@ -358,6 +431,13 @@ export function updateSettings(state: GardenState, patch: Partial<Settings>): Ga
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
 const isTime = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0;
+
+function parsePost(v: unknown): Post {
+  const p = isObj(v) ? v : {};
+  const tag = typeof p.tag === 'string' && TAG.test(p.tag) ? p.tag : null;
+  const contacts = (Array.isArray(p.contacts) ? p.contacts : []).filter((c): c is string => typeof c === 'string' && TAG.test(c)).slice(0, MAX_CONTACTS);
+  return { tag, contacts };
+}
 
 function parseRemoteDone(v: unknown): RemoteDone[] {
   if (!Array.isArray(v)) return [];
@@ -506,6 +586,8 @@ export function parseSave(input: unknown, now = Date.now()): GardenState | null 
   }
   const checked = isTime(raw.vinesCheckedAt) && raw.vinesCheckedAt <= now ? raw.vinesCheckedAt : lastNight(now);
   const lastSeen = isTime(raw.lastSeen) && raw.lastSeen <= now ? raw.lastSeen : now;
+  const shelfFree = (slot: string) => SLOT_IDS.includes(slot as SlotId) && !isHanging(slot as SlotId) && !taken.has(slot as SlotId);
+  const decor = parseDecor(raw.decor, shelfFree);
   return {
     version: SAVE_VERSION,
     plants,
@@ -516,6 +598,10 @@ export function parseSave(input: unknown, now = Date.now()): GardenState | null 
     pressed: parsePressed(raw.pressed),
     diary: parseDiary(raw.diary),
     remoteDone: parseRemoteDone(raw.remoteDone),
-    decor: parseDecor(raw.decor, (slot) => SLOT_IDS.includes(slot as SlotId) && !isHanging(slot as SlotId) && !taken.has(slot as SlotId)),
+    decor,
+    bouquets: parsePlaced(raw.bouquets, (slot) => shelfFree(slot) && !decor.drawings.some((d) => d.slot === slot)),
+    parcels: parseParcels(raw.parcels),
+    cuttings: parseCuttings(raw.cuttings),
+    post: parsePost(raw.post),
   };
 }

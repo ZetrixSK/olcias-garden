@@ -135,6 +135,7 @@ The one approved backend is Supabase (project `bnzwavfiltdemetdmmvg`), used only
 * Her diary and pressed-flower notes are only uploaded when `settings.shareNotes` is on (off by default). Her location is blurred before upload.
 * Only the publishable key goes in the app (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` in `.env.local` and Vercel). Never the service_role key.
 * Schema changes go through migrations, also kept in `supabase/migrations/`; check the advisors after each one.
+* The post (bouquets sent between gardens by tag) uses `mailboxes`, `mail` and `mail_blocks`. Phones never see each other's ids: tags are taken and mail is sent only through the `claim_tag` and `send_mail` functions (rate-limited, blocked senders dropped silently). Anything received is parsed defensively (`parseBouquet`) before it touches her garden.
 * The admin page is a separate entry (`admin.html`, `src/admin/`), kept out of her app's bundle and offline cache. Its sign-in uses its own storage key so it never replaces a device's anonymous session. In dev, `/admin.html?demo` runs it on a local garden without the database.
 
 ## 6. iPhone experience and PWA

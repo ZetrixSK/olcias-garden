@@ -70,7 +70,7 @@ const LANG_ABOUT: Record<Lang, string> = {
   mixed: 'English, with Polish flower names',
 };
 
-export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onDiary, memory, onBook, onBackup, onPicture, onDecorate, onClock, onStudio, onOwnRoom }: {
+export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onDiary, memory, onBook, onBackup, onPicture, onDecorate, onBouquet, onPost, postTag, onClock, onStudio, onOwnRoom }: {
   settings: Settings;
   weather: Weather;
   status: WeatherStatus;
@@ -84,6 +84,10 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
   onBackup: () => void;
   onPicture: () => void;
   onBook: () => void;
+  onBouquet: () => void;
+  onPost: () => void;
+  /** Her tag in the post, if she has one. */
+  postTag: string | null;
   onDecorate: () => void;
   /** Shows her own room, opening the room painter first if she hasn't made one yet (or to change it). */
   onOwnRoom: (edit: boolean) => void;
@@ -196,6 +200,16 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
               {t('Decorate', 'Ozdabianie')}
               <small>{t('wallpaper, photo, drawings', 'tapeta, zdjęcie, rysunki')}</small>
             </button>
+            <button
+              className="wide two-line"
+              onClick={() => {
+                setMenu(false);
+                onBouquet();
+              }}
+            >
+              {t('Make a bouquet', 'Ułóż bukiet')}
+              <small>{t('from your flowers in bloom', 'z kwitnących kwiatów')}</small>
+            </button>
             <div className="row three">
               {(
                 [
@@ -282,6 +296,17 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
             </button>
             {remoteConfigured && (
               <>
+                <p className="hint">{t('Post', 'Poczta')}</p>
+                <button
+                  className="wide two-line"
+                  onClick={() => {
+                    setMenu(false);
+                    onPost();
+                  }}
+                >
+                  {t('Post box', 'Skrzynka pocztowa')}
+                  <small>{settings && postTag ? `#${postTag}` : t('send and get bouquets', 'wysyłaj i dostawaj bukiety')}</small>
+                </button>
                 {/* her diary and the notes in her book stay on the phone unless she shares them */}
                 <p className="hint">{t('Diary and notes', 'Pamiętnik i notatki')}</p>
                 <div className="row two">

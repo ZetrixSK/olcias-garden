@@ -5,7 +5,7 @@ import { useWords } from '../i18n';
 const SIZE_NAMES: Record<WallpaperSize, [string, string]> = { s: ['Small', 'Mały'], m: ['Medium', 'Średni'], l: ['Large', 'Duży'] };
 
 /** A button that asks once more before undoing something she made. */
-function ConfirmButton({ label, confirm, onConfirm }: { label: string; confirm: string; onConfirm: () => void }) {
+export function ConfirmButton({ label, confirm, onConfirm }: { label: string; confirm: string; onConfirm: () => void }) {
   const [asking, setAsking] = useState(false);
   return (
     <button className={asking ? 'danger' : 'quiet'} onClick={() => (asking ? onConfirm() : setAsking(true))}>

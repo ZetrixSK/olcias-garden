@@ -1,4 +1,6 @@
-import { POT_KINDS, SPECIES, SPECIES_IDS, STAGES } from './garden/species';
+import { POT_KINDS, SPECIES, SPECIES_IDS, STAGES, type SpeciesId } from './garden/species';
+import { RIBBONS, VASES } from './garden/bouquets';
+import { BouquetArt, ParcelBox } from './plants/Bouquet';
 import { PlantArt } from './plants/PlantArt';
 import { PansyPlant } from './plants/Pansy';
 import { Potted } from './plants/Pots';
@@ -59,4 +61,37 @@ export function PressedGallery() {
   ];
   const page = Number(new URLSearchParams(location.search).get('page') ?? 0);
   return <PressedBook key={page} pressed={pressed.slice(page * 4, page * 4 + 4)} onNote={() => {}} onRemove={() => {}} onClose={() => {}} />;
+}
+
+/** Dev-only: bouquets of every kind in each vase, and the parcel box. Opened with ?bouquets. */
+export function BouquetGallery() {
+  const mixes: Array<[string, SpeciesId[]]> = [
+    ['a', ['pansy', 'pansy', 'pansy']],
+    ['b', ['rose', 'lavender', 'daisy', 'rose', 'lavender']],
+    ['c', ['moonflower', 'batflower', 'hollyhock']],
+    ['d', ['tulip', 'tulip', 'tulip', 'daisy', 'tulip']],
+    ['e', ['cyclamen', 'snowdrop', 'hellebore', 'snowdrop']],
+    ['f', ['pansy', 'rose', 'tulip', 'daisy', 'lavender', 'pumpkin', 'pansy']],
+  ];
+  return (
+    <svg viewBox="0 0 400 420" style={{ width: '100%', background: 'var(--wall)' }}>
+      {mixes.map(([id, species], i) => (
+        <g key={id} transform={`translate(${70 + (i % 3) * 130} ${150 + Math.floor(i / 3) * 170}) scale(1.15)`}>
+          <BouquetArt
+            bouquet={{
+              id,
+              stems: species.map((s, k) => ({ species: s, variety: s === 'pansy' ? (['olcia', 'velvet', 'mix', 'rosy'][k % 4] ?? null) : null, design: null })),
+              vase: VASES[i % 3]!,
+              ribbon: i % 2 ? RIBBONS[i % RIBBONS.length]! : null,
+              note: i % 2 ? '' : 'for you',
+              seed: i + 3,
+            }}
+          />
+        </g>
+      ))}
+      <g transform="translate(360 400) scale(1.4)">
+        <ParcelBox count={2} />
+      </g>
+    </svg>
+  );
 }

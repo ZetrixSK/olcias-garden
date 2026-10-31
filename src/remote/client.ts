@@ -98,3 +98,104 @@ export async function listenForActions(onAction: (a: ActionRow) => void, onConne
 
 /** Robots (link previews, deployment screenshots) load the page too; they shouldn't become gardens. */
 export const isRobot = () => typeof navigator !== 'undefined' && navigator.webdriver === true;
+
+// ---- the post: tags, sending bouquets, and the inbox ----
+
+/** Why sending or taking a tag didn't work, in a form the garden can explain. */
+export type PostError = 'offline' | 'taken' | 'bad tag' | 'no tag' | 'no such tag' | 'too many today';
+
+function postError(e: unknown): PostError {
+  const msg = typeof e === 'object' && e !== null && 'message' in e ? String((e as { message: unknown }).message) : '';
+  for (const known of ['taken', 'bad tag', 'no tag', 'no such tag', 'too many today'] as const) if (msg.includes(known)) return known;
+  return 'offline';
+}
+
+/** Takes a tag for this garden (or changes it). Resolves with the tag as stored, or why not. */
+export async function claimTag(tag: string): Promise<{ tag: string } | { error: PostError }> {
+  try {
+    await deviceId();
+    const sb = await remote();
+    const { data, error } = await sb.rpc('claim_tag', { p_tag: tag });
+    if (error) return { error: postError(error) };
+    return { tag: String(data) };
+  } catch (e) {
+    return { error: postError(e) };
+  }
+}
+
+/** Sends something to a tag. Null once it's on its way. */
+export async function sendMail(to: string, kind: 'bouquet', payload: unknown): Promise<PostError | null> {
+  try {
+    await deviceId();
+    const sb = await remote();
+    const { error } = await sb.rpc('send_mail', { p_to: to.replace(/^#/, ''), p_kind: kind, p_payload: payload });
+    return error ? postError(error) : null;
+  } catch (e) {
+    return postError(e);
+  }
+}
+
+export type Mail = { id: string; from_tag: string; kind: string; payload: unknown; created_at: string };
+
+/** Post that has arrived and not yet been taken in, oldest first. */
+export async function inbox(): Promise<Mail[]> {
+  const id = await deviceId();
+  const sb = await remote();
+  const { data, error } = await sb
+    .from('mail')
+    .select('id, from_tag, kind, payload, created_at')
+    .eq('to_device', id)
+    .is('delivered_at', null)
+    .order('created_at')
+    .limit(50);
+  if (error) throw error;
+  return data as Mail[];
+}
+
+export async function markDelivered(id: string): Promise<void> {
+  const sb = await remote();
+  const { error } = await sb.from('mail').update({ delivered_at: new Date().toISOString() }).eq('id', id);
+  if (error) throw error;
+}
+
+/** Listens for post as it arrives; `onConnected` runs each time the line opens, to fetch anything missed. */
+export async function listenForMail(onMail: (m: Mail) => void, onConnected: () => void): Promise<() => void> {
+  const id = await deviceId();
+  const sb = await remote();
+  const channel = sb
+    .channel(`mail:${id}:${Math.random().toString(36).slice(2, 8)}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mail', filter: `to_device=eq.${id}` }, (msg) => {
+      const row = msg.new as Partial<Mail> & { delivered_at?: string | null };
+      if (typeof row.id === 'string' && typeof row.from_tag === 'string' && !row.delivered_at) {
+        onMail({ id: row.id, from_tag: row.from_tag, kind: String(row.kind), payload: row.payload, created_at: String(row.created_at) });
+      }
+    })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') onConnected();
+    });
+  return () => void sb.removeChannel(channel);
+}
+
+/** The tags this garden doesn't want post from. */
+export async function blockedTags(): Promise<string[]> {
+  await deviceId();
+  const sb = await remote();
+  const { data, error } = await sb.from('mail_blocks').select('tag').order('created_at');
+  if (error) throw error;
+  return (data as { tag: string }[]).map((b) => b.tag);
+}
+
+export async function setBlocked(tag: string, blocked: boolean): Promise<boolean> {
+  try {
+    const id = await deviceId();
+    const sb = await remote();
+    const t = tag.replace(/^#/, '').toLowerCase();
+    // adding one that's already there is fine: no overwrite, so only adding is ever needed
+    const { error } = blocked
+      ? await sb.from('mail_blocks').upsert({ owner: id, tag: t }, { onConflict: 'owner,tag', ignoreDuplicates: true })
+      : await sb.from('mail_blocks').delete().eq('tag', t);
+    return !error;
+  } catch {
+    return false;
+  }
+}

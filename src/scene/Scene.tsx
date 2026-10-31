@@ -21,6 +21,7 @@ import type { OwnPaper } from './OwnDecor';
 import { HangingBat } from './HangingBat';
 import { leanFor, runnerStart, VINE_PHASE, VineRunner, Vines, type PlacedVine, type Snip, type VineSpec } from './Vines';
 import { useGrowingVines } from './useGrowingVines';
+import { FloorParcels } from '../ui/Bouquets';
 
 /** Where each window spot stands: x, the surface it stands on, the drawing scale and the tap area's width. */
 const SPOT_POS: Record<WindowSpot, { x: number; base: number; scale: number; w: number; h: number }> = {
@@ -180,12 +181,14 @@ const Backdrop = memo(function Backdrop({ theme, sky, night, twilight, season, o
 });
 
 /** Curtains, pictures, sign, floor and the dogs. */
-const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hideCurtains, phase, mood, occasion, onBook, photoUrl, onFrame }: {
+const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hideCurtains, phase, mood, occasion, onBook, photoUrl, onFrame, parcels, onParcels }: {
   theme: Theme; dy: number; wallMid: number; pictureScale: number; hideCurtains: boolean; phase: number; mood: DogMood;
   occasion: Occasion;
   onBook?: () => void;
   photoUrl: string | null;
   onFrame?: () => void;
+  parcels: number;
+  onParcels?: () => void;
 }) {
   return (
     <>
@@ -215,6 +218,8 @@ const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hi
         ) : (
           <Ball />
         )}
+        {/* bouquets that came with no room on the shelves wait in a box, in front of the dog bed */}
+        <FloorParcels count={parcels} onOpen={onParcels ?? (() => {})} />
       </g>
     </>
   );
@@ -254,7 +259,7 @@ const SillBoard = memo(Sill);
 const Trinket = memo(ShelfTrinket);
 const Candle = memo(SillCandle);
 
-export function Scene({ theme, weather, viewH, vines, still = false, moments = [], snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, rainbow = false, candle = null, candleOn, onCandle, ...rest }: {
+export function Scene({ theme, weather, viewH, vines, still = false, moments = [], onParcels, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, rainbow = false, candle = null, candleOn, onCandle, ...rest }: {
   theme: Theme;
   weather: Weather;
   viewH: number;
@@ -263,6 +268,8 @@ export function Scene({ theme, weather, viewH, vines, still = false, moments = [
   still?: boolean;
   /** Moments sent from the admin page that are showing now. */
   moments?: readonly Moment[];
+  /** Tapping the parcel box on the floor. */
+  onParcels?: () => void;
   snip?: Snip | null;
   /** Dev only: shows the bare window, to judge the vines without the curtains over them. */
   hideCurtains?: boolean;
@@ -346,7 +353,7 @@ export function Scene({ theme, weather, viewH, vines, still = false, moments = [
         onBook={onBook}
         photoUrl={photoUrl}
         onFrame={onFrame}
-      />
+       parcels={rest.garden.parcels.length} onParcels={onParcels} />
       <Lights theme={theme} sky={weather.sky} night={weather.night} twilight={weather.twilight ?? null} phase={phaseAt(rest.now)} occasion={cal.occasion} dy={dy} wallMid={wallMid} fx={candleFlame(theme, candle)[0]} fy={candleFlame(theme, candle)[1]} candleOn={candleOn} shower={moments.includes('shooting-stars')} />
       {weather.night && <WindowGlow garden={rest.garden} now={rest.now} />}
     </svg>

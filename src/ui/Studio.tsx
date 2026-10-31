@@ -22,7 +22,7 @@ import { Potted } from '../plants/Pots';
 import { FLOOR_SWATCHES, ROOM_SWATCH_NAMES, ROOM_SWATCHES, type OwnRoom, type RoomPart } from '../theme/ownRoom';
 import type { Theme } from '../theme/palettes';
 
-function Swatches({ colors, value, onPick, none, names = SWATCH_NAMES }: {
+export function Swatches({ colors, value, onPick, none, names = SWATCH_NAMES }: {
   colors: readonly string[];
   value: string | null;
   onPick: (c: string | null) => void;
@@ -46,7 +46,7 @@ function Swatches({ colors, value, onPick, none, names = SWATCH_NAMES }: {
   );
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+export function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="studio-section">
       <h3>{title}</h3>
