@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { Words } from '../i18n';
 import { useWords } from '../i18n';
-import type { PostError } from '../remote/client';
+import type { AccessRule, PostError, VisitLevel } from '../remote/client';
+import { AccessSection, VisitStart } from './Visit';
 import type { Arrival } from '../remote/useMail';
 
 /** A tag as she types it: lower case, letters, numbers and _, no # (that's drawn in front). */
@@ -20,6 +21,12 @@ export function postMessage(e: PostError, { t }: Words): string {
       return t('Nobody has that tag.', 'Nikt nie ma takiego tagu.');
     case 'too many today':
       return t("That's a lot of bouquets for one day. Try again tomorrow.", 'To dużo bukietów jak na jeden dzień. Spróbuj jutro.');
+    case 'not allowed':
+      return t("Their garden isn't open to you for that.", 'Ten ogród nie jest dla Ciebie na to otwarty.');
+    case 'no garden':
+      return t("That garden hasn't been opened yet.", 'Ten ogród nie był jeszcze otwierany.');
+    case 'yourself':
+      return t("That's your own garden!", 'To Twój własny ogród!');
     case 'offline':
       return t("Couldn't reach the post. Try again when you're online.", 'Nie udało się połączyć z pocztą. Spróbuj, gdy będzie internet.');
   }
@@ -75,7 +82,7 @@ export function ClaimTag({ current, onClaim }: { current: string | null; onClaim
  * Her post box: her own tag, bouquets waiting in the box on the floor, the tags she has sent to,
  * and the tags she doesn't want post from.
  */
-export function PostSheet({ tag, contacts, parcels, onClaim, onParcels, loadBlocked, onUnblock, onClose }: {
+export function PostSheet({ tag, contacts, parcels, onClaim, onParcels, loadBlocked, onUnblock, onVisit, loadAccess, onSetAccess, onClose }: {
   tag: string | null;
   contacts: string[];
   parcels: number;
@@ -83,6 +90,9 @@ export function PostSheet({ tag, contacts, parcels, onClaim, onParcels, loadBloc
   onParcels: () => void;
   loadBlocked: () => Promise<string[] | null>;
   onUnblock: (tag: string) => Promise<boolean>;
+  onVisit: (tag: string) => Promise<PostError | null>;
+  loadAccess: () => Promise<AccessRule[] | null>;
+  onSetAccess: (who: string, level: VisitLevel | null) => Promise<boolean>;
   onClose: () => void;
 }) {
   const { t } = useWords();
@@ -106,6 +116,20 @@ export function PostSheet({ tag, contacts, parcels, onClaim, onParcels, loadBloc
           </p>
           <ClaimTag current={tag} onClaim={onClaim} />
         </section>
+        <section className="studio-section">
+          <h3>{t('Visit a garden', 'Odwiedź ogród')}</h3>
+          {tag ? (
+            <VisitStart onVisit={onVisit} />
+          ) : (
+            <p className="hint">{t('Take a tag first, so they know who came.', 'Najpierw weź tag, żeby wiedzieli, kto przyszedł.')}</p>
+          )}
+        </section>
+        {tag && (
+          <section className="studio-section">
+            <h3>{t('Who can visit your garden', 'Kto może odwiedzać Twój ogród')}</h3>
+            <AccessSection load={loadAccess} onSet={onSetAccess} />
+          </section>
+        )}
         {parcels > 0 && (
           <section className="studio-section">
             <h3>{t('Waiting in the box', 'Czeka w pudełku')}</h3>

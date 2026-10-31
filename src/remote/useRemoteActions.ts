@@ -21,9 +21,11 @@ export function useRemoteActions(
   setGarden: (fn: (g: GardenState | null) => GardenState | null) => void,
   onEffect: (e: Effect) => void,
   world: World,
+  /** A visitor's action was carried out: who, what, and her garden as it was just before. */
+  onVisitor?: (v: { from: string; kind: string; payload: unknown; before: GardenState }) => void,
 ): void {
   const on = enabled && remoteConfigured && !isRobot();
-  const queue = useRef<(RemoteAction & { created_at: string })[]>([]);
+  const queue = useRef<(RemoteAction & { created_at: string; from_tag?: string | null })[]>([]);
   const readyRef = useRef(ready);
   readyRef.current = ready;
   const kick = useRef<() => void>(() => {});
@@ -31,6 +33,8 @@ export function useRemoteActions(
   effectRef.current = onEffect;
   const worldRef = useRef(world);
   worldRef.current = world;
+  const visitorRef = useRef(onVisitor);
+  visitorRef.current = onVisitor;
 
   useEffect(() => {
     if (!on) return;
@@ -44,7 +48,7 @@ export function useRemoteActions(
     let current: string | null = null;
     const finished = new Set<string>();
 
-    const enqueue = (a: RemoteAction & { created_at: string }) => {
+    const enqueue = (a: RemoteAction & { created_at: string; from_tag?: string | null }) => {
       if (a.id !== current && !finished.has(a.id) && !queue.current.some((q) => q.id === a.id)) {
         queue.current.push(a);
         // in the order they were sent, however they arrived
@@ -81,6 +85,7 @@ export function useRemoteActions(
           const { outcome, effect } = applyAction(before, a, now, worldRef.current);
           setGarden((g) => (g ? applyAction(g, a, now, worldRef.current).garden : g));
           if (effect) effectRef.current(effect);
+          if (outcome.status === 'applied' && a.from_tag) visitorRef.current?.({ from: a.from_tag, kind: a.kind, payload: a.payload, before });
           await new Promise((r) => setTimeout(r, REPORT_AFTER));
           await report(a.id, outcome.status, outcome.reason);
           if (outcome.status === 'applied' && queue.current.length > 0) await new Promise((r) => setTimeout(r, BETWEEN));

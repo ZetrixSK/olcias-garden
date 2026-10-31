@@ -48,7 +48,7 @@ export async function uploadGarden(garden: unknown, version: number, opened: boo
 }
 
 /** `created_at` keeps them in the order they were sent: live messages can overtake one another. */
-type ActionRow = { id: string; kind: string; payload: unknown; created_at: string };
+type ActionRow = { id: string; kind: string; payload: unknown; created_at: string; from_tag: string | null };
 
 /** Actions sent to this garden that haven't been carried out yet, oldest first. */
 export async function pendingActions(): Promise<ActionRow[]> {
@@ -56,7 +56,7 @@ export async function pendingActions(): Promise<ActionRow[]> {
   const sb = await remote();
   const { data, error } = await sb
     .from('actions')
-    .select('id, kind, payload, created_at')
+    .select('id, kind, payload, created_at, from_tag')
     .eq('garden', id)
     .eq('status', 'pending')
     .order('created_at')
@@ -86,7 +86,7 @@ export async function listenForActions(onAction: (a: ActionRow) => void, onConne
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'actions', filter: `garden=eq.${id}` }, (msg) => {
       const row = msg.new as Partial<ActionRow> & { status?: string };
       if (typeof row.id === 'string' && typeof row.kind === 'string' && typeof row.created_at === 'string' && row.status === 'pending') {
-        onAction({ id: row.id, kind: row.kind, payload: row.payload, created_at: row.created_at });
+        onAction({ id: row.id, kind: row.kind, payload: row.payload, created_at: row.created_at, from_tag: typeof row.from_tag === 'string' ? row.from_tag : null });
       }
     })
     .subscribe((status, err) => {
@@ -102,11 +102,11 @@ export const isRobot = () => typeof navigator !== 'undefined' && navigator.webdr
 // ---- the post: tags, sending bouquets, and the inbox ----
 
 /** Why sending or taking a tag didn't work, in a form the garden can explain. */
-export type PostError = 'offline' | 'taken' | 'bad tag' | 'no tag' | 'no such tag' | 'too many today';
+export type PostError = 'offline' | 'taken' | 'bad tag' | 'no tag' | 'no such tag' | 'too many today' | 'not allowed' | 'no garden' | 'yourself';
 
 function postError(e: unknown): PostError {
   const msg = typeof e === 'object' && e !== null && 'message' in e ? String((e as { message: unknown }).message) : '';
-  for (const known of ['taken', 'bad tag', 'no tag', 'no such tag', 'too many today'] as const) if (msg.includes(known)) return known;
+  for (const known of ['taken', 'bad tag', 'no tag', 'no such tag', 'too many today', 'not allowed', 'no garden', 'yourself'] as const) if (msg.includes(known)) return known;
   return 'offline';
 }
 
@@ -194,6 +194,76 @@ export async function setBlocked(tag: string, blocked: boolean): Promise<boolean
     const { error } = blocked
       ? await sb.from('mail_blocks').upsert({ owner: id, tag: t }, { onConflict: 'owner,tag', ignoreDuplicates: true })
       : await sb.from('mail_blocks').delete().eq('tag', t);
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+// ---- visiting each other's gardens ----
+
+/** What a visitor may do: 0 can't visit, 1 look, 2 water, 3 tend (plant, trim), 4 everything (also remove). */
+export type VisitLevel = 0 | 1 | 2 | 3 | 4;
+export const asLevel = (v: unknown): VisitLevel => (v === 1 || v === 2 || v === 3 || v === 4 ? v : 0);
+
+export type Visit = {
+  tag: string;
+  level: VisitLevel;
+  lastSeen: number;
+  garden: unknown;
+  /** What this visitor did that the owner's phone hasn't carried out yet. */
+  pending: { id: string; kind: string; payload: unknown; created_at: string }[];
+};
+
+/** Looks at someone's garden by their tag, if they let this visitor in. */
+export async function visitGarden(tag: string): Promise<Visit | { error: PostError }> {
+  try {
+    await deviceId();
+    const sb = await remote();
+    const { data, error } = await sb.rpc('visit_garden', { p_tag: tag.replace(/^#/, '') });
+    if (error) return { error: postError(error) };
+    const d = data as { tag: string; level: number; last_seen: string; garden: unknown; pending: Visit['pending'] };
+    return { tag: d.tag, level: asLevel(d.level), lastSeen: Date.parse(d.last_seen), garden: d.garden, pending: Array.isArray(d.pending) ? d.pending : [] };
+  } catch (e) {
+    return { error: postError(e) };
+  }
+}
+
+/** Does something in a garden being visited. Resolves with the action's id, or why not. */
+export async function visitAction(tag: string, kind: 'water' | 'plant' | 'trim' | 'remove', payload: Record<string, unknown>): Promise<{ id: string } | { error: PostError }> {
+  try {
+    await deviceId();
+    const sb = await remote();
+    const { data, error } = await sb.rpc('visit_action', { p_tag: tag.replace(/^#/, ''), p_kind: kind, p_payload: payload });
+    return error ? { error: postError(error) } : { id: String(data) };
+  } catch (e) {
+    return { error: postError(e) };
+  }
+}
+
+/** Her rules for visitors: '*' for anyone who knows her tag, or a particular tag. */
+export type AccessRule = { who: string; level: VisitLevel };
+
+export async function accessRules(): Promise<AccessRule[] | null> {
+  try {
+    await deviceId();
+    const sb = await remote();
+    const { data, error } = await sb.from('garden_access').select('who, level').order('who');
+    if (error) return null;
+    return (data as { who: string; level: number }[]).map((r) => ({ who: r.who, level: asLevel(r.level) }));
+  } catch {
+    return null;
+  }
+}
+
+export async function setAccess(who: string, level: VisitLevel | null): Promise<boolean> {
+  try {
+    const id = await deviceId();
+    const sb = await remote();
+    const { error } =
+      level === null
+        ? await sb.from('garden_access').delete().eq('who', who)
+        : await sb.from('garden_access').upsert({ owner: id, who, level }, { onConflict: 'owner,who' });
     return !error;
   } catch {
     return false;

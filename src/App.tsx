@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   addDrawing,
+  parseSave,
   bouquetAt,
   postSeen,
   rememberContact,
@@ -66,8 +67,10 @@ import { BackupSheet } from './ui/Backup';
 import { canAddToHomeScreen, Welcome } from './ui/InstallHint';
 import { BouquetCard, BouquetStudio, ParcelsSheet } from './ui/Bouquets';
 import { arrivalNotice, NoticeNote, PostSheet, type Notice } from './ui/Post';
+import { VisitView, visitorNotice, type Visiting } from './ui/Visit';
+import { applyAction } from './remote/actions';
 import { useMail } from './remote/useMail';
-import { blockedTags, claimTag, sendMail, setBlocked } from './remote/client';
+import { accessRules, blockedTags, claimTag, sendMail, setAccess, setBlocked, visitAction, visitGarden, type PostError } from './remote/client';
 import { dayKey, onThisDay } from './garden/diary';
 import type { Restored } from './garden/backup';
 import { pressedToday } from './garden/pressed';
@@ -197,6 +200,8 @@ type Mode =
   | { kind: 'bouquet'; id: string }
   | { kind: 'parcels' }
   | { kind: 'post' }
+  /** in someone else's garden, by their leave */
+  | { kind: 'visit'; visit: Visiting }
   /** painting her own room; `draft` shows in the room until she saves or closes */
   | { kind: 'roomStudio'; draft: OwnRoom; editing: boolean }
   /** saving the garden to a file, or bringing one back */
@@ -225,6 +230,8 @@ async function loadPictures(decor: Decor): Promise<Pictures> {
 export function App() {
   const [garden, setGarden] = useState<GardenState | null>(null);
   const [mode, setMode] = useState<Mode>({ kind: 'idle' });
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
   const [wateringId, setWateringId] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   const [now, setNow] = useNow();
@@ -404,6 +411,42 @@ export function App() {
   const closeNotice = useCallback(() => setNotice(null), []);
   useMail(sharing, garden !== null && lapse === null, gardenRef, setGarden, (a) => setNotice(arrivalNotice(a, words(gardenRef.current?.settings.lang ?? 'mixed'))));
   const loadBlocked = useCallback(() => blockedTags().catch(() => null), []);
+  const loadAccess = useCallback(() => accessRules(), []);
+  /** Someone's garden as it is, with this visitor's own waiting actions already shown done. */
+  const fetchVisit = useCallback(async (tag: string): Promise<Visiting | PostError> => {
+    const r = await visitGarden(tag);
+    if ('error' in r) return r.error;
+    const t = Date.now();
+    const parsed = parseSave(r.garden, t);
+    if (!parsed) return 'no garden';
+    const shown = [...r.pending]
+      .sort((a, b) => (a.created_at < b.created_at ? -1 : 1))
+      .reduce((g, a) => applyAction(g, { id: a.id, kind: a.kind, payload: a.payload }, t).garden, parsed);
+    return { tag: r.tag, level: r.level, lastSeen: r.lastSeen, garden: shown };
+  }, []);
+  const startVisit = useCallback(
+    async (tag: string) => {
+      const v = await fetchVisit(tag);
+      if (typeof v === 'string') return v;
+      setMode({ kind: 'visit', visit: v });
+      return null;
+    },
+    [fetchVisit],
+  );
+  /** Does something in the garden being visited, and shows it done there at once. */
+  const visitAct = useCallback(async (kind: 'water' | 'plant' | 'trim' | 'remove', payload: Record<string, unknown>) => {
+    const current = modeRef.current;
+    if (current.kind !== 'visit') return null;
+    const r = await visitAction(current.visit.tag, kind, payload);
+    if ('error' in r) return r.error;
+    const t = Date.now();
+    setMode((m) => (m.kind === 'visit' ? { ...m, visit: { ...m.visit, garden: applyAction(m.visit.garden, { id: r.id, kind, payload }, t).garden } } : m));
+    if (t - current.visit.lastSeen > 6 * 60_000) {
+      const w = words(gardenRef.current?.settings.lang ?? 'mixed');
+      setNotice({ title: w.t('Done', 'Gotowe'), text: w.t(`#${current.visit.tag} will see it when they next open their garden.`, `#${current.visit.tag} zobaczy to przy następnym otwarciu ogrodu.`) });
+    }
+    return null;
+  }, []);
   /** Opens the post box; she has seen what came, so the letterbox's flag comes down. */
   const openPost = useCallback(() => {
     setGarden((g) => (g ? postSeen(g) : g));
@@ -428,7 +471,23 @@ export function App() {
       else showWatering(e.plant);
     },
     { night: weather.night, sky: weather.sky, season: seasonShown(now) },
+    (v) => {
+      const n = visitorNotice(v, words(gardenRef.current?.settings.lang ?? 'mixed'));
+      if (n) setNotice(n);
+    },
   );
+
+  // while visiting, their garden is looked at again now and then, so it stays as it is
+  const visitTag = mode.kind === 'visit' ? mode.visit.tag : null;
+  useEffect(() => {
+    if (!visitTag) return;
+    const timer = window.setInterval(async () => {
+      if (document.visibilityState !== 'visible') return;
+      const v = await fetchVisit(visitTag);
+      if (typeof v !== 'string') setMode((m) => (m.kind === 'visit' && m.visit.tag === visitTag ? { ...m, visit: v } : m));
+    }, 20_000);
+    return () => window.clearInterval(timer);
+  }, [visitTag, fetchVisit]);
   // her own room shows its colours over the furniture of the room she based it on; while she's
   // painting it, the draft shows instead
   const own = mode.kind === 'roomStudio' ? mode.draft : settings?.useOwn ? settings.own : null;
@@ -847,8 +906,14 @@ export function App() {
             onParcels={() => setMode({ kind: 'parcels' })}
             loadBlocked={loadBlocked}
             onUnblock={(tag) => setBlocked(tag, false)}
+            onVisit={startVisit}
+            loadAccess={loadAccess}
+            onSetAccess={setAccess}
             onClose={() => setMode({ kind: 'idle' })}
           />
+        )}
+        {mode.kind === 'visit' && (
+          <VisitView visit={mode.visit} now={now} viewH={viewH} onAct={visitAct} onLeave={() => setMode({ kind: 'idle' })} />
         )}
         {notice && <NoticeNote notice={notice} onDone={closeNotice} />}
         {mode.kind === 'parcels' && (
