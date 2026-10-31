@@ -1,22 +1,13 @@
 import { useEffect, useRef, type MutableRefObject } from 'react';
 import type { GardenState } from '../garden/state';
 import { applyAction, handled, type Effect, type RemoteAction, type World } from './actions';
+import { timeKey as sentOrder } from './timeKey';
 import { isRobot, listenForActions, pendingActions, remoteConfigured, reportAction } from './client';
 
 /** The garden saves a moment after each change; an action is only reported done once that has happened. */
 const REPORT_AFTER = 1200;
 /** Several actions arriving together play out one after another rather than all at once. */
 const BETWEEN = 900;
-
-/**
- * A sortable key for when an action was sent. The database's times come as `2026-10-31T09:34:08.12+00:00`
- * from a fetch but `2026-10-31 09:34:08.123456+00` over the live line (both UTC), so they're compared
- * digit by digit, fractions padded to microseconds.
- */
-export function sentOrder(createdAt: string): string {
-  const m = /^(\d{4})-(\d\d)-(\d\d)[ T](\d\d):(\d\d):(\d\d)(?:\.(\d+))?/.exec(createdAt);
-  return m ? m.slice(1, 7).join('') + (m[7] ?? '').padEnd(6, '0').slice(0, 6) : createdAt;
-}
 
 /**
  * Carries out changes sent from the admin page: those already waiting when the garden opens, and

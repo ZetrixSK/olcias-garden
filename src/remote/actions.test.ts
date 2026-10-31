@@ -224,6 +224,10 @@ describe('designs and notes', () => {
     const g = { ...base, pressed: [{ id: 'pr1', plantId: 'x', species: 'pansy' as const, at: NOW, variety: null, design: null, name: null, note: '' }] };
     expect(applyAction(g, act('note', { press: 'pr1', note: 'from me' })).garden.pressed[0]!.note).toBe('from me');
     expect(applyAction(g, act('note', { press: 'nope', note: 'x' })).outcome.status).toBe('skipped');
+    const hers = { ...g, pressed: [{ ...g.pressed[0]!, note: 'her words' }] };
+    const out = applyAction(hers, act('note', { press: 'pr1', note: 'mine' }));
+    expect(out.outcome.reason).toMatch(/already written/);
+    expect(out.garden.pressed[0]!.note).toBe('her words');
   });
 });
 

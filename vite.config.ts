@@ -3,6 +3,11 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      input: { main: 'index.html', admin: 'admin.html' },
+    },
+  },
   plugins: [
     react(),
     VitePWA({
@@ -29,6 +34,9 @@ export default defineConfig({
         // everything the garden needs is bundled, so it opens fully offline after the first visit
         globPatterns: ['**/*.{js,css,html,woff2,png,svg}'],
         navigateFallback: '/index.html',
+        // the gardener's page is never part of her app: not cached on her phone, never answered with the garden
+        navigateFallbackDenylist: [/^\/admin/],
+        globIgnores: ['admin.html', 'assets/admin-*'],
         cleanupOutdatedCaches: true,
       },
     }),

@@ -1,0 +1,325 @@
+/* The gardener's page: the same paper and ink as the garden, but a page that scrolls and can be read. */
+
+:root {
+  --a-paper: #f3ebdd;
+  --a-card: #fbf7f0;
+  --a-ink: #2b2229;
+  --a-muted: #7a6a72;
+  --a-rose: #c95d7f;
+  --a-rose-soft: #f2c4cf;
+  --a-sage: #a7b598;
+  --a-line: rgba(43, 34, 41, 0.18);
+}
+
+html,
+body,
+#root {
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
+  background: var(--a-paper);
+}
+
+body {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+  color: var(--a-ink);
+  font: 16px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.admin {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: calc(env(safe-area-inset-top, 0px) + 16px) 16px calc(env(safe-area-inset-bottom, 0px) + 48px);
+}
+
+.admin h1,
+.admin h2 {
+  font-family: 'Kalam', cursive;
+  font-weight: 700;
+  margin: 0;
+}
+.admin h1 {
+  font-size: 28px;
+}
+.admin h2 {
+  font-size: 21px;
+}
+.admin h3 {
+  margin: 16px 0 6px;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--a-muted);
+}
+
+.admin .top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.admin button,
+.admin select,
+.admin input {
+  font: inherit;
+  color: inherit;
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1.5px solid var(--a-ink);
+  background: var(--a-card);
+  padding: 0 14px;
+}
+.admin input {
+  flex: 1;
+  min-width: 0;
+  background: #fff;
+}
+.admin button {
+  cursor: pointer;
+}
+.admin button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+.admin button.on,
+.admin button.on:disabled {
+  opacity: 1;
+  background: var(--a-ink);
+  color: var(--a-card);
+}
+.admin button.primary {
+  background: var(--a-rose);
+  color: #fff;
+  border-color: var(--a-rose);
+  font-weight: 600;
+}
+.admin button.quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--a-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.admin button:focus-visible,
+.admin select:focus-visible,
+.admin input:focus-visible {
+  outline: 3px solid var(--a-rose-soft);
+  outline-offset: 1px;
+}
+
+.admin .row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.admin .choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.admin .danger {
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--a-line);
+}
+.admin .danger button {
+  color: #a8324a;
+  border-color: #a8324a;
+}
+
+.admin .hint {
+  color: var(--a-muted);
+  font-size: 14px;
+  margin: 6px 0;
+}
+.admin .error {
+  color: #a8324a;
+}
+
+/* panels: cards of paper with an ink edge, like the garden's sheets */
+.admin .panel {
+  background: var(--a-card);
+  border: 1.5px solid var(--a-ink);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 3px 0 rgba(43, 34, 41, 0.12);
+}
+.admin .panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.admin .facts {
+  margin: 6px 0 0;
+  color: var(--a-muted);
+}
+
+/* the list of gardens */
+.admin .gardens {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.admin .gardens li {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  border: 1.5px solid var(--a-line);
+  border-radius: 14px;
+  background: var(--a-card);
+  padding: 2px;
+}
+.admin .gardens li.on {
+  border-color: var(--a-ink);
+  box-shadow: inset 0 0 0 1px var(--a-ink);
+}
+.admin .garden-pick {
+  border: 0;
+  background: transparent;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 8px;
+  align-items: center;
+  text-align: left;
+  padding: 6px 10px;
+}
+.admin .garden-pick .seen {
+  grid-column: 2;
+  font-size: 13px;
+  color: var(--a-muted);
+}
+.admin .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--a-line);
+}
+.admin .dot.live {
+  background: #5f9a63;
+  box-shadow: 0 0 0 3px rgba(95, 154, 99, 0.2);
+}
+
+/* her world beside the panels; one column on a phone */
+.admin .layout {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 820px) {
+  .admin .layout {
+    grid-template-columns: 360px 1fr;
+    align-items: start;
+  }
+  .admin .world-col {
+    position: sticky;
+    top: 16px;
+  }
+}
+.admin .world-col {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+}
+.admin .world-col .status {
+  margin: 0;
+  justify-self: stretch;
+}
+.admin .panels-col {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.admin-frame {
+  position: relative;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 26px;
+  border: 1.5px solid var(--a-ink);
+  box-shadow: 0 10px 30px rgba(43, 34, 41, 0.18);
+  -webkit-user-select: none;
+  user-select: none;
+}
+.admin-frame .garden {
+  position: absolute;
+}
+
+/* what was sent */
+.admin .history,
+.admin .book {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  max-height: 340px;
+  overflow-y: auto;
+}
+.admin .history li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--a-line);
+}
+.admin .history .when {
+  color: var(--a-muted);
+  font-size: 13px;
+}
+.admin .history .status {
+  grid-column: 1 / -1;
+  font-size: 13px;
+}
+.admin .history .pending .status {
+  color: #a0702a;
+}
+.admin .history .applied .status {
+  color: #4f7a52;
+}
+.admin .history .skipped .status {
+  color: #a8324a;
+}
+.admin .book li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--a-line);
+}
+.admin .book em {
+  display: block;
+  margin-top: 4px;
+}
+
+.admin .toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+  transform: translateX(-50%);
+  background: var(--a-ink);
+  color: var(--a-card);
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+/* signing in */
+.admin.sign-in {
+  max-width: 380px;
+  padding-top: 12vh;
+}
+.admin.sign-in form {
+  display: grid;
+  gap: 12px;
+}
+.admin.sign-in label {
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--a-muted);
+}

@@ -44,8 +44,6 @@ import { DecorateSheet, DrawingCard } from './ui/Decorate';
 import { chooseImage, prepareImage } from './ui/upload';
 import { awayDemo, buildTimelapse, gardenAt, LAPSE_MIN_GAP, parseAway, somethingGrew, type Timelapse } from './garden/timelapse';
 import { stageAt } from './garden/growth';
-import { isVineSpecies, isVineSpot } from './garden/vines';
-import { pansyPalette } from './plants/looks';
 import type { SpeciesId } from './garden/species';
 import { grainDataUrl } from './grain';
 import { Scene } from './scene/Scene';
@@ -79,6 +77,7 @@ import { useWeather } from './weather/useWeather';
 import { MOMENTS, type Moment } from './weather/moments';
 import { useRemoteSync } from './remote/useRemoteSync';
 import { useRemoteActions } from './remote/useRemoteActions';
+import { vineSpecs } from './scene/vineSpecs';
 import { requestLocation } from './weather/weather';
 
 /** Height of the screen in scene units, where scenes are always 400 units wide. */
@@ -564,24 +563,7 @@ export function App() {
   const shown = replayRoom ? { ...garden, plants: gardenAt(lapse.tl, shownNow).plants } : garden;
 
   // vines show while they're switched on and their plant stands on the sill
-  const vines: VineSpec[] = devVineList.length
-    ? devVineList
-    : settings.vines
-      ? shown.plants.flatMap((p) =>
-          p.vine && isVineSpot(p.display) && isVineSpecies(p.species)
-            ? [
-                {
-                  id: p.id,
-                  species: p.species,
-                  from: p.display,
-                  length: p.vine.length,
-                  palette: pansyPalette(p.variety, garden.designs),
-                  ...(p.vine.dir ? { dir: p.vine.dir } : {}),
-                },
-              ]
-            : [],
-        )
-      : [];
+  const vines: VineSpec[] = devVineList.length ? devVineList : vineSpecs(garden, shown.plants);
 
   const cardPlant = mode.kind === 'card' ? garden.plants.find((p) => p.id === mode.id) : undefined;
   const stylePlant = mode.kind === 'style' ? garden.plants.find((p) => p.id === mode.id) : undefined;

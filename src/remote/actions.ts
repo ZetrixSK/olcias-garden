@@ -222,6 +222,8 @@ function note(g: GardenState, p: Payload): Result {
   const pressing = g.pressed.find((x) => x.id === p.press);
   if (!pressing) return skip('That pressed flower is no longer in her book.');
   if (typeof p.note !== 'string') return skip('No note was given.');
+  // her own words are never written over, even when they aren't shared and so can't be seen
+  if (pressing.note.trim()) return skip('She has already written beside that flower.');
   return done(setPressNote(g, pressing.id, p.note));
 }
 

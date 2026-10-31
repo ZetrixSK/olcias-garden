@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sentOrder } from './useRemoteActions';
+import { timeKey as sentOrder } from './timeKey';
 
 describe('sentOrder', () => {
   it('puts times in order whichever way the database wrote them', () => {
