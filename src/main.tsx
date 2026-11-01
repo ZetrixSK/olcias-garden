@@ -13,6 +13,15 @@ import { ErrorBoundary } from './ui/ErrorBoundary';
 import { BouquetGallery, Gallery, IconArt, PressedGallery } from './Gallery';
 import { paletteVars } from './theme/palettes';
 
+// the page's safety net (index.html) stands down: the garden has started
+(window as Window & { __gardenStarted?: boolean }).__gardenStarted = true;
+document.getElementById('boot-note')?.remove();
+try {
+  sessionStorage.removeItem('garden-boot-retried');
+} catch {
+  // private browsing: nothing to clear
+}
+
 if (import.meta.env.PROD) {
   // caches the app for offline use and quietly picks up new versions on the next open
   void import('virtual:pwa-register').then(({ registerSW }) => registerSW({ immediate: true }));

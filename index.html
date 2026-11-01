@@ -11,9 +11,44 @@
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="/icons/icon-192.png" />
     <title>Olcia's Garden</title>
+    <!--
+      A safety net that needs nothing else to work. If the garden hasn't started a few seconds
+      after opening (the phone's stored copy of the app is out of step with the new version), it
+      clears only that stored copy, never the garden, and opens again once. If even that doesn't
+      help, it says so on paper instead of leaving a blank screen.
+    -->
+    <style>
+      html, body { margin: 0; height: 100%; background: #ecdfc9; }
+      #boot-note { display: none; position: fixed; inset: 0; align-items: center; justify-content: center; flex-direction: column; gap: 14px; padding: 24px; text-align: center; font: 18px/1.4 system-ui, sans-serif; color: #3d2633; background: #ecdfc9; }
+      #boot-note button { font: inherit; min-height: 48px; padding: 0 22px; border-radius: 14px; border: 1.5px solid #3d2633; background: #f8f1e4; color: #3d2633; }
+    </style>
+    <script>
+      (function () {
+        var TRIED = 'garden-boot-retried';
+        function freshStart() {
+          var sw = navigator.serviceWorker ? navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }) : Promise.resolve();
+          sw.then(function () { return window.caches ? caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }) : null; })
+            .catch(function () {})
+            .then(function () { location.reload(); });
+        }
+        window.__gardenFreshStart = freshStart;
+        setTimeout(function () {
+          if (window.__gardenStarted) return;
+          var tried = false;
+          try { tried = sessionStorage.getItem(TRIED) === '1'; sessionStorage.setItem(TRIED, '1'); } catch (e) {}
+          if (!tried) return freshStart();
+          var note = document.getElementById('boot-note');
+          if (note) note.style.display = 'flex';
+        }, 12000);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <div id="boot-note" role="alert">
+      <p>Ogród nie chce się otworzyć.<br />The garden won't open just now.</p>
+      <button onclick="window.__gardenFreshStart()">Otwórz ponownie · Open it again</button>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
