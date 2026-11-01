@@ -32,12 +32,11 @@ body {
   height: 100%;
 }
 
+/* the grain carries its own see-through shade (see grain.ts), so it's simply laid on top: no blending */
 .grain {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  mix-blend-mode: multiply;
-  opacity: 0.22;
 }
 
 /* ink lines */
