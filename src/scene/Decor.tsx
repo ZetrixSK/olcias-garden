@@ -196,7 +196,7 @@ export function WallPicture({ theme, phase, onBook }: { theme: Theme; phase: num
     );
   }
   return (
-    <g transform="translate(62 652) rotate(-2)">
+    <g transform="translate(62 652) rotate(-2)" className={onBook ? 'tappable' : undefined} onClick={onBook}>
       <rect className="ink" x="-30" y="-40" width="60" height="78" fill="#1a141c" />
       <rect x="-25" y="-35" width="50" height="68" fill="#2c2846" />
       {PRINT_PHASES.map((p, i) => {
@@ -211,6 +211,13 @@ export function WallPicture({ theme, phase, onBook }: { theme: Theme; phase: num
         );
       })}
       <path d="M-18,-30 l0.5,1.6 l1.6,0.5 l-1.6,0.5 l-0.5,1.6 l-0.5,-1.6 l-1.6,-0.5 l1.6,-0.5 Z M17,20 l0.5,1.6 l1.6,0.5 l-1.6,0.5 l-0.5,1.6 l-0.5,-1.6 l-1.6,-0.5 l1.6,-0.5 Z" fill="#c9a45c" />
+      {/* a dried pansy tucked into the corner of the frame: the print opens her book of pressed flowers */}
+      <g transform="translate(-24 31) rotate(-28)">
+        <path d="M0,0 C1,6 2,10 4,14" fill="none" stroke="#7d8a66" strokeWidth="1.2" />
+        <g opacity="0.9">
+          <PansyFlower x={0} y={0} s={0.24} rot={-10} c={PANSY_OLCIA} />
+        </g>
+      </g>
     </g>
   );
 }
