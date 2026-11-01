@@ -681,15 +681,13 @@ export function App() {
   };
 
   /** Keeps a painting: in her album, and on the shelf too if she painted it for a place there. Throws if it couldn't be kept. */
-  const keepPainting = async (blob: Blob, paper: PaperId | null) => {
+  const keepPainting = async (blob: Blob, small: Blob, paper: PaperId | null) => {
     const e = easel;
     if (!e) return;
-    const small = await prepareImage(blob, MEMORY_PIXELS.thumb, paper ? 'jpeg' : 'png');
     const img = newId();
     const thumb = newId();
-    await putImage(img, blob);
-    await putImage(thumb, small.blob);
-    rememberUrl(thumb, small.blob);
+    await Promise.all([putImage(img, blob), putImage(thumb, small)]);
+    rememberUrl(thumb, small);
     if (e.again) {
       const old = e.again;
       changeMemories((x) => editMemory(x, old.id, { img, thumb, w: PAINT_W, h: PAINT_H, at: Date.now(), paper }));

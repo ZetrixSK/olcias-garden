@@ -197,9 +197,6 @@ const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hi
 }) {
   return (
     <>
-      {!hideCurtains && <Curtains theme={theme} />}
-      {/* the witchy room's bat, asleep on the curtain rod by day; it visits the cozy room for Halloween */}
-      {(theme === 'witchy' || occasion === 'halloween') && <HangingBat x={298} y={36} s={1.55} awake={mood === 'asleep'} />}
       <WallDecor theme={theme} cy={wallMid} scale={pictureScale} phase={phase} onBook={onBook} photoUrl={photoUrl} onFrame={onFrame} roomForPost={!!onPost} />
       {/* her letterbox, on the wall between the sign and the photo frame */}
       {onPost && (
@@ -211,6 +208,14 @@ const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hi
       <g transform={`translate(${onPost ? -12 : 0} ${(wallMid - 606).toFixed(1)})`}>
         <Sign theme={theme} />
       </g>
+      {/* the curtains hang in front of the pictures on the wall; taps go through them to the pictures */}
+      {!hideCurtains && (
+        <g pointerEvents="none">
+          <Curtains theme={theme} />
+        </g>
+      )}
+      {/* the witchy room's bat, asleep on the curtain rod by day; it visits the cozy room for Halloween */}
+      {(theme === 'witchy' || occasion === 'halloween') && <HangingBat x={298} y={36} s={1.55} awake={mood === 'asleep'} />}
       <g transform={`translate(0 ${dy})`}>
         <Floor />
         <CornerPiece theme={theme} />

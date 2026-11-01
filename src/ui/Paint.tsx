@@ -6,6 +6,9 @@ import { useWords } from '../i18n';
 export const PAINT_W = 768;
 export const PAINT_H = 1024;
 const UNDO_STEPS = 10;
+/** The small copy shown on the album pages. */
+const THUMB_W = 270;
+const THUMB_H = 360;
 
 export const PAPER_COLOUR: Record<PaperId, string> = { cream: '#f4ecd8', white: '#fbf8f2', blush: '#f5dde1', ink: '#211a24' };
 const PAPER_NAMES: Record<PaperId | 'clear', [string, string]> = {
@@ -88,7 +91,7 @@ export function Paint({ start, paper: startPaper, onSave, onClose }: {
   /** A painting to carry on with, if any. */
   start: string | null;
   paper: PaperId | null;
-  onSave: (blob: Blob, paper: PaperId | null) => Promise<void>;
+  onSave: (blob: Blob, thumb: Blob, paper: PaperId | null) => Promise<void>;
   onClose: () => void;
 }) {
   const w = useWords();
@@ -280,10 +283,21 @@ export function Paint({ start, paper: startPaper, onSave, onClose }: {
       }
       c.drawImage(src, 0, 0);
     }
-    const blob = await new Promise<Blob | null>((resolve) => out.toBlob(resolve, 'image/png'));
+    // the small copy for the album pages is drawn straight from the canvas, and both are encoded at once
+    const small = document.createElement('canvas');
+    small.width = THUMB_W;
+    small.height = THUMB_H;
+    const sc = small.getContext('2d');
+    if (sc) {
+      sc.imageSmoothingQuality = 'high';
+      sc.drawImage(out, 0, 0, THUMB_W, THUMB_H);
+    }
+    const encode = (c: HTMLCanvasElement, jpeg: boolean) =>
+      new Promise<Blob | null>((resolve) => (jpeg ? c.toBlob(resolve, 'image/jpeg', 0.86) : c.toBlob(resolve, 'image/png')));
+    const [blob, thumb] = await Promise.all([encode(out, false), encode(small, !!paper)]);
     try {
-      if (!blob) throw new Error('could not encode');
-      await onSave(blob, paper);
+      if (!blob || !thumb) throw new Error('could not encode');
+      await onSave(blob, thumb, paper);
     } catch {
       setSaving(false);
       setFailed(true);
