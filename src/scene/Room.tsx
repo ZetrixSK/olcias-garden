@@ -73,45 +73,105 @@ export function Sill() {
 }
 
 /** One curtain panel, drawn for the left side; the right one is mirrored with different proportions. */
-function curtainPath(tieY: number, innerTop: number, tieX: number, hemInner: number) {
-  return `M2,38 L${innerTop},38 C${innerTop - 4},${tieY * 0.35} ${tieX + 18},${tieY * 0.7} ${tieX + 4},${tieY - 8}
-    C${tieX + 2},${tieY} ${tieX},${tieY + 6} ${tieX + 2},${tieY + 14}
-    C${tieX + 10},${tieY + 80} ${hemInner - 6},${tieY + 150} ${hemInner},572
-    C${hemInner - 10},576 ${hemInner - 20},571 ${hemInner - 30},575 C${hemInner - 40},578 ${hemInner - 48},572 ${hemInner - 58},576 L2,574 Z`;
+const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
+/** Where a closed panel's inner edge meets the other one, a little past the middle so they overlap. */
+const CLOSED_EDGE = 206;
+const f = (n: number) => n.toFixed(1);
+
+type Panel = { tieY: number; innerTop: number; tieX: number; hemInner: number };
+const LEFT: Panel = { tieY: 404, innerTop: 80, tieX: 38, hemInner: 62 };
+const RIGHT: Panel = { tieY: 420, innerTop: 74, tieX: 34, hemInner: 56 };
+
+/**
+ * A panel's outline, from tied back (p = 0) to drawn closed across the window (p = 1). Both states
+ * are drawn with the same points, so every step in between is a curtain too: the tie lets go, the
+ * waist widens and the inner edge slides across to the middle.
+ */
+function panelShape(p: number, { tieY, innerTop, tieX, hemInner }: Panel) {
+  const e = CLOSED_EDGE;
+  const L = (a: number, b: number) => f(lerp(a, b, p));
+  const h = lerp(hemInner, e, p);
+  // the hem's little waves spread out along the wider bottom edge
+  const s = lerp(1, 3.4, p);
+  const inner =
+    `${L(innerTop, e)},38 C${L(innerTop - 4, e + 1)},${L(tieY * 0.35, 180)} ${L(tieX + 18, e - 1)},${L(tieY * 0.7, 300)} ${L(tieX + 4, e)},${L(tieY - 8, 392)}` +
+    ` C${L(tieX + 2, e + 1)},${L(tieY, 410)} ${L(tieX, e)},${L(tieY + 6, 425)} ${L(tieX + 2, e)},${L(tieY + 14, 440)}` +
+    ` C${L(tieX + 10, e - 1)},${L(tieY + 80, 490)} ${L(hemInner - 6, e + 1)},${L(tieY + 150, 540)} ${f(h)},572`;
+  const outline =
+    `M2,38 L${inner} C${f(h - 10 * s)},576 ${f(h - 20 * s)},571 ${f(h - 30 * s)},575 C${f(h - 40 * s)},578 ${f(h - 48 * s)},572 ${f(Math.max(4, h - 58 * s))},576 L2,574 Z`;
+  return { outline, inner: `M${inner}` };
 }
 
-function Curtain({ theme, tieY, innerTop, tieX, hemInner, mirror }: {
-  theme: Theme; tieY: number; innerTop: number; tieX: number; hemInner: number; mirror?: boolean;
-}) {
-  const d = curtainPath(tieY, innerTop, tieX, hemInner);
-  const t = tieY;
+/**
+ * The folds: gathered into the tie while it's open, hanging straight when it's drawn. Each one
+ * runs from the rod to the hem through its middle point; x positions are [open, closed].
+ */
+const FOLDS: Array<{ top: [number, number]; bot: [number, number]; mid: number; wave: number; wt: number; wb: number; tone: string }> = [
+  { top: [12, 24], bot: [0.22, 18], mid: -6, wave: 5, wt: 8, wb: 14, tone: 'curtain-shade' },
+  { top: [24, 62], bot: [0.42, 62], mid: -2, wave: -4, wt: 4, wb: 7, tone: 'curtain-hi' },
+  { top: [36, 102], bot: [0.58, 98], mid: 1, wave: 6, wt: 8, wb: 12, tone: 'curtain-shade' },
+  { top: [48, 142], bot: [0.74, 144], mid: 3, wave: -5, wt: 4, wb: 6, tone: 'curtain-hi' },
+  { top: [60, 180], bot: [0.88, 178], mid: 5, wave: 4, wt: 7, wb: 11, tone: 'curtain-shade' },
+];
+
+function foldPath(p: number, fold: (typeof FOLDS)[number], { tieY, tieX, hemInner }: Panel) {
+  const x0 = lerp(fold.top[0], fold.top[1], p);
+  const x1 = lerp(fold.bot[0] * hemInner, fold.bot[1], p);
+  const xm = lerp(tieX + fold.mid, (x0 + x1) / 2 + fold.wave, p);
+  const ym = lerp(tieY, 320, p);
+  const half = lerp(1, (fold.wt + fold.wb) / 4, p);
+  const a = (ym - 38) * 0.5;
+  const b = (574 - ym) * 0.4;
+  return (
+    `M${f(x0 - fold.wt / 2)},38 C${f(x0 - fold.wt / 2)},${f(38 + a)} ${f(xm - half)},${f(ym - a * 0.6)} ${f(xm - half)},${f(ym)}` +
+    ` C${f(xm - half)},${f(ym + b * 0.7)} ${f(x1 - fold.wb / 2)},${f(574 - b)} ${f(x1 - fold.wb / 2)},574` +
+    ` L${f(x1 + fold.wb / 2)},574` +
+    ` C${f(x1 + fold.wb / 2)},${f(574 - b)} ${f(xm + half)},${f(ym + b * 0.7)} ${f(xm + half)},${f(ym)}` +
+    ` C${f(xm + half)},${f(ym - a * 0.6)} ${f(x0 + fold.wt / 2)},${f(38 + a)} ${f(x0 + fold.wt / 2)},38 Z`
+  );
+}
+
+const STAR = 'M0,-3 C0.3,-0.8 0.8,-0.3 3,0 C0.8,0.3 0.3,0.8 0,3 C-0.3,0.8 -0.8,0.3 -3,0 C-0.8,-0.3 -0.3,-0.8 0,-3 Z';
+
+function Curtain({ theme, panel, p, mirror, onToggle }: { theme: Theme; panel: Panel; p: number; mirror?: boolean; onToggle?: () => void }) {
+  const { outline, inner } = panelShape(p, panel);
+  const { tieY: t, tieX } = panel;
+  // the tie lets go first as the curtain is drawn, and is tied again only once it's fully open
+  const tie = Math.max(0, 1 - p / 0.15);
+  const charm = (open: [number, number], closed: [number, number]) => `translate(${f(lerp(open[0], closed[0], p))} ${f(lerp(open[1], closed[1], p))})`;
   return (
     <g transform={mirror ? 'translate(400 0) scale(-1 1)' : undefined}>
       <g className="curtain-sway" style={{ animationDelay: mirror ? '-3s' : '0s' }}>
-        <path style={fv('curtain')} d={d} />
-        {/* folds gather into the tie and fan out below it */}
-        <path style={fv('curtain-shade')} d={`M18,38 C22,${t * 0.4} ${tieX - 6},${t * 0.75} ${tieX},${t - 4} C${tieX - 10},${t * 0.75} 14,${t * 0.4} 10,38 Z`} />
-        <path style={fv('curtain-shade')} d={`M44,38 C44,${t * 0.4} ${tieX + 4},${t * 0.75} ${tieX + 2},${t - 4} C${tieX - 2},${t * 0.75} 38,${t * 0.4} 36,38 Z`} />
-        <path style={fv('curtain-hi')} d={`M30,38 C32,${t * 0.4} ${tieX - 2},${t * 0.75} ${tieX},${t - 6} C${tieX - 4},${t * 0.75} 28,${t * 0.4} 26,38 Z`} />
-        <path style={fv('curtain-shade')} d={`M${tieX},${t + 16} C${tieX - 6},${t + 80} 16,${t + 150} 10,574 L22,575 C26,${t + 150} ${tieX - 2},${t + 80} ${tieX + 2},${t + 16} Z`} />
-        <path style={fv('curtain-shade')} d={`M${tieX + 6},${t + 16} C${tieX + 8},${t + 80} ${hemInner - 26},${t + 150} ${hemInner - 32},575 L${hemInner - 22},572 C${hemInner - 18},${t + 150} ${tieX + 12},${t + 80} ${tieX + 8},${t + 16} Z`} />
-        <path style={fv('curtain-hi')} d={`M${tieX + 2},${t + 16} C${tieX},${t + 80} ${hemInner - 44},${t + 150} ${hemInner - 48},575 L${hemInner - 42},576 C${hemInner - 38},${t + 150} ${tieX + 6},${t + 80} ${tieX + 4},${t + 16} Z`} />
+        <path style={fv('curtain')} d={outline} />
+        {FOLDS.map((fold, i) => (
+          <path key={i} style={fv(fold.tone)} d={foldPath(p, fold, panel)} />
+        ))}
         {/* the lining peeks along the inner edge */}
-        <path
-          d={`M${innerTop},38 C${innerTop - 4},${t * 0.35} ${tieX + 18},${t * 0.7} ${tieX + 4},${t - 8} M${tieX + 2},${t + 14} C${tieX + 10},${t + 80} ${hemInner - 6},${t + 150} ${hemInner},572`}
-          fill="none"
-          style={sv('curtain-lining')}
-          strokeWidth="3.5"
-        />
-        <path className="ink" fill="none" d={d} />
+        <path d={inner} fill="none" style={sv('curtain-lining')} strokeWidth={f(lerp(3.5, 2, p))} opacity={f(lerp(1, 0.45, p))} />
+        <path className="ink" fill="none" d={outline} />
         {theme === 'witchy' && (
           <g style={fv('tie')} opacity="0.8">
-            <path transform={`translate(22 ${t * 0.42})`} d="M0,-3 C0.3,-0.8 0.8,-0.3 3,0 C0.8,0.3 0.3,0.8 0,3 C-0.3,0.8 -0.8,0.3 -3,0 C-0.8,-0.3 -0.3,-0.8 0,-3 Z" />
-            <path transform={`translate(26 ${t + 120})`} d="M0,-5 A5,5 0 1 0 0,5 A3.4,5 0 1 1 0,-5 Z" />
-            <path transform={`translate(${tieX + 14} ${t + 190})`} d="M0,-3 C0.3,-0.8 0.8,-0.3 3,0 C0.8,0.3 0.3,0.8 0,3 C-0.3,0.8 -0.8,0.3 -3,0 C-0.8,-0.3 -0.3,-0.8 0,-3 Z" />
+            <path transform={charm([22, t * 0.42], [70, 170])} d={STAR} />
+            <path transform={charm([26, t + 120], [120, 470])} d="M0,-5 A5,5 0 1 0 0,5 A3.4,5 0 1 1 0,-5 Z" />
+            <path transform={charm([tieX + 14, t + 190], [176, 540])} d={STAR} />
           </g>
         )}
-        <Tie theme={theme} x={tieX + 4} y={t + 2} />
+        {tie > 0 && (
+          <g opacity={tie}>
+            <Tie theme={theme} x={tieX + 4} y={t + 2} />
+          </g>
+        )}
+        {/* the cloth itself is what's tapped, but not where its hem hangs over the pictures on the wall */}
+        {onToggle && (
+          <path
+            className="tappable"
+            role="button"
+            d={outline}
+            fill="transparent"
+            clipPath="url(#curtain-hit)"
+            onClick={onToggle}
+          />
+        )}
       </g>
     </g>
   );
@@ -141,11 +201,26 @@ function Tie({ theme, x, y }: { theme: Theme; x: number; y: number }) {
   );
 }
 
-export function Curtains({ theme }: { theme: Theme }) {
+/** The two panels' outlines at a moment of opening or closing: what hides the sky behind them. */
+export function CurtainCover({ p, fill }: { p: number; fill: string }) {
+  return (
+    <>
+      <path d={panelShape(p, LEFT).outline} fill={fill} />
+      <path d={panelShape(p, RIGHT).outline} fill={fill} transform="translate(400 0) scale(-1 1)" />
+    </>
+  );
+}
+
+export function Curtains({ theme, p = 0, onToggle }: { theme: Theme; p?: number; onToggle?: () => void }) {
   return (
     <g>
-      <Curtain theme={theme} tieY={404} innerTop={80} tieX={38} hemInner={62} />
-      <Curtain theme={theme} tieY={420} innerTop={74} tieX={34} hemInner={56} mirror />
+      <defs>
+        <clipPath id="curtain-hit">
+          <rect x="0" y="0" width="400" height="548" />
+        </clipPath>
+      </defs>
+      <Curtain theme={theme} panel={LEFT} p={p} onToggle={onToggle} />
+      <Curtain theme={theme} panel={RIGHT} p={p} mirror onToggle={onToggle} />
       {/* rod */}
       <rect className="ink" x="0" y="30" width="400" height="7" rx="3" style={fv(theme === 'cozy' ? 'sill' : 'frame')} />
       {theme === 'cozy' ? (
@@ -159,9 +234,10 @@ export function Curtains({ theme }: { theme: Theme }) {
           <path className="ink" style={fv('tie')} d="M390,24 A10,10 0 1 1 390,44 A7,10 0 1 0 390,24 Z" />
         </>
       )}
-      {[14, 32, 50, 68, 332, 350, 368, 386].map((x) => (
-        <ellipse key={x} className="ink-thin" cx={x} cy="34" rx="4" ry="6" fill="none" />
-      ))}
+      {[14, 32, 50, 68].flatMap((x, i) => {
+        const at = lerp(x, [14, 74, 134, 194][i]!, p);
+        return [at, 400 - at].map((cx, side) => <ellipse key={`${i}-${side}`} className="ink-thin" cx={f(cx)} cy="34" rx="4" ry="6" fill="none" />);
+      })}
     </g>
   );
 }

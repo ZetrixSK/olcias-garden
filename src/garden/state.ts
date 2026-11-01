@@ -80,6 +80,8 @@ export type Settings = {
   gardenName: string | null;
   /** Whether she has been asked, once, to choose her tag (after the letter, the first time). */
   tagAsked: boolean;
+  /** Whether the curtains are drawn across the window. */
+  curtainsClosed: boolean;
 };
 
 /** Long enough for a real name, short enough to fit on the sign. */
@@ -146,6 +148,7 @@ export const DEFAULT_SETTINGS: Settings = {
   me: 'she',
   gardenName: null,
   tagAsked: false,
+  curtainsClosed: false,
 };
 
 export function newId(): string {
@@ -564,6 +567,7 @@ export function parseSettings(v: unknown): Settings {
     me: parseMe(s.me),
     gardenName: typeof s.gardenName === 'string' && s.gardenName.trim() ? s.gardenName.slice(0, MAX_GARDEN_NAME) : null,
     tagAsked: s.tagAsked === true,
+    curtainsClosed: s.curtainsClosed === true,
   };
 }
 

@@ -100,6 +100,36 @@ function OwnCandle({ look: { shape, wax } }: { look: CandleLook }) {
 }
 
 /**
+ * The gradients for candlelight, under one name per drawing (the room and the shelves each have
+ * their own). The light falls off slowly from a small, soft centre, so it reads as a warm pool in
+ * the room rather than a disc; the halo and the lit pumpkin face are made the same way.
+ */
+export function WarmLightDefs({ id }: { id: string }) {
+  return (
+    <>
+      <radialGradient id={id}>
+        <stop offset="0" stopColor="#ffd59a" stopOpacity="0.54" />
+        <stop offset="0.12" stopColor="#ffc47e" stopOpacity="0.37" />
+        <stop offset="0.3" stopColor="#f5a465" stopOpacity="0.18" />
+        <stop offset="0.55" stopColor="#e98d5a" stopOpacity="0.06" />
+        <stop offset="1" stopColor="#e98d5a" stopOpacity="0" />
+      </radialGradient>
+      <radialGradient id={`${id}-halo`}>
+        <stop offset="0" stopColor="#fff0c8" stopOpacity="0.5" />
+        <stop offset="0.35" stopColor="#ffd38a" stopOpacity="0.2" />
+        <stop offset="1" stopColor="#ffd38a" stopOpacity="0" />
+      </radialGradient>
+      {/* the carved face, lit from inside: pale where the flame is, amber towards the edges */}
+      <radialGradient id={`${id}-face`} cx="0.5" cy="0.62" r="0.62">
+        <stop offset="0" stopColor="#ffeab0" />
+        <stop offset="0.45" stopColor="#f9be62" />
+        <stop offset="1" stopColor="#d97a2e" />
+      </radialGradient>
+    </>
+  );
+}
+
+/**
  * The candle's light: glow and flame while it burns. Lighting it, the flame catches and grows;
  * blowing it out leaves a curl of smoke rising from the wick.
  */
@@ -115,8 +145,8 @@ export function CandleLight({ x, y, lit, glow, r }: { x: number; y: number; lit:
     <>
       {lit && (
         <g key={`lit-${change?.n ?? 0}`} className={change?.to ? 'candle-catch' : undefined} pointerEvents="none">
-          <circle className="glow" cx={x} cy={y} r={r} fill={`url(#${glow})`} />
-          <Flame x={x} y={y} />
+          <circle className="glow breathing" cx={x} cy={y} r={r} fill={`url(#${glow})`} />
+          <Flame x={x} y={y} halo={`${glow}-halo`} />
         </g>
       )}
       {change && !change.to && (
@@ -128,11 +158,11 @@ export function CandleLight({ x, y, lit, glow, r }: { x: number; y: number; lit:
   );
 }
 
-export function Flame({ x, y }: { x: number; y: number }) {
+/** The flame, with a soft halo that fades out rather than ending at an edge (without one, a faint plain one). */
+export function Flame({ x, y, halo }: { x: number; y: number; halo?: string }) {
   return (
     <g transform={`translate(${x} ${y})`}>
-      <circle r="13" fill="#ffd38a" opacity="0.16" />
-      <circle r="6" fill="#ffd38a" opacity="0.22" />
+      {halo ? <circle cy="-3" r="15" fill={`url(#${halo})`} /> : <circle r="9" fill="#ffd38a" opacity="0.14" />}
       <g className="flicker">
         <path d="M0,-11 C3,-6 4.6,-2 3.6,1.4 C2.8,3.6 -2.8,3.6 -3.6,1.4 C-4.6,-2 -2.4,-6 0,-11 Z" fill="#f7b24e" />
         <path d="M0,-6 C1.6,-3 2.2,-1 1.6,1 C1,2.2 -1,2.2 -1.6,1 C-2.2,-1 -1.2,-3 0,-6 Z" fill="#fff1c4" />

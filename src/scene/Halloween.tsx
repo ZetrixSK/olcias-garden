@@ -40,11 +40,12 @@ export function JackOLantern({ x, y, s = 1 }: { x: number; y: number; s?: number
 /** The candle inside the pumpkin, drawn above the night tint so the face really glows. */
 export function LanternLight({ x, y, s = 1, glow = 'candle-glow' }: { x: number; y: number; s?: number; glow?: string }) {
   return (
-    <g>
-      <circle className="glow" cx={x} cy={y - 16 * s} r={70 * s} fill={`url(#${glow})`} />
-      <g transform={`translate(${x} ${y}) scale(${s})`} className="flicker">
-        <path d={FACE} fill="#ffcf6b" />
-        <path d={FACE} fill="#fff1c4" transform="translate(0 -16) scale(0.6) translate(0 16)" opacity="0.7" />
+    <g pointerEvents="none">
+      <circle className="glow breathing" cx={x} cy={y - 14 * s} r={54 * s} fill={`url(#${glow})`} />
+      <g transform={`translate(${x} ${y}) scale(${s})`}>
+        {/* the face holds still; only its light wavers, as a candle inside would make it */}
+        <path d={FACE} fill={`url(#${glow}-face)`} />
+        <path className="lantern-waver" d={FACE} fill="#fff4d2" transform="translate(0 -12) scale(0.55) translate(0 12)" opacity="0.35" />
       </g>
     </g>
   );

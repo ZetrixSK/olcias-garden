@@ -1,24 +1,25 @@
-import { memo, useMemo } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { outsideKey, outsideNow, withMoments, type Moment, type Outside } from '../weather/moments';
 import { WINDOW_SPOTS, type GardenState, type WindowSpot } from '../garden/state';
 import { chooseRoutes, type VineSpot } from '../garden/vines';
 import { POT_HEIGHT } from '../plants/Pots';
 import { plantLook } from '../plants/looks';
 import { candleLit as isCandleLit, roomTint, type Theme, type Weather } from '../theme/palettes';
-import { Ball, CandleLight, candleFlame, CornerPiece, ROOM_SPARKLES, ShelfTrinket, SillCandle, WallDecor, WallSparkles } from './Decor';
+import { Ball, CandleLight, candleFlame, CornerPiece, ROOM_SPARKLES, ShelfTrinket, SillCandle, WallDecor, WallSparkles, WarmLightDefs } from './Decor';
 import type { CandleLook } from '../garden/candle';
 import { DogBed, Dogs } from './Dogs';
 import { dogMood, type DogMood } from './dogMood';
 import { EmptySlot, GardenPlanter, GlowPlanter } from './GardenPlanter';
 import { FLOOR_Y, SILL_Y, VIEW_H, VIEW_W, WINDOW_OPENING } from './geometry';
 import { Frost, LakeLife, Landscape, Rain, SeasonAir, SeasonBranch } from './Outside';
-import { Curtains, Floor, Shelf, Sign, Sill, Wall, WindowFrame } from './Room';
+import { Floor, Shelf, Sign, Sill, Wall, WindowFrame } from './Room';
 import { Sky, SkyLights } from './Sky';
 import { moonPhase } from '../weather/moon';
 import { occasionShown, seasonShown, type Occasion, type Season } from '../theme/seasons';
 import { Bats, LanternLight, ROOM_LANTERN, RoomPumpkins } from './Halloween';
 import type { OwnPaper } from './OwnDecor';
 import { HangingBat } from './HangingBat';
+import { CurtainStage } from './CurtainStage';
 import { leanFor, runnerStart, VINE_PHASE, VineRunner, Vines, type PlacedVine, type Snip, type VineSpec } from './Vines';
 import { useGrowingVines } from './useGrowingVines';
 import { FloorParcels } from '../ui/Bouquets';
@@ -182,7 +183,11 @@ const Backdrop = memo(function Backdrop({ theme, sky, night, twilight, season, o
 });
 
 /** Curtains, pictures, sign, floor and the dogs. */
-const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hideCurtains, phase, mood, occasion, onBook, photoUrl, onFrame, parcels, onParcels, mailNews, onPost, name, onSign }: {
+const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hideCurtains, phase, mood, occasion, onBook, photoUrl, onFrame, parcels, onParcels, mailNews, onPost, name, onSign, curtainsClosed, onCurtains, onCurtainsOpen }: {
+  curtainsClosed: boolean;
+  /** Tapping the curtains draws them or ties them back (only in her own garden). */
+  onCurtains?: () => void;
+  onCurtainsOpen: () => void;
   /** Her name for the garden, on the sign; tapping the sign calls onSign (only in her own garden). */
   name: string | null;
   onSign?: () => void;
@@ -211,12 +216,8 @@ const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hi
       <g transform={`translate(${onPost ? -12 : 0} ${(wallMid - 606).toFixed(1)})`}>
         <Sign theme={theme} name={name} onTap={onSign} />
       </g>
-      {/* the curtains hang in front of the pictures on the wall; taps go through them to the pictures */}
-      {!hideCurtains && (
-        <g pointerEvents="none">
-          <Curtains theme={theme} />
-        </g>
-      )}
+      {/* the curtains hang in front of the pictures on the wall; only the cloth above them is tapped */}
+      {!hideCurtains && <CurtainStage theme={theme} closed={curtainsClosed} onToggle={onCurtains} onOpen={onCurtainsOpen} />}
       {/* the witchy room's bat, asleep on the curtain rod by day; it visits the cozy room for Halloween */}
       {(theme === 'witchy' || occasion === 'halloween') && <HangingBat x={298} y={36} s={1.55} awake={mood === 'asleep'} />}
       <g transform={`translate(0 ${dy})`}>
@@ -246,8 +247,10 @@ const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hi
 });
 
 /** The light over everything: night or rain tint, moon and stars, candlelight. */
-const Lights = memo(function Lights({ theme, sky, night, twilight, phase, occasion, dy, wallMid, fx, fy, candleOn, shower }: Lit & {
+const Lights = memo(function Lights({ theme, sky, night, twilight, phase, occasion, dy, wallMid, fx, fy, candleOn, shower, veiled }: Lit & {
   shower: boolean;
+  /** The curtains are drawn (or moving): the sky behind them is hidden, the candle only glimmers through. */
+  veiled: boolean;
   phase: number;
   occasion: Occasion;
   dy: number;
@@ -262,14 +265,18 @@ const Lights = memo(function Lights({ theme, sky, night, twilight, phase, occasi
     <>
       {/* one tint for the whole scene keeps sky and room in the same light */}
       {tint && <rect className="tint" x="0" y="-300" width={VIEW_W} height={VIEW_H + 600} fill={tint.color} opacity={tint.opacity} />}
-      <SkyLights weather={weather} phase={phase} shower={shower} />
+      <g mask={veiled ? 'url(#curtain-cover)' : undefined}>
+        <SkyLights weather={weather} phase={phase} shower={shower} />
+      </g>
       {theme === 'witchy' && <WallSparkles points={ROOM_SPARKLES} cy={wallMid} night={night} />}
       {occasion === 'halloween' && isCandleLit(weather) && (
         <g transform={`translate(0 ${dy})`}>
           <LanternLight {...ROOM_LANTERN} />
         </g>
       )}
-      <CandleLight x={fx} y={fy} lit={candleOn} glow="candle-glow" r={night ? 250 : 170} />
+      <g mask={veiled ? 'url(#curtain-cover-soft)' : undefined}>
+        <CandleLight x={fx} y={fy} lit={candleOn} glow="candle-glow" r={night ? 250 : 170} />
+      </g>
     </>
   );
 });
@@ -279,7 +286,7 @@ const SillBoard = memo(Sill);
 const Trinket = memo(ShelfTrinket);
 const Candle = memo(SillCandle);
 
-export function Scene({ theme, weather, viewH, vines, still = false, moments = [], onParcels, onPost, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, onSign, rainbow = false, candle = null, candleOn, onCandle, ...rest }: {
+export function Scene({ theme, weather, viewH, vines, still = false, moments = [], onParcels, onPost, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, onSign, onCurtains, rainbow = false, candle = null, candleOn, onCandle, ...rest }: {
   theme: Theme;
   weather: Weather;
   viewH: number;
@@ -306,6 +313,8 @@ export function Scene({ theme, weather, viewH, vines, still = false, moments = [
   onFrame?: () => void;
   /** Tapping the sign, to name the garden; without it the sign is only to look at (someone else's garden). */
   onSign?: () => void;
+  /** Tapping the curtains, to draw them or tie them back; without it they're only to look at. */
+  onCurtains?: () => void;
   /** Her own candle, or null for the room's own. */
   candle?: CandleLook | null;
   candleOn: boolean;
@@ -322,17 +331,18 @@ export function Scene({ theme, weather, viewH, vines, still = false, moments = [
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the key holds everything that matters
     [key],
   );
+  const curtainsClosed = rest.garden.settings.curtainsClosed;
+  const [veiled, setVeiled] = useState(curtainsClosed);
+  if (curtainsClosed && !veiled) setVeiled(true);
+  const onCurtainsOpen = useCallback(() => setVeiled(false), []);
+
   return (
     <svg className="scene" viewBox={`0 ${minY.toFixed(1)} ${VIEW_W} ${viewH.toFixed(1)}`} preserveAspectRatio="xMidYMax slice">
       <defs>
         <clipPath id="window-clip">
           <path d={WINDOW_OPENING} />
         </clipPath>
-        <radialGradient id="candle-glow">
-          <stop offset="0" stopColor="#ffc97e" stopOpacity="0.72" />
-          <stop offset="0.35" stopColor="#ff9f5a" stopOpacity="0.2" />
-          <stop offset="1" stopColor="#ff9f5a" stopOpacity="0" />
-        </radialGradient>
+        <WarmLightDefs id="candle-glow" />
       </defs>
 
       <Backdrop
@@ -380,9 +390,16 @@ export function Scene({ theme, weather, viewH, vines, still = false, moments = [
        parcels={rest.garden.parcels.length} onParcels={onParcels} mailNews={rest.garden.post.unread > 0} onPost={onPost}
         name={rest.garden.settings.gardenName}
         onSign={onSign}
+        curtainsClosed={curtainsClosed}
+        onCurtains={onCurtains}
+        onCurtainsOpen={onCurtainsOpen}
       />
-      <Lights theme={theme} sky={weather.sky} night={weather.night} twilight={weather.twilight ?? null} phase={phaseAt(rest.now)} occasion={cal.occasion} dy={dy} wallMid={wallMid} fx={candleFlame(theme, candle)[0]} fy={candleFlame(theme, candle)[1]} candleOn={candleOn} shower={moments.includes('shooting-stars')} />
-      {weather.night && <WindowGlow garden={rest.garden} now={rest.now} />}
+      <Lights theme={theme} sky={weather.sky} night={weather.night} twilight={weather.twilight ?? null} phase={phaseAt(rest.now)} occasion={cal.occasion} dy={dy} wallMid={wallMid} fx={candleFlame(theme, candle)[0]} fy={candleFlame(theme, candle)[1]} candleOn={candleOn} shower={moments.includes('shooting-stars')} veiled={veiled} />
+      {weather.night && (
+        <g mask={veiled ? 'url(#curtain-cover-soft)' : undefined}>
+          <WindowGlow garden={rest.garden} now={rest.now} />
+        </g>
+      )}
     </svg>
   );
 }

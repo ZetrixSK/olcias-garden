@@ -2,7 +2,7 @@ import { SLOT_IDS, type GardenState, type SlotId } from '../garden/state';
 import { POT_HEIGHT } from '../plants/Pots';
 import { plantLook } from '../plants/looks';
 import { candleLit as isCandleLit, roomTint, type Theme, type Weather } from '../theme/palettes';
-import { CandleLight, candleFlame, SHELF_SPARKLES, SillCandle, WallSparkles } from './Decor';
+import { CandleLight, candleFlame, SHELF_SPARKLES, SillCandle, WallSparkles, WarmLightDefs } from './Decor';
 import type { CandleLook } from '../garden/candle';
 import { PeekingDogs } from './Dogs';
 import { dogMood } from './dogMood';
@@ -148,11 +148,7 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
         <clipPath id="shelf-window-clip">
           <path d={OPENING} />
         </clipPath>
-        <radialGradient id="shelf-candle-glow">
-          <stop offset="0" stopColor="#ffc97e" stopOpacity="0.72" />
-          <stop offset="0.35" stopColor="#ff9f5a" stopOpacity="0.2" />
-          <stop offset="1" stopColor="#ff9f5a" stopOpacity="0" />
-        </radialGradient>
+        <WarmLightDefs id="shelf-candle-glow" />
       </defs>
 
       <g clipPath="url(#shelf-window-clip)">

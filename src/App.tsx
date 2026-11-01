@@ -289,6 +289,7 @@ export function App() {
   const [pictureError, setPictureError] = useState<string | null>(null);
   const openDecorate = useCallback(() => setMode({ kind: 'decorate' }), []);
   const openSign = useCallback(() => setMode({ kind: 'gardenName' }), []);
+  const toggleCurtains = useCallback(() => setGarden((g) => (g ? updateSettings(g, { curtainsClosed: !g.settings.curtainsClosed }) : g)), []);
 
   /** Replays what happened between two moments. With reduced motion it only plays when asked. */
   const playLapse = useCallback((tl: Timelapse, auto: boolean) => {
@@ -848,6 +849,7 @@ export function App() {
               photoUrl={garden.decor.photo ? (pictures[garden.decor.photo.img] ?? null) : null}
               onFrame={openDecorate}
               onSign={openSign}
+              onCurtains={toggleCurtains}
               onParcels={() => {
                 setGarden((g) => (g ? postSeen(g) : g));
                 setMode({ kind: 'parcels' });

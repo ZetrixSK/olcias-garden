@@ -3139,3 +3139,22 @@ body {
 .tag-screen .welcome-here {
   margin-top: 4px;
 }
+
+/* candlelight breathes, slowly and only a little: alive, never flashing */
+.breathing {
+  animation: breathing 5.5s ease-in-out infinite;
+}
+@keyframes breathing {
+  0%, 100% { opacity: 1; }
+  35% { opacity: 0.86; }
+  60% { opacity: 0.95; }
+  80% { opacity: 0.88; }
+}
+.lantern-waver {
+  animation: lantern-waver 3.2s ease-in-out infinite;
+}
+@keyframes lantern-waver {
+  0%, 100% { opacity: 0.35; }
+  40% { opacity: 0.2; }
+  70% { opacity: 0.3; }
+}
