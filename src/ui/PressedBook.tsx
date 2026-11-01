@@ -135,9 +135,9 @@ export function PressedBook({ pressed, onNote, onRemove, onClose }: {
               <h2>{t('Pressed flowers', 'Zielnik')}</h2>
               {pressed.length === 0 ? (
                 <p className="book-empty">
-                  {t('Nothing pressed yet.', 'Jeszcze nic tu nie ma.')}
+                  {t('Nothing pressed yet.', 'Jeszcze nic nie zostało zasuszone.')}
                   <br />
-                  {t('When a flower is in bloom, tap it and choose Press.', 'Kiedy kwiat zakwitnie, stuknij go i wybierz Zasusz.')}
+                  {t('When a flower is in bloom, tap it and choose Press.', 'Kiedy kwiat zakwitnie, stuknij go i wybierz „Zasusz”.')}
                 </p>
               ) : (
                 <ul className="book-grid">

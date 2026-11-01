@@ -327,7 +327,7 @@ export function Paint({ start, paper: startPaper, onSave, onClose }: {
                 <path d="M-7,-3 L-2,-8 M-7,-3 L-2,2 M-7,-3 L3,-3 C7,-3 9,0 9,3.5 C9,7 6.5,9 3,9 L-1,9" />
               </svg>
             </button>
-            <button aria-label={t('Redo', 'Ponów')} disabled={!redo.current.length} onClick={() => step(redo, undo)}>
+            <button aria-label={t('Redo', 'Przywróć')} disabled={!redo.current.length} onClick={() => step(redo, undo)}>
               <svg viewBox="-12 -12 24 24" aria-hidden="true">
                 <path d="M7,-3 L2,-8 M7,-3 L2,2 M7,-3 L-3,-3 C-7,-3 -9,0 -9,3.5 C-9,7 -6.5,9 -3,9 L1,9" />
               </svg>
@@ -396,7 +396,7 @@ export function Paint({ start, paper: startPaper, onSave, onClose }: {
                   </svg>
                 </button>
               ))}
-              <button aria-label={t('Brush size', 'Grubość')} onClick={() => setSize((s) => (s + 1) % 3)}>
+              <button aria-label={t('Brush size', 'Grubość pędzla')} onClick={() => setSize((s) => (s + 1) % 3)}>
                 <span className="size-dot" style={{ width: 6 + size * 6, height: 6 + size * 6 }} />
               </button>
             </div>

@@ -58,7 +58,7 @@ export function BackupSheet({ garden, onRestore, onClose }: {
     if (!file) return;
     setError(null);
     void sendFile(file, "Olcia's Garden backup").then((how) => {
-      if (how === 'shared') setNote(t('Done. Keep it somewhere safe, like Files or iCloud Drive.', 'Gotowe. Trzymaj ją w bezpiecznym miejscu, na przykład w Plikach albo na iCloud Drive.'));
+      if (how === 'shared') setNote(t('Done. Keep it somewhere safe, like Files or iCloud Drive.', 'Gotowe. Trzymaj ją w bezpiecznym miejscu, na przykład w aplikacji Pliki albo na iCloud Drive.'));
       if (how === 'downloaded') setNote(t(`Saved as ${file.name}, in Downloads.`, `Zapisano jako ${file.name}, w Pobranych.`));
     });
   };
@@ -85,7 +85,7 @@ export function BackupSheet({ garden, onRestore, onClose }: {
       await onRestore(found);
     } catch {
       setBusy(false);
-      setError(t("There wasn't room on the phone to restore it. Nothing was changed.", 'Zabrakło miejsca w telefonie. Nic nie zostało zmienione.'));
+      setError(t("There wasn't room on the phone to restore it. Nothing was changed.", 'Zabrakło miejsca w telefonie, więc nic nie zostało zmienione.'));
     }
   };
 
@@ -108,7 +108,7 @@ export function BackupSheet({ garden, onRestore, onClose }: {
             <p className="decor-hint">
               {t(
                 'Restoring puts this in place of the garden as it is now. The garden now is kept aside on the phone, not thrown away.',
-                'Przywrócenie zastąpi obecny ogród tą kopią. Obecny ogród zostanie odłożony na bok w telefonie, nie zniknie.',
+                'Przywrócenie zastąpi obecny ogród tą kopią. Obecny ogród nie zniknie: zostanie zachowany w telefonie.',
               )}
             </p>
             <div className="decor-choice two">
@@ -123,7 +123,7 @@ export function BackupSheet({ garden, onRestore, onClose }: {
             <p className="decor-hint">
               {t(
                 'Everything here lives only on this phone. A backup is one file with all of it inside: the plants, the diary, pressed flowers, drawings and photos.',
-                'Wszystko tutaj jest zapisane tylko na tym telefonie. Kopia to jeden plik, w którym jest wszystko: rośliny, pamiętnik, zielnik, rysunki i zdjęcia.',
+                'Wszystko tutaj jest zapisane tylko w tym telefonie. Kopia to jeden plik, w którym jest wszystko: rośliny, pamiętnik, zielnik, rysunki i zdjęcia.',
               )}
             </p>
             <div className="decor-buttons backup-buttons">

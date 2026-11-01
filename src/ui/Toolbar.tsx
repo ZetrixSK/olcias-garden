@@ -115,7 +115,7 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
     <>
       <button
         className="fab left"
-        aria-label={other === 'shelves' ? t('Go to the shelves', 'Idź do półek') : t('Go to the window', 'Idź do okna')}
+        aria-label={other === 'shelves' ? t('Go to the shelves', 'Przejdź do półek') : t('Go to the window', 'Przejdź do okna')}
         onClick={() => onSettings({ view: other })}
       >
         <Icon>{VIEW_ICON[other]}</Icon>
@@ -158,7 +158,7 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
                 ? t('Finding you…', 'Szukam Cię…')
                 : settings.location
                   ? t('Live weather', 'Prawdziwa pogoda')
-                  : t('Live weather · uses location', 'Pogoda z lokalizacji')}
+                  : t('Live weather · uses location', 'Prawdziwa pogoda · użyje lokalizacji')}
             </button>
             <button className="wide" aria-pressed={settings.weatherMode === 'clock'} onClick={() => onSettings({ weatherMode: 'clock' })}>
               {t('Follow the clock', 'Według zegara')}
@@ -216,7 +216,7 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
                 onDecorate();
               }}
             >
-              {t('Decorate', 'Ozdabianie')}
+              {t('Decorate', 'Dekoracje')}
               <small>{t('wallpaper, photo, drawings', 'tapeta, zdjęcie, rysunki')}</small>
             </button>
             <button
@@ -347,6 +347,20 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
               ))}
             </div>
             <p className="hint lang-about">{LANG_ABOUT[settings.lang]}</p>
+            {/* Polish says things differently to her and to him; English doesn't, so it's only asked here */}
+            {settings.lang === 'pl' && (
+              <>
+                <p className="hint">Zwracaj się do mnie</p>
+                <div className="row two">
+                  <button aria-pressed={settings.me === 'she'} onClick={() => onSettings({ me: 'she' })}>
+                    jak do niej
+                  </button>
+                  <button aria-pressed={settings.me === 'he'} onClick={() => onSettings({ me: 'he' })}>
+                    jak do niego
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </>
       )}

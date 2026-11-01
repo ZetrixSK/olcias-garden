@@ -16,6 +16,7 @@ import {
   type Cover,
   type Memories,
   type Memory,
+  type PastDay,
   type Stamp,
 } from '../garden/memories';
 import { newId } from '../garden/state';
@@ -46,9 +47,40 @@ const tiltOf = (id: string, range: number) => ((rng(hash(`${id}/tilt`))() - 0.5)
 
 /** The shelves that aren't her own albums: everything, and the ones she gave a heart. */
 function builtIn(id: string, w: Words): Album | null {
-  if (id === ALL) return { id, name: w.t('All memories', 'Wszystkie'), stamp: 'camera', cover: 'linen', created: 0 };
+  if (id === ALL) return { id, name: w.t('All memories', 'Wszystkie wspomnienia'), stamp: 'camera', cover: 'linen', created: 0 };
   if (id === HEARTS) return { id, name: w.t('With a heart', 'Z serduszkiem'), stamp: 'heart', cover: 'rose', created: 0 };
   return null;
+}
+
+/** "A year ago today", "3 years ago today". */
+export function agoText(n: number, w: Words): string {
+  if (w.pl) return n === 1 ? 'Rok temu, tego dnia' : `${n} ${w.plural(n, 'rok', 'lata', 'lat')} temu, tego dnia`;
+  return n === 1 ? 'A year ago today' : `${n} years ago today`;
+}
+
+/** Slips for the pictures from this day in earlier years: a few prints each, tap one to open it. */
+export function PastDays({ days, onOpen }: { days: PastDay[]; onOpen: (id: string) => void }) {
+  const w = useWords();
+  return (
+    <>
+      {days.map((d) => (
+        <div key={d.yearsAgo} className="diary-memory past-photos">
+          <span className="diary-memory-head">
+            <StampArt stamp="camera" />
+            {agoText(d.yearsAgo, w)}
+          </span>
+          <span className="past-prints">
+            {d.items.slice(0, 4).map((m) => (
+              <button key={m.id} className={`snap${m.kind === 'painting' && !m.paper ? ' clear' : ''}`} style={{ ['--tilt' as string]: `${tiltOf(m.id, 6)}deg` }} aria-label={m.caption || dateText(m.at, w)} onClick={() => onOpen(m.id)}>
+                <Thumb m={m} />
+              </button>
+            ))}
+            {d.items.length > 4 && <span className="past-more">+{d.items.length - 4}</span>}
+          </span>
+        </div>
+      ))}
+    </>
+  );
 }
 
 function Thumb({ m }: { m: Memory }) {
@@ -260,8 +292,12 @@ function AlbumEditor({ album, isNew, onChange, onDelete }: {
  * heart, and the albums she made, each with its own stamp and cloth. Inside an album the
  * pictures lie like prints on a table; one opens large, to write under it.
  */
-export function MemoryBook({ memories, busy, error, canShelf, onChange, onAdd, onPaint, onRemove, onHang, onShelf, onClose }: {
+export function MemoryBook({ memories, past, startAt, busy, error, canShelf, onChange, onAdd, onPaint, onRemove, onHang, onShelf, onClose }: {
   memories: Memories;
+  /** Pictures from this day in earlier years, shown at the top of the shelf. */
+  past: PastDay[];
+  /** A picture to open the book on, if it was opened from one (an "on this day" slip in the diary). */
+  startAt: string | null;
   /** What is being added right now, to say so ("Adding 2 of 5…"). */
   busy: string | null;
   error: string | null;
@@ -276,7 +312,7 @@ export function MemoryBook({ memories, busy, error, canShelf, onChange, onAdd, o
 }) {
   const w = useWords();
   const { t } = w;
-  const [page, setPage] = useState<Page>({ kind: 'shelf' });
+  const [page, setPage] = useState<Page>(startAt ? { kind: 'memory', album: ALL, id: startAt } : { kind: 'shelf' });
   const [choosing, setChoosing] = useState<Set<string> | null>(null);
   const [filing, setFiling] = useState(false);
   const [askDelete, setAskDelete] = useState(false);
@@ -337,7 +373,7 @@ export function MemoryBook({ memories, busy, error, canShelf, onChange, onAdd, o
         <button className="quiet" onClick={() => open(page.back)}>
           {page.isNew ? t('Cancel', 'Anuluj') : t('Back', 'Wróć')}
         </button>
-        <button onClick={save}>{page.isNew ? t('Make the album', 'Zrób album') : t('Done', 'Gotowe')}</button>
+        <button onClick={save}>{page.isNew ? t('Make the album', 'Utwórz album') : t('Done', 'Gotowe')}</button>
       </>
     );
   } else if (page.kind === 'memory' && current) {
@@ -460,7 +496,7 @@ export function MemoryBook({ memories, busy, error, canShelf, onChange, onAdd, o
     bar = choosing ? (
       askDelete ? (
         <>
-          <span>{t(`Delete ${chosen.size}?`, `Usunąć ${chosen.size}?`)}</span>
+          <span>{t(`Delete ${chosen.size}?`, `Usunąć zaznaczone (${chosen.size})?`)}</span>
           <button
             className="danger"
             onClick={() => {
@@ -523,11 +559,12 @@ export function MemoryBook({ memories, busy, error, canShelf, onChange, onAdd, o
     body = (
       <>
         <h2>{t('Memories', 'Wspomnienia')}</h2>
+        <PastDays days={past} onOpen={(id) => open({ kind: 'memory', album: ALL, id })} />
         {memories.items.length === 0 && (
           <p className="memory-welcome">
             {t(
               'Keep your photos here, or paint something of your own. Make albums for them, give each one a name and a stamp.',
-              'Tu możesz trzymać swoje zdjęcia albo namalować coś swojego. Zrób dla nich albumy i daj każdemu nazwę i znaczek.',
+              'Tu możesz trzymać swoje zdjęcia i obrazki, które namalujesz. Układaj je w albumy, a każdemu nadaj nazwę i znaczek.',
             )}
           </p>
         )}

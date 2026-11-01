@@ -59,15 +59,15 @@ export function Welcome({ onStayHere }: { onStayHere: () => void }) {
         {pl ? (
           <>
             <h1>Czeka na Ciebie ogród</h1>
-            <p className="welcome-lead">Mieszka na ekranie początkowym, jak aplikacja. Tam też czeka na Ciebie list.</p>
+            <p className="welcome-lead">Ogród mieszka na ekranie początkowym, jak aplikacja. Tam czeka też na Ciebie list.</p>
             <ol>
               <li>
-                Stuknij Udostępnij {SHARE} w Safari. Jeśli go nie widać, jest pod <b>⋯</b>
+                Stuknij przycisk Udostępnij {SHARE} w Safari. Jeśli go nie widać, jest pod <b>⋯</b>
               </li>
               <li>
                 Wybierz <b>Do ekranu początkowego</b>
               </li>
-              <li>Otwórz ogród z nowej ikonki</li>
+              <li>Otwórz ogród, stukając nową ikonkę</li>
             </ol>
           </>
         ) : (

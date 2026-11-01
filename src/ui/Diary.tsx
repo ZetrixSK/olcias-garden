@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { dateOfKey, dayKey, MAX_ENTRY, monthGrid, MOODS, onThisDay, type Diary, type Mood } from '../garden/diary';
 import { useWords, type Words } from '../i18n';
 import { MoodFace } from './Moods';
+import type { PastDay } from '../garden/memories';
+import { agoText, PastDays } from './Memories';
 
 const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 const WEEKDAYS_PL = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'So', 'Nd'];
@@ -14,7 +16,14 @@ const dayTitle = (key: string, w: Words) => {
 };
 
 /** The month on one page: each day she wrote shows her mood face, or a little ink mark if she chose none. */
-function Calendar({ diary, today, onOpen, onClose }: { diary: Diary; today: string; onOpen: (key: string) => void; onClose: () => void }) {
+function Calendar({ diary, today, past, onPhoto, onOpen, onClose }: {
+  diary: Diary;
+  today: string;
+  past: PastDay[];
+  onPhoto: (id: string) => void;
+  onOpen: (key: string) => void;
+  onClose: () => void;
+}) {
   const day = dateOfKey(today);
   const [shown, setShown] = useState({ y: day.getFullYear(), m: day.getMonth() });
   const turn = (by: number) => setShown(({ y, m }) => ({ y: m + by < 0 ? y - 1 : m + by > 11 ? y + 1 : y, m: (m + by + 12) % 12 }));
@@ -23,8 +32,6 @@ function Calendar({ diary, today, onOpen, onClose }: { diary: Diary; today: stri
   const memories = onThisDay(diary, today);
   const w = useWords();
   const { t } = w;
-  const ago = (n: number) =>
-    w.pl ? (n === 1 ? 'Rok temu, tego dnia' : `${n} ${w.plural(n, 'rok', 'lata', 'lat')} temu, tego dnia`) : n === 1 ? 'A year ago today' : `${n} years ago today`;
   return (
     <>
       <div className="book-page diary-page">
@@ -32,11 +39,12 @@ function Calendar({ diary, today, onOpen, onClose }: { diary: Diary; today: stri
           <button key={m.key} className="diary-memory" onClick={() => onOpen(m.key)}>
             <span className="diary-memory-head">
               {m.entry.mood && <MoodFace mood={m.entry.mood} size={22} />}
-              {ago(m.yearsAgo)}
+              {agoText(m.yearsAgo, w)}
             </span>
             <span className="diary-memory-text">{m.entry.text.trim() || (m.entry.mood ? w.mood(m.entry.mood) : '')}</span>
           </button>
         ))}
+        <PastDays days={past} onOpen={onPhoto} />
         <div className="diary-month">
           <button aria-label={t('Previous month', 'Poprzedni miesiąc')} onClick={() => turn(-1)}>‹</button>
           <h2>{monthTitle(shown.y, shown.m, w)}</h2>
@@ -73,7 +81,7 @@ function Calendar({ diary, today, onOpen, onClose }: { diary: Diary; today: stri
       </div>
       <div className="letter-actions book-actions">
         <button className="quiet" onClick={onClose}>{t('Close', 'Zamknij')}</button>
-        <button onClick={() => onOpen(today)}>{diary[today] ? t('Open today', 'Otwórz dzisiejszy') : t('Write today', 'Napisz dziś')}</button>
+        <button onClick={() => onOpen(today)}>{diary[today] ? t('Open today', 'Otwórz dzisiejszą stronę') : t('Write today', 'Napisz coś dziś')}</button>
       </div>
     </>
   );
@@ -112,7 +120,7 @@ function DayPage({ day, entry, onSave, onDelete, onBack }: {
           value={text}
           maxLength={MAX_ENTRY}
           placeholder={t('Dear diary…', 'Drogi pamiętniku…')}
-          aria-label={t('Diary entry', 'Wpis')}
+          aria-label={t('Diary entry', 'Wpis w pamiętniku')}
           onChange={(e) => setText(e.target.value)}
         />
       </div>
@@ -142,8 +150,10 @@ function DayPage({ day, entry, onSave, onDelete, onBack }: {
 }
 
 /** Her diary: a calendar of the month, and a page for each day she writes. */
-export function DiaryBook({ diary, now, onSave, onDelete, onClose }: {
+export function DiaryBook({ diary, past, onPhoto, now, onSave, onDelete, onClose }: {
   diary: Diary;
+  past: PastDay[];
+  onPhoto: (id: string) => void;
   now: number;
   onSave: (key: string, mood: Mood | null, text: string) => void;
   onDelete: (key: string) => void;
@@ -172,7 +182,7 @@ export function DiaryBook({ diary, now, onSave, onDelete, onClose }: {
             onBack={() => setOpen(null)}
           />
         ) : (
-          <Calendar diary={diary} today={today} onOpen={setOpen} onClose={onClose} />
+          <Calendar diary={diary} today={today} past={past} onPhoto={onPhoto} onOpen={setOpen} onClose={onClose} />
         )}
       </div>
     </>

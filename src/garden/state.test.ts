@@ -82,6 +82,7 @@ describe('garden state', () => {
       sound: false,
       lang: 'mixed',
       shareNotes: false,
+      me: 'she',
     });
   });
 

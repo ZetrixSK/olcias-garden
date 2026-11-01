@@ -98,7 +98,7 @@ export function BouquetStudio({ garden, now, onKeep, onSend, onClaim, canSend, o
         <div className="studio-body">
           {garden.post.tag ? (
             <Section title={t('Send it to', 'Wyślij do')}>
-              <TagInput value={to} onChange={(v) => { setTo(v); setError(null); }} placeholder={t('their tag', 'ich tag')} autoFocus />
+              <TagInput value={to} onChange={(v) => { setTo(v); setError(null); }} placeholder={t('their tag', 'tag tej osoby')} autoFocus />
               {garden.post.contacts.length > 0 && (
                 <div className="in-vase contacts-pick">
                   {garden.post.contacts.map((c) => (
@@ -112,7 +112,7 @@ export function BouquetStudio({ garden, now, onKeep, onSend, onClaim, canSend, o
             </Section>
           ) : (
             <Section title={t('First, your own tag', 'Najpierw Twój tag')}>
-              <p className="hint">{t('So they know who the bouquet is from.', 'Żeby wiedzieli, od kogo jest bukiet.')}</p>
+              <p className="hint">{t('So they know who the bouquet is from.', w.other('Żeby wiedziała, od kogo jest bukiet.', 'Żeby wiedział, od kogo jest bukiet.'))}</p>
               <ClaimTag current={null} onClaim={onClaim} />
             </Section>
           )}
@@ -125,7 +125,7 @@ export function BouquetStudio({ garden, now, onKeep, onSend, onClaim, canSend, o
             <p className="hint">
               {t(
                 "Nothing has stems to give today. Bouquets are cut from flowers in bloom, a few from each a day.",
-                'Dziś nic nie ma łodyżek do ścięcia. Bukiety układa się z kwitnących kwiatów, kilka z każdego dziennie.',
+                'Dziś nie ma już czego ściąć. Bukiety układa się z kwitnących kwiatów, a z każdego można ściąć kilka łodyżek dziennie.',
               )}
             </p>
           ) : (
@@ -256,7 +256,7 @@ export function BouquetCard({ bouquet, onMove, onRemove, onBlock, onClose }: {
       {bouquet.from && onBlock && (
         <div className="block-row">
           <ConfirmButton
-            label={t(`No more post from #${bouquet.from}`, `Bez poczty od #${bouquet.from}`)}
+            label={t(`No more post from #${bouquet.from}`, `Zablokuj #${bouquet.from}`)}
             confirm={t(`Sure? Block #${bouquet.from}`, `Na pewno? Zablokuj #${bouquet.from}`)}
             onConfirm={onBlock}
           />

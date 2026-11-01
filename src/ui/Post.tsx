@@ -9,26 +9,27 @@ import type { Arrival } from '../remote/useMail';
 export const cleanTag = (s: string) => s.replace(/^#/, '').toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 20);
 export const validTag = (s: string) => /^[a-z0-9_]{3,20}$/.test(s);
 
-export function postMessage(e: PostError, { t }: Words): string {
+export function postMessage(e: PostError, w: Words): string {
+  const { t } = w;
   switch (e) {
     case 'taken':
       return t('Someone already has that tag. Try another.', 'Ktoś już ma ten tag. Spróbuj innego.');
     case 'bad tag':
       return t('A tag is 3 to 20 letters, numbers or _.', 'Tag to od 3 do 20 liter, cyfr albo _.');
     case 'no tag':
-      return t('Choose your own tag first, so they know it’s from you.', 'Najpierw wybierz swój tag, żeby wiedzieli, że to od Ciebie.');
+      return t('Choose your own tag first, so they know it’s from you.', w.other('Najpierw wybierz swój tag, żeby wiedziała, że to od Ciebie.', 'Najpierw wybierz swój tag, żeby wiedział, że to od Ciebie.'));
     case 'no such tag':
       return t('Nobody has that tag.', 'Nikt nie ma takiego tagu.');
     case 'too many today':
       return t("That's a lot of bouquets for one day. Try again tomorrow.", 'To dużo bukietów jak na jeden dzień. Spróbuj jutro.');
     case 'not allowed':
-      return t("Their garden isn't open to you for that.", 'Ten ogród nie jest dla Ciebie na to otwarty.');
+      return t("Their garden isn't open to you for that.", 'W tym ogrodzie nie masz na to pozwolenia.');
     case 'no garden':
       return t("That garden hasn't been opened yet.", 'Ten ogród nie był jeszcze otwierany.');
     case 'yourself':
       return t("That's your own garden!", 'To Twój własny ogród!');
     case 'offline':
-      return t("Couldn't reach the post. Try again when you're online.", 'Nie udało się połączyć z pocztą. Spróbuj, gdy będzie internet.');
+      return t("Couldn't reach the post. Try again when you're online.", 'Nie udało się połączyć z pocztą. Spróbuj ponownie, kiedy będzie internet.');
   }
 }
 
@@ -95,7 +96,8 @@ export function PostSheet({ tag, contacts, parcels, onClaim, onParcels, loadBloc
   onSetAccess: (who: string, level: VisitLevel | null) => Promise<boolean>;
   onClose: () => void;
 }) {
-  const { t } = useWords();
+  const w = useWords();
+  const { t } = w;
   const [blocked, setBlocked] = useState<string[] | null>(null);
   useEffect(() => {
     void loadBlocked().then(setBlocked);
@@ -111,8 +113,8 @@ export function PostSheet({ tag, contacts, parcels, onClaim, onParcels, loadBloc
           <h3>{t('Your tag', 'Twój tag')}</h3>
           <p className="hint">
             {tag
-              ? t(`Others send bouquets to #${tag}, and see it on the ones you send.`, `Inni wysyłają bukiety na #${tag} i widzą go na tych od Ciebie.`)
-              : t('Choose a tag so others can send you bouquets, and know who yours are from.', 'Wybierz tag, żeby inni mogli wysyłać Ci bukiety i wiedzieli, od kogo są Twoje.')}
+              ? t(`Others send bouquets to #${tag}, and see it on the ones you send.`, `Na #${tag} inni mogą wysyłać Ci bukiety. Ten tag widać też na bukietach od Ciebie.`)
+              : t('Choose a tag so others can send you bouquets, and know who yours are from.', 'Wybierz tag, żeby inni mogli wysyłać Ci bukiety i wiedzieli, od kogo dostają Twoje.')}
           </p>
           <ClaimTag current={tag} onClaim={onClaim} />
         </section>
@@ -121,7 +123,7 @@ export function PostSheet({ tag, contacts, parcels, onClaim, onParcels, loadBloc
           {tag ? (
             <VisitStart onVisit={onVisit} />
           ) : (
-            <p className="hint">{t('Take a tag first, so they know who came.', 'Najpierw weź tag, żeby wiedzieli, kto przyszedł.')}</p>
+            <p className="hint">{t('Take a tag first, so they know who came.', w.other('Najpierw wybierz swój tag, żeby wiedziała, kto przyszedł w odwiedziny.', 'Najpierw wybierz swój tag, żeby wiedział, kto przyszedł w odwiedziny.'))}</p>
           )}
         </section>
         {tag && (
@@ -140,16 +142,16 @@ export function PostSheet({ tag, contacts, parcels, onClaim, onParcels, loadBloc
         )}
         {contacts.length > 0 && (
           <section className="studio-section">
-            <h3>{t("You've sent to", 'Wysyłałaś do')}</h3>
+            <h3>{t("You've sent to", w.g('Wysyłałaś do', 'Wysyłałeś do'))}</h3>
             <p className="contacts">{contacts.map((c) => `#${c}`).join('  ')}</p>
           </section>
         )}
         <section className="studio-section">
           <h3>{t('Blocked', 'Zablokowane')}</h3>
           {blocked === null ? (
-            <p className="hint">{t('The list needs the internet.', 'Lista potrzebuje internetu.')}</p>
+            <p className="hint">{t('The list needs the internet.', 'Do wyświetlenia listy potrzebny jest internet.')}</p>
           ) : blocked.length === 0 ? (
-            <p className="hint">{t('Nobody. You can block someone from a bouquet they sent.', 'Nikt. Możesz kogoś zablokować z bukietu, który przysłał.')}</p>
+            <p className="hint">{t('Nobody. You can block someone from a bouquet they sent.', 'Nikt. Nadawcę możesz zablokować, otwierając bukiet od tej osoby.')}</p>
           ) : (
             <ul className="blocked">
               {blocked.map((b) => (

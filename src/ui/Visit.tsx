@@ -26,7 +26,7 @@ export function levelName(l: VisitLevel, { t }: Words): string {
 
 export function levelAbout(l: VisitLevel, { t }: Words): string {
   return [
-    t('Your garden stays private.', 'Twój ogród zostaje tylko Twój.'),
+    t('Your garden stays private.', 'Nikt nie może wejść do Twojego ogrodu.'),
     t('They can look around, nothing more.', 'Mogą się rozejrzeć, nic więcej.'),
     t('They can look, and water your plants.', 'Mogą oglądać i podlewać kwiaty.'),
     t('They can water, plant flowers in empty places and trim vines.', 'Mogą podlewać, sadzić w wolnych miejscach i przycinać pnącza.'),
@@ -39,19 +39,22 @@ export function visitorNotice(v: { from: string; kind: string; payload: unknown;
   const { t } = w;
   const p = typeof v.payload === 'object' && v.payload ? (v.payload as Record<string, unknown>) : {};
   const plant = v.before.plants.find((x) => x.id === p.plant);
-  const what = plant ? plant.name ?? w.marker(plant.species) : t('a plant', 'roślinę');
+  const what = plant ? plant.name ?? w.marker(plant.species) : t('a plant', 'roślina');
   const who = `#${v.from}`;
+  // the visitor's phone says who they are; an older one didn't, and then it's the other of the two
+  const g = p.who === 'she' || p.who === 'he' ? p.who : undefined;
+  const o = (she: string, he: string) => w.other(she, he, g);
   switch (v.kind) {
     case 'water':
-      return { title: t(`${who} watered your ${what}`, `${who} podlał(a): ${what}`), text: t('They came to visit your garden.', 'Ktoś odwiedził Twój ogród.') };
+      return { title: t(`${who} watered your ${what}`, `${who} ${o('wpadła', 'wpadł')} z konewką`), text: t(o('She came to visit your garden.', 'He came to visit your garden.'), `Podlane: ${what}.`) };
     case 'trim':
-      return { title: t(`${who} trimmed the vine on your ${what}`, `${who} przyciął/przycięła pnącze: ${what}`), text: '' };
+      return { title: t(`${who} trimmed the vine on your ${what}`, `${who} ${o('przycięła', 'przyciął')} pnącze: ${what}`), text: '' };
     case 'plant': {
       const species = typeof p.species === 'string' && p.species in SPECIES ? w.marker(p.species as SpeciesId) : t('a flower', 'kwiat');
-      return { title: t(`${who} planted a ${species} for you`, `${who} posadził(a) dla Ciebie: ${species}`), text: t('Look on your shelves.', 'Zajrzyj na półki.') };
+      return { title: t(`${who} planted a ${species} for you`, `${who} ${o('posadziła', 'posadził')} dla Ciebie: ${species}`), text: t('Look on your shelves.', 'Zajrzyj na półki.') };
     }
     case 'remove':
-      return { title: t(`${who} took out your ${what}`, `${who} usunął/usunęła: ${what}`), text: t('You can change what visitors may do in the post box.', 'W skrzynce możesz zmienić, co wolno gościom.') };
+      return { title: t(`${who} took out your ${what}`, `${who} ${o('usunęła', 'usunął')}: ${what}`), text: t('You can change what visitors may do in the post box.', 'W skrzynce pocztowej możesz zmienić, co wolno gościom.') };
     default:
       return null;
   }
@@ -68,7 +71,7 @@ export function AccessSection({ load, onSet }: { load: () => Promise<AccessRule[
     void load().then(setRules);
   }, [load]);
   if (rules === 'loading') return <p className="hint">{t('Moment…', 'Chwila…')}</p>;
-  if (rules === null) return <p className="hint">{t('This needs the internet.', 'To potrzebuje internetu.')}</p>;
+  if (rules === null) return <p className="hint">{t('This needs the internet.', 'Do tego potrzebny jest internet.')}</p>;
   const anyone = rules.find((r) => r.who === '*')?.level ?? 0;
   const people = rules.filter((r) => r.who !== '*');
   const set = async (target: string, level: VisitLevel | null) => {
@@ -91,7 +94,7 @@ export function AccessSection({ load, onSet }: { load: () => Promise<AccessRule[
         ))}
       </div>
       <p className="hint level-about">{levelAbout(anyone, w)}</p>
-      <p className="hint">{t('Particular people, whatever the rule above:', 'Wybrane osoby, niezależnie od tego powyżej:')}</p>
+      <p className="hint">{t('Particular people, whatever the rule above:', 'Wybrane osoby (niezależnie od ustawienia powyżej):')}</p>
       <ul className="people">
         {people.map((r) => (
           <li key={r.who}>
@@ -113,10 +116,10 @@ export function AccessSection({ load, onSet }: { load: () => Promise<AccessRule[
           void set(who, 2).then(() => setWho(''));
         }}
       >
-        <TagInput value={who} onChange={setWho} placeholder={t('their tag', 'ich tag')} />
+        <TagInput value={who} onChange={setWho} placeholder={t('their tag', w.other('jej tag', 'jego tag'))} />
         <button type="submit" disabled={!validTag(who)}>{t('Add', 'Dodaj')}</button>
       </form>
-      {failed && <p className="decor-error">{t("Couldn't save that. Try again when you're online.", 'Nie udało się zapisać. Spróbuj, gdy będzie internet.')}</p>}
+      {failed && <p className="decor-error">{t("Couldn't save that. Try again when you're online.", 'Nie udało się zapisać. Spróbuj ponownie, kiedy będzie internet.')}</p>}
     </>
   );
 }
@@ -138,7 +141,7 @@ export function VisitStart({ onVisit }: { onVisit: (tag: string) => Promise<Post
         setBusy(false);
       }}
     >
-      <TagInput value={tag} onChange={(v) => { setTag(v); setError(null); }} placeholder={t('their tag', 'ich tag')} />
+      <TagInput value={tag} onChange={(v) => { setTag(v); setError(null); }} placeholder={t('their tag', w.other('jej tag', 'jego tag'))} />
       <button type="submit" disabled={!validTag(tag) || busy}>{busy ? t('Moment…', 'Chwila…') : t('Visit', 'Odwiedź')}</button>
       {error && <p className="decor-error">{postMessage(error, w)}</p>}
     </form>
@@ -150,7 +153,7 @@ type Act = (kind: 'water' | 'plant' | 'trim' | 'remove', payload: Record<string,
 
 const ago = (then: number, now: number, { t }: Words) => {
   const m = Math.round((now - then) / 60_000);
-  if (m < 6) return t('open right now', 'otwarty teraz');
+  if (m < 6) return t('open right now', 'otwarty w tej chwili');
   if (m < 60) return t(`last open ${m} min ago`, `ostatnio otwarty ${m} min temu`);
   const h = Math.round(m / 60);
   if (h < 36) return t(`last open ${h} h ago`, `ostatnio otwarty ${h} godz. temu`);
@@ -222,7 +225,7 @@ export function VisitView({ visit, now, viewH, onAct, onLeave }: { visit: Visiti
             {ago(visit.lastSeen, now, w)} · {levelName(visit.level, w).toLowerCase()}
           </small>
         </div>
-        <button aria-label={view === 'room' ? t('Go to the shelves', 'Idź do półek') : t('Go to the window', 'Idź do okna')} onClick={() => setView(view === 'room' ? 'shelves' : 'room')}>
+        <button aria-label={view === 'room' ? t('Go to the shelves', 'Przejdź do półek') : t('Go to the window', 'Przejdź do okna')} onClick={() => setView(view === 'room' ? 'shelves' : 'room')}>
           {view === 'room' ? t('Shelves', 'Półki') : t('Window', 'Okno')}
         </button>
         <button className="primary" onClick={onLeave}>{t('Leave', 'Wyjdź')}</button>
@@ -236,7 +239,7 @@ export function VisitView({ visit, now, viewH, onAct, onLeave }: { visit: Visiti
           <p className="hint">
             {/* the kind of flower only when the title is its own name, not the kind again */}
             {plant.name ? `${w.flower(plant.species)} · ` : ''}
-            {t(STAGE_LABEL[stageAt(plant.species, plant, now)], { seed: 'Posadzony', seedling: 'Kiełkuje', bud: 'Pąki', bloom: 'Kwitnie' }[stageAt(plant.species, plant, now)])}
+            {t(STAGE_LABEL[stageAt(plant.species, plant, now)], { seed: 'Świeżo w ziemi', seedling: 'Kiełkuje', bud: 'Ma pąki', bloom: 'Kwitnie' }[stageAt(plant.species, plant, now)])}
           </p>
           {visit.level < 2 ? (
             <p className="hint">{t('You can look, but not touch.', 'Możesz oglądać, ale nie dotykać.')}</p>

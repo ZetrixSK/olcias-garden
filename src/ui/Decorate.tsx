@@ -24,7 +24,7 @@ function Guide() {
         <dl>
           <dt>Tapeta</dt>
           <dd>
-            Kwadratowy rysunek, około <b>512 × 512 px</b> (do 1024 zostaje ostry). Powtarza się we wszystkie strony, więc lewa krawędź
+            Kwadratowy rysunek, około <b>512 × 512 px</b> (do 1024 px pozostaje ostry). Powtarza się we wszystkie strony, więc lewa krawędź
             powinna przechodzić w prawą, a górna w dolną. Zapisz go jako <b>PNG z przezroczystym tłem</b>, a między Twoimi wzorkami
             będzie widać kolor ściany; obrazek bez przezroczystości zakryje całą ścianę.
           </dd>
@@ -39,7 +39,7 @@ function Guide() {
             i odrobiną pustego miejsca dookoła. Stoi na półce tak jak doniczka.
           </dd>
         </dl>
-        <p>Większe obrazki też są dobre: zmniejszą się przy dodawaniu. Są zapisane tylko na tym telefonie.</p>
+        <p>Większe obrazki też się nadają: zostaną zmniejszone przy dodawaniu. Są zapisane tylko w tym telefonie.</p>
       </details>
     );
   }
@@ -86,9 +86,9 @@ export function DecorateSheet({ decor, wallpaperUrl, photoUrl, busy, error, onWa
   const wp = decor.wallpaper;
   const { t } = useWords();
   return (
-    <div className="sheet studio decorate" role="dialog" aria-label={t('Decorate', 'Ozdabianie')}>
+    <div className="sheet studio decorate" role="dialog" aria-label={t('Decorate', 'Dekoracje')}>
       <div className="sheet-head">
-        <h2>{t('Decorate', 'Ozdabianie')}</h2>
+        <h2>{t('Decorate', 'Dekoracje')}</h2>
         <button className="close" aria-label={t('Close', 'Zamknij')} onClick={onClose}>×</button>
       </div>
       <div className="studio-body">

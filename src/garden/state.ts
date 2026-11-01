@@ -4,7 +4,7 @@ import { imagesInUse, MAX_DRAWINGS, NO_DECOR, parseDecor, type Decor, type Drawi
 import { memoryImages, NO_MEMORIES, parseMemories, type Memories } from './memories';
 import { MAX_NAME, MAX_NOTE, MAX_PRESSED, parsePressed, pressedToday, pressingOf, type Pressing } from './pressed';
 import { parseOwnRoom, type OwnRoom } from '../theme/ownRoom';
-import { parseLang, type Lang } from '../i18n';
+import { parseLang, parseMe, type Lang, type Me } from '../i18n';
 import { parseCandle, parseCandleLit, type CandleLit, type CandleLook } from './candle';
 import { parseDiary, withEntry, withoutEntry, type Diary, type Mood } from './diary';
 import { designId, NO_DESIGNS, PANSY_PRESETS, parseDesigns, upsert, type Designs, type PansyDesign, type PotDesign, type PotRef } from './designs';
@@ -74,6 +74,8 @@ export type Settings = {
   lang: Lang;
   /** Whether her diary and pressed-flower notes go up with the shared garden. Off unless both agree. */
   shareNotes: boolean;
+  /** Who holds this phone, for the Polish words said to them. Her, unless he set it on his. */
+  me: Me;
 };
 
 export const SAVE_VERSION = 4;
@@ -134,6 +136,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sound: false,
   lang: 'mixed',
   shareNotes: false,
+  me: 'she',
 };
 
 export function newId(): string {
@@ -549,6 +552,7 @@ export function parseSettings(v: unknown): Settings {
     sound: s.sound === true,
     lang: parseLang(s.lang),
     shareNotes: s.shareNotes === true,
+    me: parseMe(s.me),
   };
 }
 

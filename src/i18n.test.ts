@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { parseLang, plural, words } from './i18n';
 import { elapsedText } from './ui/Clock';
 import { whenText } from './ui/Sheets';
+import { visitorNotice } from './ui/Visit';
+import { starterGarden } from './garden/state';
 
 const H = 3_600_000;
 const NOW = new Date(2026, 9, 17, 10, 0).getTime();
@@ -56,5 +58,26 @@ describe('night flower names', () => {
     expect(pl.sign('moonflower')).toBe('księżyc');
     expect(pl.sign('pansy')).toBe('bratek');
     expect(words('en').sign('moonflower')).toBe('moonflower');
+  });
+});
+
+describe('speaking to her, or to him', () => {
+  it('talks to her unless the phone is set to him', () => {
+    expect(words('pl').mood('tired')).toBe('Zmęczona');
+    expect(words('pl', 'he').mood('tired')).toBe('Zmęczony');
+    expect(words('pl').g('Wysyłałaś', 'Wysyłałeś')).toBe('Wysyłałaś');
+    expect(words('pl', 'he').g('Wysyłałaś', 'Wysyłałeś')).toBe('Wysyłałeś');
+    expect(words('en', 'he').mood('tired')).toBe('Tired');
+  });
+
+  it('says what a visitor did as they are: from their phone, or else the other one of the two', () => {
+    const before = starterGarden(NOW);
+    const plant = before.plants[0]!.id;
+    const notice = (who: unknown, me: 'she' | 'he') => visitorNotice({ from: 'kuba', kind: 'water', payload: { plant, who }, before }, words('pl', me))!.title;
+    expect(notice('he', 'she')).toBe('#kuba wpadł z konewką');
+    expect(notice('she', 'he')).toBe('#kuba wpadła z konewką');
+    // an older phone didn't say: on her phone the visitor is him, on his it's her
+    expect(notice(undefined, 'she')).toBe('#kuba wpadł z konewką');
+    expect(notice(undefined, 'he')).toBe('#kuba wpadła z konewką');
   });
 });

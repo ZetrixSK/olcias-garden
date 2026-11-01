@@ -52,7 +52,7 @@ import {
 } from './garden/state';
 import { deleteImage, getImage, loadGarden, persistStorage, putImage, restoreGarden, saveGarden, tidyImages } from './garden/storage';
 import { imagesInUse, MAX_PIXELS, type WallpaperSize } from './garden/decor';
-import { addMemories, editMemory, MEMORY_PIXELS, photoTakenAt, removeMemories, roomFor, type Memories, type Memory, type PaperId } from './garden/memories';
+import { addMemories, editMemory, MEMORY_PIXELS, memoriesOnThisDay, photoTakenAt, removeMemories, roomFor, type Memories, type Memory, type PaperId } from './garden/memories';
 import { MemoryBook } from './ui/Memories';
 import { Paint, PAINT_H, PAINT_W } from './ui/Paint';
 import { forgetUrl, rememberUrl, storedUrl } from './ui/storedImages';
@@ -92,7 +92,7 @@ import { flameOn, type CandleLook } from './garden/candle';
 import { candleLit as roomIsDim } from './theme/palettes';
 import { ambientMix } from './sound/mix';
 import { useAmbience } from './sound/useAmbience';
-import { LangProvider, words } from './i18n';
+import { LangProvider, MeProvider, words } from './i18n';
 import { designRef } from './garden/designs';
 import { PlantArt } from './plants/PlantArt';
 import { pansyPalette as paletteOf } from './plants/looks';
@@ -272,7 +272,8 @@ export function App() {
   const [letterOpen, setLetterOpen] = useState(false);
   const [bookOpen, setBookOpen] = useState(false);
   const [diaryOpen, setDiaryOpen] = useState(false);
-  const [memoriesOpen, setMemoriesOpen] = useState(false);
+  /** The album book: shut, open on its shelf (null), or open on one picture. */
+  const [memoriesOpen, setMemoriesOpen] = useState<{ at: string | null } | false>(false);
   const [easel, setEasel] = useState<Easel | null>(null);
   const [memoryBusy, setMemoryBusy] = useState<string | null>(null);
   const [memoryError, setMemoryError] = useState<string | null>(null);
@@ -424,7 +425,7 @@ export function App() {
   // post sent to her tag: bouquets come in once the garden is open and no replay is playing
   const [notice, setNotice] = useState<Notice | null>(null);
   const closeNotice = useCallback(() => setNotice(null), []);
-  useMail(sharing, garden !== null && lapse === null, gardenRef, setGarden, (a) => setNotice(arrivalNotice(a, words(gardenRef.current?.settings.lang ?? 'mixed'))));
+  useMail(sharing, garden !== null && lapse === null, gardenRef, setGarden, (a) => setNotice(arrivalNotice(a, words(gardenRef.current?.settings.lang ?? 'mixed', gardenRef.current?.settings.me))));
   const loadBlocked = useCallback(() => blockedTags().catch(() => null), []);
   const loadAccess = useCallback(() => accessRules(), []);
   /** Someone's garden as it is, with this visitor's own waiting actions already shown done. */
@@ -452,13 +453,13 @@ export function App() {
   const visitAct = useCallback(async (kind: 'water' | 'plant' | 'trim' | 'remove', payload: Record<string, unknown>) => {
     const current = modeRef.current;
     if (current.kind !== 'visit') return null;
-    const r = await visitAction(current.visit.tag, kind, payload);
+    const r = await visitAction(current.visit.tag, kind, { ...payload, who: gardenRef.current?.settings.me ?? 'she' });
     if ('error' in r) return r.error;
     const t = Date.now();
     setMode((m) => (m.kind === 'visit' ? { ...m, visit: { ...m.visit, garden: applyAction(m.visit.garden, { id: r.id, kind, payload }, t).garden } } : m));
     if (t - current.visit.lastSeen > 6 * 60_000) {
-      const w = words(gardenRef.current?.settings.lang ?? 'mixed');
-      setNotice({ title: w.t('Done', 'Gotowe'), text: w.t(`#${current.visit.tag} will see it when they next open their garden.`, `#${current.visit.tag} zobaczy to przy następnym otwarciu ogrodu.`) });
+      const w = words(gardenRef.current?.settings.lang ?? 'mixed', gardenRef.current?.settings.me);
+      setNotice({ title: w.t('Done', 'Gotowe'), text: w.t(`#${current.visit.tag} will see it when they next open their garden.`, `#${current.visit.tag} zobaczy to, kiedy następnym razem otworzy ogród.`) });
     }
     return null;
   }, []);
@@ -487,7 +488,7 @@ export function App() {
     },
     { night: weather.night, sky: weather.sky, season: seasonShown(now) },
     (v) => {
-      const n = visitorNotice(v, words(gardenRef.current?.settings.lang ?? 'mixed'));
+      const n = visitorNotice(v, words(gardenRef.current?.settings.lang ?? 'mixed', gardenRef.current?.settings.me));
       if (n) setNotice(n);
     },
   );
@@ -526,7 +527,7 @@ export function App() {
   useAmbience(!!settings?.sound, ambientMix(weather, seasonShown(now), new Date(now).getHours(), candleOn));
 
   if (!garden || !settings) return <div className="garden" style={paletteVars('cozy', weather)} />;
-  const { t } = words(settings.lang);
+  const { t } = words(settings.lang, settings.me);
 
   const setSettings = (patch: Partial<Settings>) => {
     update((g) => updateSettings(g, patch));
@@ -556,7 +557,8 @@ export function App() {
   };
 
   const today = dayKey(new Date(now));
-  const memory = diarySeenOn !== today && onThisDay(garden.diary, today).length > 0;
+  const past = memoriesOnThisDay(garden.memories, new Date(now));
+  const memory = diarySeenOn !== today && (onThisDay(garden.diary, today).length > 0 || past.length > 0);
 
   const onSlot = (slot: SlotId) => {
     const here = plantAt(garden, slot);
@@ -807,14 +809,17 @@ export function App() {
   if (mode.kind === 'visit') {
     return (
       <LangProvider value={settings.lang}>
+      <MeProvider value={settings.me}>
         <VisitView visit={mode.visit} now={now} viewH={viewH} onAct={visitAct} onLeave={() => setMode({ kind: 'idle' })} />
         {notice && <NoticeNote notice={notice} onDone={closeNotice} />}
+      </MeProvider>
       </LangProvider>
     );
   }
 
   return (
     <LangProvider value={settings.lang}>
+      <MeProvider value={settings.me}>
       <div
         className={`garden theme-${theme}${uiDark ? ' ui-dark' : ''}${weather.night ? ' night' : ''}${weather.twilight === 'dusk' ? ' dusk' : ''}${lapse ? ' replaying' : ''}`}
         style={paletteVars(theme, weather, seasonShown(now), own)}
@@ -894,7 +899,7 @@ export function App() {
           onBackup={() => setMode({ kind: 'backup' })}
           onPicture={() => setMode({ kind: 'picture' })}
           onBook={openBook}
-          onMemories={() => setMemoriesOpen(true)}
+          onMemories={() => setMemoriesOpen({ at: null })}
           onDecorate={openDecorate}
           onBouquet={() => setMode({ kind: 'bouquetStudio' })}
           onPost={openPost}
@@ -1008,8 +1013,8 @@ export function App() {
               if (error) return error;
               update((g) => rememberContact(cutStems(g, cutFrom, Date.now()), to));
               setMode({ kind: 'idle' });
-              const w = words(settings.lang);
-              setNotice({ title: w.t(`On its way to #${to}`, `W drodze do #${to}`), text: w.t('It will be there when they next open their garden.', 'Dotrze, gdy następnym razem otworzą swój ogród.') });
+              const w = words(settings.lang, settings.me);
+              setNotice({ title: w.t(`On its way to #${to}`, `W drodze do #${to}`), text: w.t('It will be there when they next open their garden.', 'Dotrze, kiedy następnym razem otworzy swój ogród.') });
               return null;
             }}
             onKeep={(b, cutFrom) => {
@@ -1035,11 +1040,11 @@ export function App() {
                     if (!from) return;
                     const ok = await setBlocked(from, true);
                     if (ok) setMode({ kind: 'idle' });
-                    const w = words(settings.lang);
+                    const w = words(settings.lang, settings.me);
                     setNotice(
                       ok
-                        ? { title: w.t(`No more post from #${from}`, `Bez poczty od #${from}`), text: w.t('You can unblock them in the post box.', 'Możesz to cofnąć w skrzynce pocztowej.') }
-                        : { title: w.t('Not blocked', 'Nie zablokowano'), text: w.t("Couldn't reach the post. Try again when you're online.", 'Nie udało się połączyć z pocztą. Spróbuj, gdy będzie internet.') },
+                        ? { title: w.t(`No more post from #${from}`, `Zablokowano #${from}`), text: w.t('You can unblock them in the post box.', 'Możesz to cofnąć w skrzynce pocztowej.') }
+                        : { title: w.t('Not blocked', 'Nie zablokowano'), text: w.t("Couldn't reach the post. Try again when you're online.", 'Nie udało się połączyć z pocztą. Spróbuj ponownie, kiedy będzie internet.') },
                     );
                   }
                 : undefined
@@ -1230,6 +1235,11 @@ export function App() {
         {diaryOpen && (
           <DiaryBook
             diary={garden.diary}
+            past={past}
+            onPhoto={(id) => {
+              setDiaryOpen(false);
+              setMemoriesOpen({ at: id });
+            }}
             now={now}
             onSave={(key, mood, text) => update((g) => saveDiaryEntry(g, key, mood, text, Date.now()))}
             onDelete={(key) => update((g) => deleteDiaryEntry(g, key))}
@@ -1246,7 +1256,10 @@ export function App() {
         )}
         {memoriesOpen && (
           <MemoryBook
+            key={memoriesOpen.at ?? 'shelf'}
             memories={garden.memories}
+            past={past}
+            startAt={memoriesOpen.at}
             busy={memoryBusy}
             error={memoryError}
             canShelf={freeShelfSlots(garden).length > 0}
@@ -1276,6 +1289,7 @@ export function App() {
           />
         )}
       </div>
-    </LangProvider>
+    </MeProvider>
+      </LangProvider>
   );
 }

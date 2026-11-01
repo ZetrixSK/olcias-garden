@@ -10,6 +10,7 @@ import {
   MAX_CAPTION,
   MAX_MEMORIES,
   memoryImages,
+  memoriesOnThisDay,
   NO_MEMORIES,
   parseMemories,
   photoTakenAt,
@@ -176,5 +177,25 @@ describe('when a photo was taken', () => {
     expect(photoTakenAt(new Uint8Array([137, 80, 78, 71]))).toBeNull();
     expect(photoTakenAt(jpegWithDate('0000:00:00 00:00:00', true, true))).toBeNull();
     expect(photoTakenAt(jpegWithDate('2025:07:14 17:03:09', true, true).slice(0, 40))).toBeNull();
+  });
+});
+
+describe('on this day', () => {
+  it('finds the pictures from this date in earlier years, by year, newest year first', () => {
+    const at = (y: number, mo: number, d: number, h = 12) => new Date(y, mo, d, h).getTime();
+    const m = addMemories(NO_MEMORIES, [
+      memory('a', at(2025, 10, 1, 9)),
+      memory('b', at(2025, 10, 1, 8)),
+      memory('c', at(2023, 10, 1)),
+      memory('today', at(2026, 10, 1)),
+      memory('other-day', at(2025, 10, 2)),
+      memory('undated', 0),
+    ]);
+    const days = memoriesOnThisDay(m, new Date(2026, 10, 1, 18));
+    expect(days.map((d) => [d.yearsAgo, d.items.map((x) => x.id)])).toEqual([
+      [1, ['b', 'a']],
+      [3, ['c']],
+    ]);
+    expect(memoriesOnThisDay(m, new Date(2026, 10, 3))).toEqual([]);
   });
 });

@@ -93,7 +93,7 @@ function StudioFrame({ title, preview, children, editing, onSave, onDelete, onCl
 
 const PATTERN_NAMES: Record<PotPattern, [string, string]> = {
   none: ['Plain', 'Gładka'], scallops: ['Scallops', 'Falbanki'], dots: ['Dots', 'Kropki'], stripes: ['Stripes', 'Paski'],
-  bands: ['Bands', 'Obręcze'], hearts: ['Hearts', 'Serca'], moons: ['Moons', 'Księżyce'], checks: ['Checks', 'Kratka'],
+  bands: ['Bands', 'Pasy'], hearts: ['Hearts', 'Serca'], moons: ['Moons', 'Księżyce'], checks: ['Checks', 'Kratka'],
   zigzag: ['Zigzag', 'Zygzak'], flowers: ['Flowers', 'Kwiatki'],
 };
 const SHAPE_NAMES: Record<PotDesign['shape'], [string, string]> = {
@@ -305,7 +305,7 @@ export function RoomStudio({ room, editing, onChange, onSave, onClose }: {
 const FLAME_CHOICES: Array<[CandleLit, string, string]> = [
   [true, 'Lit', 'Zapalona'],
   [false, 'Blown out', 'Zgaszona'],
-  [null, 'Lights itself', 'Sama się pali'],
+  [null, 'Lights itself', 'Sama się zapala'],
 ];
 const SHAPES_PL: Record<CandleShape, string> = { jar: 'W słoiku', pillar: 'Słupek', taper: 'Wysoka świeca' };
 
@@ -367,13 +367,13 @@ export function CandleStudio({ look, lit, own, onChange, onLit, onRoomCandle, on
         <p className="decor-hint">
           {t(
             'Tap the candle in the room to light it or blow it out. Left to itself, it lights in the evening and when it rains.',
-            'Stuknij świecę w pokoju, żeby ją zapalić albo zdmuchnąć. Zostawiona sama sobie zapala się wieczorem i kiedy pada.',
+            'Stuknij świecę w pokoju, żeby ją zapalić albo zdmuchnąć. Jeśli jej nie ruszasz, sama zapala się wieczorem i kiedy pada.',
           )}
         </p>
       </Section>
       {own && (
         <button className="quiet candle-reset" onClick={onRoomCandle}>
-          {t("Back to the room's own candle", 'Wróć do świecy z pokoju')}
+          {t("Back to the room's own candle", 'Przywróć zwykłą świecę')}
         </button>
       )}
     </StudioFrame>

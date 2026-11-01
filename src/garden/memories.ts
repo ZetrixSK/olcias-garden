@@ -225,3 +225,22 @@ function readExif(view: DataView, tiff: number, end: number): number | null {
   const t = new Date(+m[1]!, +m[2]! - 1, +m[3]!, +m[4]!, +m[5]!, +m[6]!).getTime();
   return Number.isFinite(t) && t > 0 ? t : null;
 }
+
+export type PastDay = { yearsAgo: number; items: Memory[] };
+
+/** Photos and paintings from this same day in earlier years, grouped by year, the most recent first. */
+export function memoriesOnThisDay(m: Memories, today: Date): PastDay[] {
+  const year = today.getFullYear();
+  const byYear = new Map<number, Memory[]>();
+  for (const x of m.items) {
+    if (!x.at) continue;
+    const d = new Date(x.at);
+    if (d.getMonth() !== today.getMonth() || d.getDate() !== today.getDate() || d.getFullYear() >= year) continue;
+    const list = byYear.get(d.getFullYear()) ?? [];
+    list.push(x);
+    byYear.set(d.getFullYear(), list);
+  }
+  return [...byYear.entries()]
+    .sort((a, b) => b[0] - a[0])
+    .map(([y, items]) => ({ yearsAgo: year - y, items: items.sort((a, b) => a.at - b.at) }));
+}

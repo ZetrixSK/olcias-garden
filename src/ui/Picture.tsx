@@ -38,7 +38,7 @@ export function PictureSheet({ onClose }: { onClose: () => void }) {
   const save = () => {
     if (!pic) return;
     void sendFile(pic.file, "Olcia's Garden").then((how) => {
-      if (how === 'shared') setNote(t('Done. "Save Image" keeps it in Photos.', 'Gotowe. „Zachowaj obraz” zapisze go w Zdjęciach.'));
+      if (how === 'shared') setNote(t('Done. "Save Image" keeps it in Photos.', 'Gotowe. „Zachowaj obrazek” zapisze go w Zdjęciach.'));
       if (how === 'downloaded') setNote(t(`Saved as ${pic.file.name}, in Downloads.`, `Zapisano jako ${pic.file.name}, w Pobranych.`));
     });
   };

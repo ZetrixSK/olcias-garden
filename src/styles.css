@@ -2999,3 +2999,24 @@ body {
 .paint-paper-pick {
   padding: 0;
 }
+
+/* pictures from this day in earlier years: a few small prints on the slip */
+.past-photos .stamp {
+  width: 20px;
+  height: 20px;
+}
+.past-prints {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 2px 2px;
+}
+.past-prints .snap {
+  width: 62px;
+  flex: none;
+  padding: 3px 3px 7px;
+}
+.past-more {
+  font-size: 15px;
+  opacity: 0.75;
+}
