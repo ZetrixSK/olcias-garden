@@ -10,7 +10,9 @@ import {
 } from '../garden/designs';
 import { SPECIES, SPECIES_IDS, type SpeciesId, type Stage } from '../garden/species';
 import { useWords, words, type Words } from '../i18n';
-import type { Plant } from '../garden/state';
+import { MAX_GARDEN_NAME, type Plant } from '../garden/state';
+import { Sign } from '../scene/Room';
+import type { Theme } from '../theme/palettes';
 import { plantLook } from '../plants/looks';
 import { PlantArt } from '../plants/PlantArt';
 import { Potted } from '../plants/Pots';
@@ -173,6 +175,43 @@ function fitName(name: string): { fontSize: string } | undefined {
 }
 
 const WINDOW_ICON = <path d="M-8,10 L-8,-2 A8,8 0 0 1 8,-2 L8,10 Z M0,-10 L0,10 M-8,2 L8,2" />;
+
+/** Naming the garden: the sign changes as she types; an empty name brings back "Olcia's garden". */
+export function GardenNameSheet({ theme, name, onChange, onClose }: { theme: Theme; name: string | null; onChange: (name: string | null) => void; onClose: () => void }) {
+  const w = useWords();
+  const { t } = w;
+  return (
+    <div className="sheet garden-name" role="dialog" aria-label={t('Name the garden', 'Nazwij ogród')}>
+      <div className="sheet-head">
+        <h2>{t('Name the garden', 'Nazwij ogród')}</h2>
+        <button className="close" aria-label={t('Close', 'Zamknij')} onClick={onClose}>×</button>
+      </div>
+      {/* the sign itself, as it will hang: the one on the wall may be behind the keyboard */}
+      <svg className="sign-preview" viewBox="122 556 156 84" aria-hidden="true">
+        <Sign theme={theme} name={name} />
+      </svg>
+      <input
+        className="name-input"
+        value={name ?? ''}
+        maxLength={MAX_GARDEN_NAME}
+        placeholder={t("Olcia's garden", 'Ogródek Olci')}
+        aria-label={t("The garden's name", 'Nazwa ogrodu')}
+        enterKeyHint="done"
+        onChange={(e) => onChange(e.target.value || null)}
+        onKeyDown={(e) => e.key === 'Enter' && onClose()}
+      />
+      <p className="name-count" aria-hidden="true">
+        {(name ?? '').length} / {MAX_GARDEN_NAME}
+      </p>
+      <div className="actions two">
+        <button className="quiet" disabled={!name} onClick={() => onChange(null)}>
+          {t('Back to the original', 'Przywróć oryginalną')}
+        </button>
+        <button onClick={onClose}>{t('Done', 'Gotowe')}</button>
+      </div>
+    </div>
+  );
+}
 
 export function PlantPicker({ onPick, onDrawing, onPaint, busy, error, onClose }: {
   onPick: (s: SpeciesId) => void;

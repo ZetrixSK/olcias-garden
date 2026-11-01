@@ -182,7 +182,10 @@ const Backdrop = memo(function Backdrop({ theme, sky, night, twilight, season, o
 });
 
 /** Curtains, pictures, sign, floor and the dogs. */
-const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hideCurtains, phase, mood, occasion, onBook, photoUrl, onFrame, parcels, onParcels, mailNews, onPost }: {
+const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hideCurtains, phase, mood, occasion, onBook, photoUrl, onFrame, parcels, onParcels, mailNews, onPost, name, onSign }: {
+  /** Her name for the garden, on the sign; tapping the sign calls onSign (only in her own garden). */
+  name: string | null;
+  onSign?: () => void;
   theme: Theme; dy: number; wallMid: number; pictureScale: number; hideCurtains: boolean; phase: number; mood: DogMood;
   occasion: Occasion;
   onBook?: () => void;
@@ -206,7 +209,7 @@ const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hi
       )}
       {/* a touch left of centre, to leave the letterbox room beside it */}
       <g transform={`translate(${onPost ? -12 : 0} ${(wallMid - 606).toFixed(1)})`}>
-        <Sign theme={theme} />
+        <Sign theme={theme} name={name} onTap={onSign} />
       </g>
       {/* the curtains hang in front of the pictures on the wall; taps go through them to the pictures */}
       {!hideCurtains && (
@@ -276,7 +279,7 @@ const SillBoard = memo(Sill);
 const Trinket = memo(ShelfTrinket);
 const Candle = memo(SillCandle);
 
-export function Scene({ theme, weather, viewH, vines, still = false, moments = [], onParcels, onPost, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, rainbow = false, candle = null, candleOn, onCandle, ...rest }: {
+export function Scene({ theme, weather, viewH, vines, still = false, moments = [], onParcels, onPost, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, onSign, rainbow = false, candle = null, candleOn, onCandle, ...rest }: {
   theme: Theme;
   weather: Weather;
   viewH: number;
@@ -301,6 +304,8 @@ export function Scene({ theme, weather, viewH, vines, still = false, moments = [
   /** Her photo in the frame on the wall; tapping the frame calls onFrame. */
   photoUrl?: string | null;
   onFrame?: () => void;
+  /** Tapping the sign, to name the garden; without it the sign is only to look at (someone else's garden). */
+  onSign?: () => void;
   /** Her own candle, or null for the room's own. */
   candle?: CandleLook | null;
   candleOn: boolean;
@@ -372,7 +377,10 @@ export function Scene({ theme, weather, viewH, vines, still = false, moments = [
         onBook={onBook}
         photoUrl={photoUrl}
         onFrame={onFrame}
-       parcels={rest.garden.parcels.length} onParcels={onParcels} mailNews={rest.garden.post.unread > 0} onPost={onPost} />
+       parcels={rest.garden.parcels.length} onParcels={onParcels} mailNews={rest.garden.post.unread > 0} onPost={onPost}
+        name={rest.garden.settings.gardenName}
+        onSign={onSign}
+      />
       <Lights theme={theme} sky={weather.sky} night={weather.night} twilight={weather.twilight ?? null} phase={phaseAt(rest.now)} occasion={cal.occasion} dy={dy} wallMid={wallMid} fx={candleFlame(theme, candle)[0]} fy={candleFlame(theme, candle)[1]} candleOn={candleOn} shower={moments.includes('shooting-stars')} />
       {weather.night && <WindowGlow garden={rest.garden} now={rest.now} />}
     </svg>

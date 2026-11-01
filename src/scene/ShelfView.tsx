@@ -98,7 +98,7 @@ function Hanger({ x, rimY }: { x: number; rimY: number }) {
   );
 }
 
-export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movingId, wateringId, onSlot, paper = null, pictures = {}, drawingId = null, bouquetId = null, rainbow = false, moments = [], candle = null, candleOn, onCandle }: {
+export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movingId, wateringId, onSlot, paper = null, pictures = {}, drawingId = null, bouquetId = null, rainbow = false, moments = [], candle = null, candleOn, onCandle, onSign }: {
   theme: Theme;
   weather: Weather;
   viewH: number;
@@ -122,6 +122,8 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
   candle?: CandleLook | null;
   candleOn: boolean;
   onCandle?: () => void;
+  /** Tapping the sign, to name the garden. */
+  onSign?: () => void;
 }) {
   // short screens (Safari with its bars) see the whole wall slightly smaller, with wallpaper at the sides
   const h = Math.max(viewH, CORE_H);
@@ -244,7 +246,7 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
 
       {/* the name, hung from the underside of the bottom shelf, between the dogs */}
       <g transform={`translate(200 ${Math.min(695, bottom - 88).toFixed(1)}) scale(0.85) translate(-200 -606)`}>
-        <Sign theme={theme} />
+        <Sign theme={theme} name={garden.settings.gardenName} onTap={onSign} />
       </g>
 
       <PeekingDogs bottom={bottom} mood={dogMood(weather, new Date(now).getHours())} />

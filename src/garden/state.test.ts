@@ -83,6 +83,8 @@ describe('garden state', () => {
       lang: 'mixed',
       shareNotes: false,
       me: 'she',
+      gardenName: null,
+      tagAsked: false,
     });
   });
 

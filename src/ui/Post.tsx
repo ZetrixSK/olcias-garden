@@ -72,10 +72,71 @@ export function ClaimTag({ current, onClaim }: { current: string | null; onClaim
     >
       <TagInput value={tag} onChange={setTag} placeholder={t('yourname', 'twojeimie')} />
       <button type="submit" disabled={busy || !tag || tag === current}>
-        {busy ? t('Moment…', 'Chwila…') : current ? t('Change', 'Zmień') : t('Take it', 'Biorę')}
+        {busy ? t('Moment…', 'Chwila…') : current ? t('Change', 'Zmień') : t('Save', 'Zapisz')}
       </button>
       {error && <p className="decor-error">{postMessage(error, w)}</p>}
     </form>
+  );
+}
+
+/** A brown paper luggage tag on a string, with a # inked on it. */
+function TagArt() {
+  return (
+    <svg className="welcome-art tag-art" viewBox="-70 -50 140 100" aria-hidden="true">
+      {/* the string, looping through the hole and trailing off */}
+      <path d="M-34,-6 C-48,-22 -60,-30 -66,-44 M-34,-6 C-46,-4 -58,6 -64,18" fill="none" stroke="#3d2633" strokeWidth="1.4" strokeLinecap="round" />
+      <g transform="rotate(-8)">
+        <path
+          d="M-40,-22 L40,-24 C44,-24 46,-22 46,-18 L47,20 C47,24 45,26 41,26 L-40,24 L-56,2 Z"
+          fill="#d8b88a"
+          stroke="#3d2633"
+          strokeWidth="1.6"
+          strokeLinejoin="round"
+        />
+        <path d="M-38,-17 L38,-19 M-38,19 L39,20" stroke="#b9925e" strokeWidth="1" strokeDasharray="3 3" />
+        <circle cx="-38" cy="1" r="4.2" fill="#f3ead6" stroke="#3d2633" strokeWidth="1.4" />
+        <circle cx="-38" cy="1" r="6.6" fill="none" stroke="#b5476a" strokeWidth="1.2" />
+        <path d="M-6,-12 L-11,14 M7,-12 L2,14 M-15,-4 L13,-4 M-17,6 L11,6" stroke="#3d2633" strokeWidth="3" strokeLinecap="round" />
+        {/* a small pansy stamped in the corner */}
+        <g transform="translate(30 -7) scale(0.55)">
+          <ellipse cx="-4" cy="-5" rx="5" ry="6" fill="#2a1f2e" />
+          <ellipse cx="4" cy="-5" rx="5" ry="6" fill="#2a1f2e" />
+          <ellipse cx="-6" cy="3" rx="5.5" ry="5" fill="#e58aa6" />
+          <ellipse cx="6" cy="3" rx="5.5" ry="5" fill="#e58aa6" />
+          <ellipse cx="0" cy="6" rx="6" ry="5.5" fill="#e58aa6" />
+          <circle cx="0" cy="2" r="1.8" fill="#e3b341" />
+        </g>
+      </g>
+    </svg>
+  );
+}
+
+/**
+ * A page of its own, after the letter and before the garden: her tag, so bouquets and visits can
+ * find her. Asked only once; "Later" is always there (she might be offline), and the post box
+ * can set it any time.
+ */
+export function TagWelcome({ onClaim, onLater }: { onClaim: (tag: string) => Promise<PostError | null>; onLater: () => void }) {
+  const w = useWords();
+  const { t } = w;
+  return (
+    <div className="welcome tag-screen" role="dialog" aria-label={t('What should we call you?', 'Jak mamy na Ciebie wołać?')}>
+      <div className="welcome-inner">
+        <TagArt />
+        <h1>{t('What should we call you?', 'Jak mamy na Ciebie wołać?')}</h1>
+        <p className="welcome-lead">
+          {t(
+            "Piorun and Bajzel, along with the flowers, need to know who they're letting into the garden. Pick a tag, and bouquets and visitors will find you by it.",
+            'Piorun i Bajzel razem z kwiatkami muszą wiedzieć, kogo wpuszczają do ogrodu. Wybierz tag, a po nim trafią do Ciebie bukiety i goście.',
+          )}
+        </p>
+        <ClaimTag current={null} onClaim={onClaim} />
+        <p className="tag-later-note">{t('You can change it later in the post box.', 'Możesz go później zmienić w skrzynce pocztowej.')}</p>
+        <button className="welcome-here" onClick={onLater}>
+          {t("I'll introduce myself later", 'Przedstawię się później')}
+        </button>
+      </div>
+    </div>
   );
 }
 

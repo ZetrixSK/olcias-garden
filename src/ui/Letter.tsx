@@ -2,8 +2,11 @@ import { useState } from 'react';
 import { LETTER } from '../letter';
 import { useWords } from '../i18n';
 
-/** The letter, on paper, with a wax seal. Keeping it is the default; throwing it away asks first. */
-export function Letter({ onKeep, onThrowAway }: { onKeep: () => void; onThrowAway: () => void }) {
+/**
+ * The letter, on paper, with a wax seal. The first time it only offers to be kept, so the first
+ * moment isn't a choice; read again from the envelope, it can also be thrown away (asking first).
+ */
+export function Letter({ first = false, onKeep, onThrowAway }: { first?: boolean; onKeep: () => void; onThrowAway: () => void }) {
   const [confirm, setConfirm] = useState(false);
   const { t } = useWords();
   const paragraphs = LETTER.body.split(/\n\s*\n/).map((t) => t.trim()).filter(Boolean);
@@ -37,9 +40,11 @@ export function Letter({ onKeep, onThrowAway }: { onKeep: () => void; onThrowAwa
             </>
           ) : (
             <>
-              <button className="quiet" onClick={() => setConfirm(true)}>
-                {t('Throw away', 'Wyrzuć')}
-              </button>
+              {!first && (
+                <button className="quiet" onClick={() => setConfirm(true)}>
+                  {t('Throw away', 'Wyrzuć')}
+                </button>
+              )}
               <button onClick={onKeep}>{t('Keep it', 'Zatrzymaj')}</button>
             </>
           )}

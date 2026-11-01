@@ -76,7 +76,14 @@ export type Settings = {
   shareNotes: boolean;
   /** Who holds this phone, for the Polish words said to them. Her, unless he set it on his. */
   me: Me;
+  /** The garden's name on the sign, if she gave it one; otherwise the sign says "Olcia's garden". */
+  gardenName: string | null;
+  /** Whether she has been asked, once, to choose her tag (after the letter, the first time). */
+  tagAsked: boolean;
 };
+
+/** Long enough for a real name, short enough to fit on the sign. */
+export const MAX_GARDEN_NAME = 24;
 
 export const SAVE_VERSION = 4;
 
@@ -137,6 +144,8 @@ export const DEFAULT_SETTINGS: Settings = {
   lang: 'mixed',
   shareNotes: false,
   me: 'she',
+  gardenName: null,
+  tagAsked: false,
 };
 
 export function newId(): string {
@@ -553,6 +562,8 @@ export function parseSettings(v: unknown): Settings {
     lang: parseLang(s.lang),
     shareNotes: s.shareNotes === true,
     me: parseMe(s.me),
+    gardenName: typeof s.gardenName === 'string' && s.gardenName.trim() ? s.gardenName.slice(0, MAX_GARDEN_NAME) : null,
+    tagAsked: s.tagAsked === true,
   };
 }
 

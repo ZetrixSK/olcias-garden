@@ -22,6 +22,7 @@ import {
   deleteDiaryEntry,
   drawingAt,
   isHanging,
+  MAX_GARDEN_NAME,
   moveDrawing,
   newId,
   removeDrawing,
@@ -73,7 +74,7 @@ import { DiaryBook } from './ui/Diary';
 import { BackupSheet } from './ui/Backup';
 import { canAddToHomeScreen, Welcome } from './ui/InstallHint';
 import { BouquetCard, BouquetStudio, ParcelsSheet } from './ui/Bouquets';
-import { arrivalNotice, NoticeNote, PostSheet, type Notice } from './ui/Post';
+import { arrivalNotice, NoticeNote, PostSheet, TagWelcome, type Notice } from './ui/Post';
 import { VisitView, visitorNotice, type Visiting } from './ui/Visit';
 import { ViewSwiper } from './ui/ViewSwiper';
 import { applyAction } from './remote/actions';
@@ -85,7 +86,7 @@ import { pressedToday } from './garden/pressed';
 import { paletteVars, type Weather } from './theme/palettes';
 import { seasonShown } from './theme/seasons';
 import { isDarkRoom, startingRoom, type OwnRoom } from './theme/ownRoom';
-import { MoveBanner, PlantCard, PlantPicker, StyleSheet, VarietyPicker, WindowChooser } from './ui/Sheets';
+import { GardenNameSheet, MoveBanner, PlantCard, PlantPicker, StyleSheet, VarietyPicker, WindowChooser } from './ui/Sheets';
 import { CandleStudio, NEW_PANSY, NEW_POT, PansyStudio, PotStudio, RoomStudio } from './ui/Studio';
 import { PictureSheet } from './ui/Picture';
 import { flameOn, type CandleLook } from './garden/candle';
@@ -201,6 +202,8 @@ type Mode =
   | { kind: 'pansyStudio'; editing: string | null; forSlot: SlotId | null; forPlant: string | null }
   /** her wallpaper, photo and drawings */
   | { kind: 'decorate' }
+  /** naming the garden, on the sign */
+  | { kind: 'gardenName' }
   /** one of her drawings on the shelves */
   | { kind: 'drawing'; id: string }
   /** making a bouquet, looking at one on the shelves, or the box of parcels on the floor */
@@ -285,6 +288,7 @@ export function App() {
   const [adding, setAdding] = useState<'wallpaper' | 'photo' | 'drawing' | null>(null);
   const [pictureError, setPictureError] = useState<string | null>(null);
   const openDecorate = useCallback(() => setMode({ kind: 'decorate' }), []);
+  const openSign = useCallback(() => setMode({ kind: 'gardenName' }), []);
 
   /** Replays what happened between two moments. With reduced motion it only plays when asked. */
   const playLapse = useCallback((tl: Timelapse, auto: boolean) => {
@@ -556,6 +560,9 @@ export function App() {
     setMode({ kind: 'idle' });
   };
 
+  // once the letter is kept (the very first time), she's asked for her tag, over the garden, just once
+  const askTag = sharing && settings.letter !== 'unread' && !settings.tagAsked && !garden.post.tag && !letterOpen && !lapse && mode.kind === 'idle';
+
   const today = dayKey(new Date(now));
   const past = memoriesOnThisDay(garden.memories, new Date(now));
   const memory = diarySeenOn !== today && (onThisDay(garden.diary, today).length > 0 || past.length > 0);
@@ -826,7 +833,7 @@ export function App() {
       >
         <ViewSwiper
           view={settings.view}
-          enabled={mode.kind === 'idle' && !lapse && !letterOpen && !diaryOpen && !bookOpen && !memoriesOpen && !easel && !welcoming}
+          enabled={mode.kind === 'idle' && !lapse && !letterOpen && !diaryOpen && !bookOpen && !memoriesOpen && !easel && !welcoming && !askTag}
           onChange={(view) => setSettings({ view })}
           room={
             <Scene
@@ -840,6 +847,7 @@ export function App() {
               paper={paper}
               photoUrl={garden.decor.photo ? (pictures[garden.decor.photo.img] ?? null) : null}
               onFrame={openDecorate}
+              onSign={openSign}
               onParcels={() => {
                 setGarden((g) => (g ? postSeen(g) : g));
                 setMode({ kind: 'parcels' });
@@ -879,6 +887,7 @@ export function App() {
               onCandle={() => setSettings({ candleLit: !candleOn })}
               wateringId={wateringId}
               onSlot={onSlot}
+              onSign={openSign}
             />
           }
         />
@@ -962,6 +971,18 @@ export function App() {
           />
         )}
         {mode.kind === 'picture' && <PictureSheet onClose={() => setMode({ kind: 'idle' })} />}
+        {mode.kind === 'gardenName' && (
+          <GardenNameSheet
+            theme={theme}
+            name={settings.gardenName}
+            onChange={(gardenName) => update((g) => updateSettings(g, { gardenName: gardenName?.slice(0, MAX_GARDEN_NAME) ?? null }))}
+            onClose={() => {
+              // a name of only spaces is no name at all
+              if (settings.gardenName !== null && !settings.gardenName.trim()) update((g) => updateSettings(g, { gardenName: null }));
+              setMode({ kind: 'idle' });
+            }}
+          />
+        )}
         {mode.kind === 'candleStudio' && (
           <CandleStudio
             look={mode.draft}
@@ -1276,8 +1297,22 @@ export function App() {
           />
         )}
         {easel && <Paint key={easel.again?.id ?? 'new'} start={easel.start} paper={easel.paper} onSave={keepPainting} onClose={() => setEasel(null)} />}
+        {askTag && (
+          <TagWelcome
+            onClaim={async (tag) => {
+              const why = await claim(tag);
+              if (!why) {
+                setSettings({ tagAsked: true });
+                setNotice({ title: `#${tag}`, text: t('That’s yours now. Others can send bouquets to it.', 'Ten tag jest teraz Twój. Inni mogą wysyłać na niego bukiety.') });
+              }
+              return why;
+            }}
+            onLater={() => setSettings({ tagAsked: true })}
+          />
+        )}
         {letterOpen && !lapse && (
           <Letter
+            first={settings.letter === 'unread'}
             onKeep={() => {
               setLetterOpen(false);
               if (settings.letter === 'unread') setSettings({ letter: 'kept' });

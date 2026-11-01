@@ -3028,3 +3028,114 @@ body {
   font-size: 15px;
   opacity: 0.75;
 }
+
+/* naming the garden: at the top, clear of the keyboard, with the sign drawn as it will hang */
+.sheet.garden-name {
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  bottom: auto;
+}
+.sign-preview {
+  display: block;
+  width: min(260px, 72%);
+  margin: 2px auto 8px;
+  overflow: visible;
+}
+.garden-name .name-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 20px;
+  font-weight: 700;
+  color: inherit;
+  border: 1.5px solid color-mix(in srgb, var(--ink) 35%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--wall) 70%, white);
+  outline: none;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.garden-name .name-input::placeholder {
+  color: color-mix(in srgb, var(--ink) 40%, transparent);
+}
+.name-count {
+  margin: 4px 4px 10px;
+  text-align: right;
+  font-size: 13px;
+  opacity: 0.6;
+}
+.actions.two {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* the tag, asked once on a page of its own between the letter and the garden */
+.welcome.tag-screen {
+  /* the form sits in the upper part, where the keyboard won't cover it */
+  place-items: start center;
+  padding-top: calc(env(safe-area-inset-top, 0px) + max(36px, 13vh));
+  animation: fade-in 0.5s ease-out;
+}
+.tag-art {
+  width: min(190px, 52vw);
+}
+.tag-screen .claim {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.tag-screen .tag-input {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 12px;
+  min-height: 50px;
+  background: #f8f1e4;
+  border: 1.5px solid #3d2633;
+  border-radius: 12px;
+  font-size: 20px;
+  font-weight: 700;
+}
+.tag-screen .tag-input input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.tag-screen .claim button {
+  min-height: 50px;
+  padding: 0 18px;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  color: #f8f1e4;
+  background: #3d2633;
+  border: 1.5px solid #3d2633;
+  border-radius: 12px;
+}
+.tag-screen .claim button:disabled {
+  opacity: 0.4;
+}
+.tag-screen .decor-error {
+  width: 100%;
+  margin: 8px 0 0;
+  color: #a3324e;
+  font-size: 15px;
+}
+.tag-screen .claim {
+  flex-wrap: wrap;
+}
+.tag-later-note {
+  margin: 12px 0 0;
+  font-size: 15px;
+  opacity: 0.7;
+}
+.tag-screen .welcome-here {
+  margin-top: 4px;
+}

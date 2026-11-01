@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { Theme } from '../theme/palettes';
 import { useWords } from '../i18n';
 import { OwnWallpaper, wallFill, type OwnPaper } from './OwnDecor';
@@ -206,11 +207,38 @@ export function Floor() {
   );
 }
 
-export function Sign({ theme }: { theme: Theme }) {
+/** How wide the words may be on each board; a longer name is drawn a little smaller to fit. */
+const SIGN_ROOM = { cozy: 118, witchy: 122 } as const;
+
+/** Shrinks the words to fit the board, measured once the font is ready (it changes the width). */
+function useFitted(text: string, room: number) {
+  const ref = useRef<SVGTextElement>(null);
+  const [k, setK] = useState(1);
+  useLayoutEffect(() => {
+    let live = true;
+    const measure = () => {
+      const el = ref.current;
+      if (!live || !el) return;
+      const w = el.getComputedTextLength();
+      setK(w > room ? room / w : 1);
+    };
+    measure();
+    void document.fonts?.ready.then(measure);
+    return () => {
+      live = false;
+    };
+  }, [text, room]);
+  return { ref, k };
+}
+
+export function Sign({ theme, name = null, onTap }: { theme: Theme; name?: string | null; onTap?: () => void }) {
   const cozy = theme === 'cozy';
   const { t } = useWords();
+  const text = name?.trim() || (cozy ? t("Olcia's garden", 'Ogródek Olci') : t("Olcia's Garden", 'Ogród Olci'));
+  const { ref, k } = useFitted(text, cozy ? SIGN_ROOM.cozy : SIGN_ROOM.witchy);
+  const fit = (y: number) => (k < 1 ? `translate(200 ${y}) scale(${k.toFixed(3)}) translate(-200 ${-y})` : undefined);
   return (
-    <g>
+    <g className={onTap ? 'tappable' : undefined} onClick={onTap}>
       <path d="M200,566 L146,592 M200,566 L254,592" className="ink-thin" fill="none" />
       <circle cx="200" cy="566" r="2.4" className="ink-thin" style={fv('ink')} />
       <g transform="rotate(-2.5 200 606)">
@@ -218,8 +246,8 @@ export function Sign({ theme }: { theme: Theme }) {
           <>
             <path className="ink" style={fv('sign-bg')} d="M134,590 L266,588 C267,600 266,614 267,626 L135,628 C133,616 135,602 134,590 Z" />
             <path d="M138,622 L264,620" style={sv('sign-shade')} strokeWidth="3" />
-            <text x="200" y="615" textAnchor="middle" fontFamily="Kalam" fontWeight="700" fontSize="21" style={fv('sign-ink')}>
-              {t("Olcia's garden", 'Ogródek Olci')}
+            <text ref={ref} x="200" y="615" transform={fit(608)} textAnchor="middle" fontFamily="Kalam" fontWeight="700" fontSize="21" style={fv('sign-ink')}>
+              {text}
             </text>
           </>
         ) : (
@@ -227,8 +255,8 @@ export function Sign({ theme }: { theme: Theme }) {
             <path className="ink" fill="#5a4234" d="M128,586 L272,584 L273,632 L129,634 Z" />
             <path style={fv('sign-bg')} d="M134,591 L267,589 L268,627 L135,629 Z" />
             <path d="M140,600 C170,598 190,604 220,598" stroke="#fff" strokeOpacity="0.06" strokeWidth="6" fill="none" />
-            <text x="200" y="618" textAnchor="middle" fontFamily="Grenze Gotisch" fontWeight="600" fontSize="22" style={fv('sign-ink')} opacity="0.92">
-              {t("Olcia's Garden", 'Ogród Olci')}
+            <text ref={ref} x="200" y="618" transform={fit(610)} textAnchor="middle" fontFamily="Grenze Gotisch" fontWeight="600" fontSize="22" style={fv('sign-ink')} opacity="0.92">
+              {text}
             </text>
             <path d="M146,598 A3.5,3.5 0 1 0 146,605 A2.4,3.5 0 1 1 146,598 Z M256,618 l0.6,2 l2,0.6 l-2,0.6 l-0.6,2 l-0.6,-2 l-2,-0.6 l2,-0.6 Z" style={fv('sign-ink')} opacity="0.85" />
           </>
