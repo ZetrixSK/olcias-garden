@@ -3158,3 +3158,8 @@ body {
   40% { opacity: 0.2; }
   70% { opacity: 0.3; }
 }
+
+/* the view out of sight holds still: its endless little motions would only be drawn for nobody */
+.view:not(.current) * {
+  animation-play-state: paused !important;
+}
