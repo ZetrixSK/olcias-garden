@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   addDrawing,
+  freeShelfSlots,
+  gardenImages,
+  withMemories,
   parseSave,
   bouquetAt,
   postSeen,
@@ -48,10 +51,14 @@ import {
   type WindowSpot,
 } from './garden/state';
 import { deleteImage, getImage, loadGarden, persistStorage, putImage, restoreGarden, saveGarden, tidyImages } from './garden/storage';
-import { imagesInUse, MAX_PIXELS, type Decor, type WallpaperSize } from './garden/decor';
+import { imagesInUse, MAX_PIXELS, type WallpaperSize } from './garden/decor';
+import { addMemories, editMemory, MEMORY_PIXELS, photoTakenAt, removeMemories, roomFor, type Memories, type Memory, type PaperId } from './garden/memories';
+import { MemoryBook } from './ui/Memories';
+import { Paint, PAINT_H, PAINT_W } from './ui/Paint';
+import { forgetUrl, rememberUrl, storedUrl } from './ui/storedImages';
 import type { OwnPaper } from './scene/OwnDecor';
 import { DecorateSheet, DrawingCard } from './ui/Decorate';
-import { chooseImage, prepareImage } from './ui/upload';
+import { chooseImage, chooseImages, prepareImage } from './ui/upload';
 import { awayDemo, buildTimelapse, gardenAt, LAPSE_MIN_GAP, parseAway, somethingGrew, type Timelapse } from './garden/timelapse';
 import { stageAt } from './garden/growth';
 import type { SpeciesId } from './garden/species';
@@ -215,18 +222,21 @@ type Mode =
 /** Her pictures, as addresses the drawing can use, keyed by the image's name in storage. */
 type Pictures = Record<string, string>;
 
-async function loadPictures(decor: Decor): Promise<Pictures> {
-  const inUse = imagesInUse(decor);
+/** Reads back the pictures the room shows; her album's pictures are read only when it's open. */
+async function loadPictures(garden: GardenState): Promise<Pictures> {
   const out: Pictures = {};
   await Promise.all(
-    [...inUse].map(async (key) => {
+    [...imagesInUse(garden.decor)].map(async (key) => {
       const blob = await getImage(key);
       if (blob) out[key] = URL.createObjectURL(blob);
     }),
   );
-  void tidyImages(inUse);
+  void tidyImages(gardenImages(garden));
   return out;
 }
+
+/** Her easel: what it's for (an album, a painting to carry on with, a place on the shelves) and what it starts from. */
+type Easel = { album: string | null; again: Memory | null; slot: SlotId | null; start: string | null; paper: PaperId | null };
 
 export function App() {
   const [garden, setGarden] = useState<GardenState | null>(null);
@@ -262,6 +272,10 @@ export function App() {
   const [letterOpen, setLetterOpen] = useState(false);
   const [bookOpen, setBookOpen] = useState(false);
   const [diaryOpen, setDiaryOpen] = useState(false);
+  const [memoriesOpen, setMemoriesOpen] = useState(false);
+  const [easel, setEasel] = useState<Easel | null>(null);
+  const [memoryBusy, setMemoryBusy] = useState<string | null>(null);
+  const [memoryError, setMemoryError] = useState<string | null>(null);
   /** The day she last opened the diary, so its "on this day" mark goes once she's seen it. */
   const [diarySeenOn, setDiarySeenOn] = useState<string | null>(null);
   // ?installhint shows the iPhone Home Screen note on any phone, to see how it looks
@@ -283,7 +297,7 @@ export function App() {
     loadGarden().then((g) => {
       loaded.current = true;
       const t = Date.now();
-      void loadPictures(g.decor).then(setPictures);
+      void loadPictures(g).then(setPictures);
       if (AWAY) {
         const demo = awayDemo(g, AWAY, t, AWAY_WATER);
         opened.current = { at: t, garden: demo };
@@ -536,7 +550,7 @@ export function App() {
     const caughtUp = catchUpNights(r.garden, t);
     opened.current = { at: t, garden: caughtUp };
     lastLapse.current = null;
-    setPictures(await loadPictures(caughtUp.decor));
+    setPictures(await loadPictures(caughtUp));
     setGarden(caughtUp);
     setMode({ kind: 'idle' });
   };
@@ -618,6 +632,127 @@ export function App() {
     dropPicture(old?.img);
   };
 
+  const changeMemories = (fn: (m: Memories) => Memories) => update((g) => withMemories(g, fn));
+
+  /** Photos from her gallery, into the album she's looking at; each one shows up as soon as it's ready. */
+  const addPhotos = async (album: string | null) => {
+    const files = await chooseImages();
+    if (!files.length) return;
+    setMemoryError(null);
+    const room = roomFor(gardenRef.current?.memories ?? garden.memories);
+    const list = files.slice(0, Math.max(0, room));
+    let failed = 0;
+    let full = false;
+    for (let i = 0; i < list.length; i++) {
+      if (list.length > 1) setMemoryBusy(t(`Adding ${i + 1} of ${list.length}…`, `Dodaję ${i + 1} z ${list.length}…`));
+      else setMemoryBusy(t('Adding…', 'Dodaję…'));
+      const file = list[i]!;
+      try {
+        const big = await prepareImage(file, MEMORY_PIXELS.photo, 'jpeg');
+        const small = await prepareImage(big.blob, MEMORY_PIXELS.thumb, 'jpeg');
+        const taken = photoTakenAt(new Uint8Array(await file.slice(0, 256 * 1024).arrayBuffer()));
+        const img = newId();
+        const thumb = newId();
+        try {
+          await putImage(img, big.blob);
+          await putImage(thumb, small.blob);
+        } catch {
+          full = true;
+          void deleteImage(img);
+          break;
+        }
+        rememberUrl(thumb, small.blob);
+        const picked = file.lastModified > 0 && file.lastModified <= Date.now() ? file.lastModified : Date.now();
+        const m: Memory = { id: newId(), kind: 'photo', img, thumb, w: big.w, h: big.h, at: taken ?? picked, caption: '', albums: album ? [album] : [], fav: false, paper: null };
+        changeMemories((x) => addMemories(x, [m]));
+      } catch {
+        failed++;
+      }
+    }
+    setMemoryBusy(null);
+    if (full) setMemoryError(t("There isn't room on the phone for more pictures.", 'W telefonie zabrakło miejsca na kolejne zdjęcia.'));
+    else if (failed) setMemoryError(t(`${failed} of them couldn't be opened.`, `Nie udało się otworzyć: ${failed}.`));
+    else if (files.length > list.length) setMemoryError(t('The album is full.', 'Album jest pełny.'));
+  };
+
+  const openEasel = async (album: string | null, again: Memory | null, slot: SlotId | null = null) => {
+    const start = again ? await storedUrl(again.img) : null;
+    setEasel({ album, again, slot, start, paper: again ? again.paper : slot ? null : 'cream' });
+  };
+
+  /** Keeps a painting: in her album, and on the shelf too if she painted it for a place there. Throws if it couldn't be kept. */
+  const keepPainting = async (blob: Blob, paper: PaperId | null) => {
+    const e = easel;
+    if (!e) return;
+    const small = await prepareImage(blob, MEMORY_PIXELS.thumb, paper ? 'jpeg' : 'png');
+    const img = newId();
+    const thumb = newId();
+    await putImage(img, blob);
+    await putImage(thumb, small.blob);
+    rememberUrl(thumb, small.blob);
+    if (e.again) {
+      const old = e.again;
+      changeMemories((x) => editMemory(x, old.id, { img, thumb, w: PAINT_W, h: PAINT_H, at: Date.now(), paper }));
+      for (const k of [old.img, old.thumb]) {
+        void deleteImage(k);
+        forgetUrl(k);
+      }
+    } else {
+      const m: Memory = { id: newId(), kind: 'painting', img, thumb, w: PAINT_W, h: PAINT_H, at: Date.now(), caption: '', albums: e.album ? [e.album] : [], fav: false, paper };
+      changeMemories((x) => addMemories(x, [m]));
+    }
+    if (e.slot) {
+      const slot = e.slot;
+      const key = newId();
+      await putImage(key, blob);
+      setPictures((p) => ({ ...p, [key]: URL.createObjectURL(blob) }));
+      update((g) => addDrawing(g, { id: newId(), slot, img: key, w: PAINT_W, h: PAINT_H }));
+      setMode({ kind: 'idle' });
+    }
+    setEasel(null);
+  };
+
+  /** A copy of a memory's picture, for the room to keep as its own (so deleting one never empties the other). */
+  const copyPicture = async (m: Memory) => {
+    const blob = await getImage(m.img);
+    if (!blob) return null;
+    const key = newId();
+    try {
+      await putImage(key, blob);
+    } catch {
+      return null;
+    }
+    setPictures((p) => ({ ...p, [key]: URL.createObjectURL(blob) }));
+    return key;
+  };
+
+  const hangMemory = async (m: Memory) => {
+    const key = await copyPicture(m);
+    if (!key) return false;
+    const old = gardenRef.current?.decor.photo;
+    update((g) => setPhoto(g, { img: key, w: m.w, h: m.h }));
+    dropPicture(old?.img);
+    return true;
+  };
+
+  const shelveMemory = async (m: Memory) => {
+    const slot = gardenRef.current && freeShelfSlots(gardenRef.current)[0];
+    if (!slot) return false;
+    const key = await copyPicture(m);
+    if (!key) return false;
+    update((g) => (freeShelfSlots(g).includes(slot) ? addDrawing(g, { id: newId(), slot, img: key, w: m.w, h: m.h }) : g));
+    return true;
+  };
+
+  const forgetMemories = (ids: string[]) => {
+    const { unused } = removeMemories(garden.memories, ids);
+    changeMemories((x) => removeMemories(x, ids).memories);
+    for (const k of unused) {
+      void deleteImage(k);
+      forgetUrl(k);
+    }
+  };
+
   const drawingIn = async (slot: SlotId) => {
     const pic = await addPicture('drawing');
     if (!pic) return;
@@ -688,7 +823,7 @@ export function App() {
       >
         <ViewSwiper
           view={settings.view}
-          enabled={mode.kind === 'idle' && !lapse && !letterOpen && !diaryOpen && !bookOpen && !welcoming}
+          enabled={mode.kind === 'idle' && !lapse && !letterOpen && !diaryOpen && !bookOpen && !memoriesOpen && !easel && !welcoming}
           onChange={(view) => setSettings({ view })}
           room={
             <Scene
@@ -761,6 +896,7 @@ export function App() {
           onBackup={() => setMode({ kind: 'backup' })}
           onPicture={() => setMode({ kind: 'picture' })}
           onBook={openBook}
+          onMemories={() => setMemoriesOpen(true)}
           onDecorate={openDecorate}
           onBouquet={() => setMode({ kind: 'bouquetStudio' })}
           onPost={openPost}
@@ -788,6 +924,7 @@ export function App() {
           <PlantPicker
             onPick={plantSpecies}
             onDrawing={isHanging(mode.slot) ? null : () => void drawingIn(mode.slot)}
+            onPaint={isHanging(mode.slot) ? null : () => void openEasel(null, null, mode.slot)}
             busy={adding === 'drawing'}
             error={pictureError}
             onClose={() => setMode({ kind: 'idle' })}
@@ -1109,6 +1246,25 @@ export function App() {
             onClose={() => setBookOpen(false)}
           />
         )}
+        {memoriesOpen && (
+          <MemoryBook
+            memories={garden.memories}
+            busy={memoryBusy}
+            error={memoryError}
+            canShelf={freeShelfSlots(garden).length > 0}
+            onChange={changeMemories}
+            onAdd={(album) => void addPhotos(album)}
+            onPaint={(album, again) => void openEasel(album, again)}
+            onRemove={forgetMemories}
+            onHang={hangMemory}
+            onShelf={shelveMemory}
+            onClose={() => {
+              setMemoriesOpen(false);
+              setMemoryError(null);
+            }}
+          />
+        )}
+        {easel && <Paint key={easel.again?.id ?? 'new'} start={easel.start} paper={easel.paper} onSave={keepPainting} onClose={() => setEasel(null)} />}
         {letterOpen && !lapse && (
           <Letter
             onKeep={() => {

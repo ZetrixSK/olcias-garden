@@ -101,6 +101,36 @@ export async function getImage(key: string): Promise<Blob | null> {
   }
 }
 
+/** Reads many pictures in one go (the album pages show dozens at once); missing ones are left out. */
+export async function getImages(keys: string[]): Promise<Record<string, Blob>> {
+  const out: Record<string, Blob> = {};
+  if (!keys.length) return out;
+  try {
+    const db = await openDb();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(IMAGES, 'readonly');
+      const store = tx.objectStore(IMAGES);
+      for (const key of keys) {
+        const req = store.get(key);
+        req.onsuccess = () => {
+          if (req.result instanceof Blob) out[key] = req.result;
+        };
+      }
+      tx.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      tx.onerror = () => {
+        db.close();
+        reject(tx.error);
+      };
+    });
+  } catch {
+    // whatever was read is still shown
+  }
+  return out;
+}
+
 export async function deleteImage(key: string): Promise<void> {
   try {
     await run('readwrite', (s) => s.delete(key), IMAGES);

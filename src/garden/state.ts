@@ -1,6 +1,7 @@
 import { SKY_KINDS, type Theme, type Weather } from '../theme/palettes';
 import { plantedAtForStage, stageAt } from './growth';
-import { MAX_DRAWINGS, NO_DECOR, parseDecor, type Decor, type Drawing, type Photo, type Wallpaper } from './decor';
+import { imagesInUse, MAX_DRAWINGS, NO_DECOR, parseDecor, type Decor, type Drawing, type Photo, type Wallpaper } from './decor';
+import { memoryImages, NO_MEMORIES, parseMemories, type Memories } from './memories';
 import { MAX_NAME, MAX_NOTE, MAX_PRESSED, parsePressed, pressedToday, pressingOf, type Pressing } from './pressed';
 import { parseOwnRoom, type OwnRoom } from '../theme/ownRoom';
 import { parseLang, type Lang } from '../i18n';
@@ -103,6 +104,8 @@ export type GardenState = {
   cuttings: Cutting[];
   /** Her post box: her own tag, and the tags she has sent to, most recent first. */
   post: Post;
+  /** Her photos and paintings, and the albums she keeps them in. */
+  memories: Memories;
 };
 
 /** Her tag, the tags she has sent to, and how many bouquets came since she last opened the post box. */
@@ -176,7 +179,19 @@ export function starterGarden(now: number): GardenState {
     parcels: [],
     cuttings: [],
     post: { tag: null, contacts: [], unread: 0 },
+    memories: NO_MEMORIES,
   };
+}
+
+/** Every picture the garden keeps: her decorations and her memories. */
+export function gardenImages(state: GardenState): Set<string> {
+  const used = imagesInUse(state.decor);
+  for (const k of memoryImages(state.memories)) used.add(k);
+  return used;
+}
+
+export function withMemories(state: GardenState, fn: (m: Memories) => Memories): GardenState {
+  return { ...state, memories: fn(state.memories) };
 }
 
 export function plantAt(state: GardenState, slot: SlotId): Plant | undefined {
@@ -616,5 +631,6 @@ export function parseSave(input: unknown, now = Date.now()): GardenState | null 
     parcels: parseParcels(raw.parcels),
     cuttings: parseCuttings(raw.cuttings),
     post: parsePost(raw.post),
+    memories: parseMemories(raw.memories),
   };
 }

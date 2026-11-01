@@ -2,21 +2,27 @@
 export type Prepared = { blob: Blob; w: number; h: number };
 
 /** Opens the phone's photo picker and resolves with the chosen file, or null if she cancels. */
-export function chooseImage(): Promise<File | null> {
+export async function chooseImage(): Promise<File | null> {
+  return (await chooseImages(false))[0] ?? null;
+}
+
+/** Opens the photo picker for one picture or several; resolves with none if she cancels. */
+export function chooseImages(multiple = true): Promise<File[]> {
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
+    input.multiple = multiple;
     // some Safari versions only open the picker for an input that is in the page
     input.style.display = 'none';
     document.body.appendChild(input);
-    const done = (file: File | null) => {
+    const done = (files: File[]) => {
       input.remove();
-      resolve(file);
+      resolve(files);
     };
-    input.onchange = () => done(input.files?.[0] ?? null);
+    input.onchange = () => done([...(input.files ?? [])]);
     // Safari has no reliable cancel event; a picker that's dismissed just never resolves, which is harmless
-    input.addEventListener('cancel', () => done(null));
+    input.addEventListener('cancel', () => done([]));
     input.click();
   });
 }

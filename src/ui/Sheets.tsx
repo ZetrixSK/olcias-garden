@@ -174,10 +174,11 @@ function fitName(name: string): { fontSize: string } | undefined {
 
 const WINDOW_ICON = <path d="M-8,10 L-8,-2 A8,8 0 0 1 8,-2 L8,10 Z M0,-10 L0,10 M-8,2 L8,2" />;
 
-export function PlantPicker({ onPick, onDrawing, busy, error, onClose }: {
+export function PlantPicker({ onPick, onDrawing, onPaint, busy, error, onClose }: {
   onPick: (s: SpeciesId) => void;
-  /** Present on the shelves (not the hanging pots): stand one of her drawings here instead. */
+  /** Present on the shelves (not the hanging pots): stand one of her drawings here instead, or paint one. */
   onDrawing: (() => void) | null;
+  onPaint: (() => void) | null;
   busy: boolean;
   error: string | null;
   onClose: () => void;
@@ -209,6 +210,14 @@ export function PlantPicker({ onPick, onDrawing, busy, error, onClose }: {
             </svg>
             {busy ? w.t('Adding…', 'Dodaję…') : w.t('One of my drawings', 'Mój rysunek')}
           </button>
+          {onPaint && (
+            <button onClick={onPaint}>
+              <svg viewBox="-14 -14 28 28" aria-hidden="true">
+                <path d="M9,-10 L-1,1 M-1,1 C-4,0.5 -7.5,3.5 -8,9.5 C-2,9 1,6 0.5,2.5" />
+              </svg>
+              {w.t('Paint one here', 'Namaluj coś tutaj')}
+            </button>
+          )}
           {error && <p className="decor-error">{error}</p>}
         </div>
       )}

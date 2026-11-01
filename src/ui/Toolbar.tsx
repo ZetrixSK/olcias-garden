@@ -51,6 +51,14 @@ const VIEW_ICON: Record<View, JSX.Element> = {
   ),
 };
 
+/** A photo album with a little picture on its cover. */
+const ALBUM_ICON = (
+  <g>
+    <path d="M-9,-9 L8,-9 L8,9 L-9,9 Z M-6,-9 L-6,9 M-2.5,-5.5 L5,-5.5 L5,1.5 L-2.5,1.5 Z M-2.5,-0.5 L0,-3 L2,-1 L3,-2 L5,0" />
+    <path d="M-2,5.5 L4.5,5.5" />
+  </g>
+);
+
 function Icon({ children }: { children: JSX.Element }) {
   return <svg viewBox="-14 -14 28 28">{children}</svg>;
 }
@@ -70,7 +78,7 @@ const LANG_ABOUT: Record<Lang, string> = {
   mixed: 'English, with Polish flower names',
 };
 
-export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onDiary, memory, onBook, onBackup, onPicture, onDecorate, onBouquet, onPost, postTag, onClock, onStudio, onOwnRoom }: {
+export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onDiary, memory, onBook, onMemories, onBackup, onPicture, onDecorate, onBouquet, onPost, postTag, onClock, onStudio, onOwnRoom }: {
   settings: Settings;
   weather: Weather;
   status: WeatherStatus;
@@ -84,6 +92,7 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
   onBackup: () => void;
   onPicture: () => void;
   onBook: () => void;
+  onMemories: () => void;
   onBouquet: () => void;
   onPost: () => void;
   /** Her tag in the post, if she has one. */
@@ -178,6 +187,16 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
             >
               <Icon>{BOOK_ICON}</Icon>
               {t('Pressed flowers', 'Zielnik')}
+            </button>
+            <button
+              className="wide with-icon"
+              onClick={() => {
+                setMenu(false);
+                onMemories();
+              }}
+            >
+              <Icon>{ALBUM_ICON}</Icon>
+              {t('Memories', 'Wspomnienia')}
             </button>
             <button
               className="wide with-icon"

@@ -1,5 +1,4 @@
-import { imagesInUse } from './decor';
-import { parseSave, type GardenState } from './state';
+import { gardenImages, parseSave, type GardenState } from './state';
 import { words, type Words } from '../i18n';
 
 /**
@@ -36,7 +35,7 @@ function fromDataUrl(url: string): Blob | null {
 /** Writes the garden and every picture it uses into one backup file's text. */
 export async function makeBackup(garden: GardenState, getImage: (key: string) => Promise<Blob | null>, now: number): Promise<string> {
   const images: Record<string, string> = {};
-  for (const key of imagesInUse(garden.decor)) {
+  for (const key of gardenImages(garden)) {
     const blob = await getImage(key);
     if (blob) images[key] = await toDataUrl(blob);
   }
@@ -56,7 +55,7 @@ export function readBackup(text: string, now: number): Restored | null {
   if (!garden) return null;
   const stored = isObj(raw.images) ? raw.images : {};
   const images: Record<string, Blob> = {};
-  for (const key of imagesInUse(garden.decor)) {
+  for (const key of gardenImages(garden)) {
     const v = stored[key];
     const blob = typeof v === 'string' ? fromDataUrl(v) : null;
     if (blob) images[key] = blob;
@@ -79,6 +78,9 @@ export function backupSummary(r: Restored, w: Words = words('mixed')): string {
     n(r.garden.plants.length, ['plant', 'plants'], ['roślina', 'rośliny', 'roślin']),
     n(Object.keys(r.garden.diary).length, ['diary page', 'diary pages'], ['strona pamiętnika', 'strony pamiętnika', 'stron pamiętnika']),
     n(r.garden.pressed.length, ['pressed flower', 'pressed flowers'], ['zasuszony kwiat', 'zasuszone kwiaty', 'zasuszonych kwiatów']),
+    r.garden.memories.items.length ? n(r.garden.memories.items.length, ['memory', 'memories'], ['wspomnienie', 'wspomnienia', 'wspomnień']) : '',
     n(Object.keys(r.images).length, ['picture', 'pictures'], ['obrazek', 'obrazki', 'obrazków']),
-  ].join(', ');
+  ]
+    .filter(Boolean)
+    .join(', ');
 }

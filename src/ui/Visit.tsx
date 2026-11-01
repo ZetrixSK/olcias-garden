@@ -258,6 +258,7 @@ export function VisitView({ visit, now, viewH, onAct, onLeave }: { visit: Visiti
           // its id is chosen here, so it stays the same plant while their garden is looked at again
           onPick={(species) => void act('plant', { id: newId(), slot: picked.slot, species })}
           onDrawing={null}
+          onPaint={null}
           busy={false}
           error={error ? postMessage(error, w) : null}
           onClose={() => setPicked(null)}
