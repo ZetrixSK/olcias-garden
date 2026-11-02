@@ -3170,3 +3170,20 @@ body {
   40% { opacity: 0.2; }
   70% { opacity: 0.3; }
 }
+
+/* the first visit: plain paper over the garden until the letter is read and her tag chosen, then it lifts */
+.first-cover {
+  position: fixed;
+  inset: 0;
+  background: #f3ead6;
+}
+.first-cover.lifting {
+  pointer-events: none;
+  animation: cover-lift 1.1s ease-in-out forwards;
+}
+@keyframes cover-lift {
+  to { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .first-cover.lifting { animation-duration: 0.01s; }
+}

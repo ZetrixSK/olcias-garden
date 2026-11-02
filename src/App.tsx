@@ -75,6 +75,7 @@ import { BackupSheet } from './ui/Backup';
 import { canAddToHomeScreen, Welcome } from './ui/InstallHint';
 import { BouquetCard, BouquetStudio, ParcelsSheet } from './ui/Bouquets';
 import { arrivalNotice, NoticeNote, PostSheet, TagWelcome, type Notice } from './ui/Post';
+import { FirstCover } from './ui/FirstCover';
 import { VisitView, visitorNotice, type Visiting } from './ui/Visit';
 import { ViewSwiper } from './ui/ViewSwiper';
 import { applyAction } from './remote/actions';
@@ -563,6 +564,8 @@ export function App() {
 
   // once the letter is kept (the very first time), she's asked for her tag, over the garden, just once
   const askTag = sharing && settings.letter !== 'unread' && !settings.tagAsked && !garden.post.tag && !letterOpen && !lapse && mode.kind === 'idle';
+  // the first visit keeps the garden a surprise until the letter is read and her tag is chosen
+  const firstCover = !welcoming && (settings.letter === 'unread' || (sharing && !settings.tagAsked && !garden.post.tag));
 
   const today = dayKey(new Date(now));
   const past = memoriesOnThisDay(garden.memories, new Date(now));
@@ -1299,6 +1302,7 @@ export function App() {
           />
         )}
         {easel && <Paint key={easel.again?.id ?? 'new'} start={easel.start} paper={easel.paper} onSave={keepPainting} onClose={() => setEasel(null)} />}
+        <FirstCover show={firstCover} />
         {askTag && (
           <TagWelcome
             onClaim={async (tag) => {
