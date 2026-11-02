@@ -1,6 +1,7 @@
 import { growthHours, plantedAtForStage, stageAt } from '../garden/growth';
 import { designId, PANSY_PRESETS, parsePansy, parsePot, type PotRef } from '../garden/designs';
 import { POT_KINDS, SPECIES_IDS, STAGES, type SpeciesId, type Stage } from '../garden/species';
+import { TRAITS, type TraitKind } from '../garden/traits';
 import {
   addPlant, drawingAt, isHanging, MAX_REMOTE_DONE, movePlant, newId, parseSettings, placeInWindow, plantAt, removePlant,
   savePansyDesign, savePotDesign, setPlantName, setPot, setPressNote, setVariety, SLOT_IDS, takeDown, trimVine, waterPlant,
@@ -153,6 +154,19 @@ function name(g: GardenState, p: Payload): Result {
   return done(setPlantName(g, plant.id, p.name));
 }
 
+/** Gives a plant a trait (as if a night had), or takes it away (`kind: null`). */
+function trait(g: GardenState, p: Payload, now: number): Result {
+  const plant = findPlant(g, p);
+  if (!plant) return skip(GONE);
+  if (p.kind === null) {
+    if (!plant.trait) return skip('It has no trait to take away.');
+    return done({ ...g, plants: g.plants.map((x) => (x.id === plant.id ? { ...x, trait: null } : x)) });
+  }
+  if (!TRAITS.includes(p.kind as TraitKind)) return skip('That is not a trait a plant can have.');
+  if (plant.trait?.kind === p.kind) return skip('It already has that trait.');
+  return done({ ...g, plants: g.plants.map((x) => (x.id === plant.id ? { ...x, trait: { kind: p.kind as TraitKind, at: now } } : x)) });
+}
+
 /** Moves a plant to another place on the shelves, swapping with whatever stands there. */
 function move(g: GardenState, p: Payload): Result {
   const plant = findPlant(g, p);
@@ -260,6 +274,7 @@ const KINDS: Record<string, (g: GardenState, p: Payload, now: number, world: Wor
   move,
   window: windowSpot,
   trim,
+  trait,
 };
 
 /** What was already done with this action here, if anything. */

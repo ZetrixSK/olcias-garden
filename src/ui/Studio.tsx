@@ -1,3 +1,4 @@
+import { MAX_SEEDS } from '../garden/state';
 import { useState, type ReactNode } from 'react';
 import {
   PANSY_FACES,
@@ -184,12 +185,15 @@ export const NEW_PANSY = (): PansyDesign => ({
 export function PansyStudio({ initial, editing, onSave, onDelete, onClose }: {
   initial: PansyDesign;
   editing: boolean;
-  onSave: (d: PansyDesign) => void;
+  /** The design, and how many seeds of it go into her seed tin (none is fine). */
+  onSave: (d: PansyDesign, seeds: number) => void;
   onDelete: () => void;
   onClose: () => void;
 }) {
   const [d, setD] = useState(initial);
   const set = (patch: Partial<PansyDesign>) => setD((x) => ({ ...x, ...patch }));
+  // a new design comes with a few seeds; one being changed with none, unless she asks
+  const [seeds, setSeeds] = useState(editing ? 0 : 3);
   const colors = designColors(d);
   const w = useWords();
   const { t } = w;
@@ -198,7 +202,7 @@ export function PansyStudio({ initial, editing, onSave, onDelete, onClose }: {
     <StudioFrame
       title={editing ? t(`Your ${bratek}`, 'Twój bratek') : t(`Design a ${bratek}`, 'Zaprojektuj bratka')}
       editing={editing}
-      onSave={() => onSave({ ...d, name: d.name.trim() })}
+      onSave={() => onSave({ ...d, name: d.name.trim() }, seeds)}
       onDelete={onDelete}
       onClose={onClose}
       preview={
@@ -248,6 +252,17 @@ export function PansyStudio({ initial, editing, onSave, onDelete, onClose }: {
       )}
       <Section title={t('Petal edge', 'Brzeg płatków')}>
         <Swatches colors={PANSY_SWATCHES} value={d.edge} onPick={(edge) => set({ edge })} none />
+      </Section>
+      <Section title={t('Seeds for your tin', 'Nasiona do puszki')}>
+        <div className="seed-stepper">
+          <button aria-label={t('Fewer seeds', 'Mniej nasion')} disabled={seeds === 0} onClick={() => setSeeds((n) => Math.max(0, n - 1))}>
+            −
+          </button>
+          <span>{seeds === 0 ? t('none', 'bez nasion') : seeds}</span>
+          <button aria-label={t('More seeds', 'Więcej nasion')} disabled={seeds === MAX_SEEDS} onClick={() => setSeeds((n) => Math.min(MAX_SEEDS, n + 1))}>
+            +
+          </button>
+        </div>
       </Section>
     </StudioFrame>
   );

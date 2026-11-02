@@ -1,3 +1,5 @@
+import { TRAITS } from '../garden/traits';
+import { TRAIT_WORDS } from '../ui/traitWords';
 import { useState, type ReactNode } from 'react';
 import { stageAt } from '../garden/growth';
 import { PANSY_PRESET_NAMES, PANSY_PRESETS, designRef } from '../garden/designs';
@@ -86,6 +88,13 @@ export function PlantPanel({ garden, plant, now, send, onClose }: { garden: Gard
 
       <h3>Stage</h3>
       <Choice value={stage} options={STAGES.map((s) => ({ id: s, label: STAGE_LABEL[s] }))} onPick={(s) => send('stage', { ...at, stage: s })} />
+
+      <h3>Trait</h3>
+      <Choice
+        value={plant.trait?.kind ?? 'none'}
+        options={[{ id: 'none', label: 'None' }, ...TRAITS.map((k) => ({ id: k as string, label: TRAIT_WORDS[k].name[0] }))]}
+        onPick={(k) => send('trait', { ...at, kind: k === 'none' ? null : k })}
+      />
 
       <h3>In the window</h3>
       <Choice

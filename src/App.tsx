@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   addDrawing,
+  addSeeds,
+  sawWeather,
+  sowSeed,
   freeShelfSlots,
   gardenImages,
   withMemories,
@@ -76,6 +79,7 @@ import { canAddToHomeScreen, Welcome } from './ui/InstallHint';
 import { BouquetCard, BouquetStudio, ParcelsSheet } from './ui/Bouquets';
 import { arrivalNotice, NoticeNote, PostSheet, TagWelcome, type Notice } from './ui/Post';
 import { FirstCover } from './ui/FirstCover';
+import { TRAIT_WORDS } from './ui/traitWords';
 import { VisitView, visitorNotice, type Visiting } from './ui/Visit';
 import { ViewSwiper } from './ui/ViewSwiper';
 import { applyAction } from './remote/actions';
@@ -315,6 +319,17 @@ export function App() {
       opened.current = { at: t, garden: g };
       const caughtUp = catchUpNights(g, t);
       setGarden(import.meta.env.DEV ? devOverrides(caughtUp) : caughtUp);
+      // a plant that changed in the night is worth a word when she comes back
+      const changed = caughtUp.plants.filter((p) => p.trait && !g.plants.find((was) => was.id === p.id)?.trait);
+      if (changed.length > 0) {
+        const w = words(caughtUp.settings.lang, caughtUp.settings.me);
+        const first = changed[0]!;
+        const name = first.name ?? w.marker(first.species);
+        setNotice({
+          title: w.t('Something happened in the night', 'Coś wydarzyło się w nocy'),
+          text: `${name}: ${w.t(...TRAIT_WORDS[first.trait!.kind].name)}${changed.length > 1 ? w.t(` (and ${changed.length - 1} more)`, ` (i ${changed.length - 1} więcej)`) : ''}`,
+        });
+      }
       if (t - g.lastSeen >= LAPSE_MIN_GAP) playLapse(buildTimelapse(g, g.lastSeen, t), true);
       void persistStorage();
     });
@@ -415,6 +430,14 @@ export function App() {
     (glowPreview === 'dawn' || glowPreview === 'dusk') && realWeather.sky !== 'rain'
       ? { ...realWeather, night: false, twilight: glowPreview }
       : realWeather;
+
+  // the garden remembers the weather it saw each day, so the night can answer to it (see traits)
+  const dayOfMonth = new Date(now).getDate();
+  const hasGarden = garden !== null;
+  useEffect(() => {
+    if (!hasGarden || AWAY) return;
+    update((g) => sawWeather(g, Date.now(), weather));
+  }, [hasGarden, weather.sky, weather.night, dayOfMonth, update]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // when rain stops by day, a rainbow stays over the lake for a while
   const lastSky = useRef(weather.sky);
@@ -960,6 +983,14 @@ export function App() {
             onPick={plantSpecies}
             onDrawing={isHanging(mode.slot) ? null : () => void drawingIn(mode.slot)}
             onPaint={isHanging(mode.slot) ? null : () => void openEasel(null, null, mode.slot)}
+            seeds={garden.seeds}
+            designs={garden.designs}
+            onSow={(packetId) => {
+              const t = Date.now();
+              setNow(t);
+              update((g) => sowSeed(g, packetId, mode.slot, t));
+              setMode({ kind: 'idle' });
+            }}
             busy={adding === 'drawing'}
             error={pictureError}
             onClose={() => setMode({ kind: 'idle' })}
@@ -1246,11 +1277,12 @@ export function App() {
             key={mode.editing ?? 'new'}
             initial={garden.designs.pansies.find((d) => d.id === mode.editing) ?? NEW_PANSY()}
             editing={mode.editing !== null}
-            onSave={(d) => {
+            onSave={(d, seeds) => {
               const ref = designRef(d.id);
               update((g) => {
                 const saved = savePansyDesign(g, d);
-                return mode.forPlant ? setVariety(saved, mode.forPlant, ref) : saved;
+                const withSeeds = seeds > 0 ? addSeeds(saved, ref, seeds, Date.now()) : saved;
+                return mode.forPlant ? setVariety(withSeeds, mode.forPlant, ref) : withSeeds;
               });
               if (mode.forSlot) plantIn(mode.forSlot, 'pansy', ref);
               else setMode(mode.forPlant ? { kind: 'style', id: mode.forPlant } : { kind: 'idle' });

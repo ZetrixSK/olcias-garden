@@ -1,4 +1,5 @@
 import { SPECIES, type SpeciesId, type Stage } from './species';
+import { TRAIT_SPEED, type Trait } from './traits';
 
 const HOUR = 3_600_000;
 
@@ -8,7 +9,7 @@ export const WATER_COOLDOWN_HOURS = 6;
 /** Soil looks dark and damp for this long after watering. */
 export const WET_HOURS = 8;
 
-type Growing = { plantedAt: number; waterings: number[] };
+type Growing = { plantedAt: number; waterings: number[]; trait?: Trait | null };
 
 /** Growth so far, in hours. Purely from timestamps, so it keeps going while the app is closed. */
 export function growthHours(plant: Growing, now: number): number {
@@ -22,6 +23,9 @@ export function growthHours(plant: Growing, now: number): number {
       lastCounted = t;
     }
   }
+  // a trait that hurries growth does so from the night it came, not before
+  const speed = plant.trait ? TRAIT_SPEED[plant.trait.kind] : 1;
+  if (speed !== 1) bonus += (speed - 1) * (Math.max(0, now - Math.max(plant.trait!.at, plant.plantedAt)) / HOUR);
   return elapsed + bonus;
 }
 
@@ -44,7 +48,8 @@ export function nextStage(species: SpeciesId, plant: Growing, now: number): { st
   if (!stage) return null;
   const [seedling, bud, bloom] = SPECIES[species].hours;
   const at = { seedling, bud, bloom, seed: 0 }[stage];
-  return { stage, inMs: Math.max(0, (at - growthHours(plant, now)) * HOUR) };
+  const speed = plant.trait && plant.trait.at <= now ? TRAIT_SPEED[plant.trait.kind] : 1;
+  return { stage, inMs: Math.max(0, ((at - growthHours(plant, now)) * HOUR) / speed) };
 }
 
 /** Whether watering now would count: the last watering that helped was long enough ago. */

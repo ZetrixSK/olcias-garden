@@ -8,6 +8,7 @@ import type { PansyColors } from '../plants/Pansy';
 import type { PotDesign } from '../garden/designs';
 import { PlantArt } from '../plants/PlantArt';
 import { MoonflowerGlow } from '../plants/Night';
+import { TraitGlow, TraitTouches } from '../plants/Traits';
 import { POT_HEIGHT, Potted, RIM } from '../plants/Pots';
 import { useWords } from '../i18n';
 
@@ -73,7 +74,12 @@ const PlanterArt = memo(function PlanterArt({ plant, stage, wet, shape, potDesig
     <g className={moving ? 'moving' : undefined}>
       <Potted kind={shape} design={potDesign} wet={wet}>
         <g transform={lean ? `rotate(${lean})` : undefined}>
-          <g className={STILL_SPECIES.includes(plant.species) ? undefined : 'sway'} style={{ animationDuration: `${7 + (plant.id.charCodeAt(0) % 5)}s` }}>
+          {/* a willowy plant sways long and slow, like willow in the wind */}
+          <g
+            className={STILL_SPECIES.includes(plant.species) ? undefined : plant.trait?.kind === 'willowy' ? 'sway willowy' : 'sway'}
+            style={{ animationDuration: `${(plant.trait?.kind === 'willowy' ? 11 : 7) + (plant.id.charCodeAt(0) % 5)}s` }}
+          >
+            {plant.trait && <TraitGlow kind={plant.trait.kind} stage={stage} species={plant.species} />}
             {outgrown && (
               <g key={`was-${grew}`} className="outgrown">
                 <PlantArt species={plant.species} stage={outgrown} palette={palette} label={label} />
@@ -84,6 +90,7 @@ const PlanterArt = memo(function PlanterArt({ plant, stage, wet, shape, potDesig
                 <PlantArt species={plant.species} stage={stage} palette={palette} label={label} />
               </g>
             </g>
+            {plant.trait && <TraitTouches kind={plant.trait.kind} stage={stage} species={plant.species} id={plant.id} />}
           </g>
         </g>
         {runner}

@@ -10,7 +10,10 @@ import {
 } from '../garden/designs';
 import { SPECIES, SPECIES_IDS, type SpeciesId, type Stage } from '../garden/species';
 import { useWords, words, type Words } from '../i18n';
-import { MAX_GARDEN_NAME, type Plant } from '../garden/state';
+import { MAX_GARDEN_NAME, type Plant, type SeedPacket } from '../garden/state';
+import { TRAIT_WORDS } from './traitWords';
+import { pansyPalette } from '../plants/looks';
+import { PansyFlower } from '../plants/Pansy';
 import { Sign } from '../scene/Room';
 import type { Theme } from '../theme/palettes';
 import { plantLook } from '../plants/looks';
@@ -213,8 +216,25 @@ export function GardenNameSheet({ theme, name, onChange, onClose }: { theme: The
   );
 }
 
-export function PlantPicker({ onPick, onDrawing, onPaint, busy, error, onClose }: {
+/** A paper seed packet with her bratek painted on the front, and how many seeds are left in it. */
+function SeedPacketArt({ packet, designs }: { packet: SeedPacket; designs: Designs }) {
+  const c = pansyPalette(packet.variety, designs)[0]!;
+  return (
+    <svg viewBox="-24 -32 48 62" aria-hidden="true">
+      <path className="ink" fill="#e9d6b0" d="M-18,-22 L18,-22 L18,26 L-18,26 Z" />
+      <path className="ink" fill="#dcc497" d="M-18,-22 L-14,-28 L14,-28 L18,-22 Z" />
+      <path d="M-15,-17 L15,-17 M-15,21 L15,21" stroke="#b9925e" strokeWidth="0.8" strokeDasharray="2 2" />
+      <PansyFlower x={0} y={2} s={0.62} c={c} />
+    </svg>
+  );
+}
+
+export function PlantPicker({ onPick, onDrawing, onPaint, seeds = [], designs, onSow, busy, error, onClose }: {
   onPick: (s: SpeciesId) => void;
+  /** Her seed tin: packets of her own designs, sown one seed at a time. */
+  seeds?: SeedPacket[];
+  designs?: Designs;
+  onSow?: (packetId: string) => void;
   /** Present on the shelves (not the hanging pots): stand one of her drawings here instead, or paint one. */
   onDrawing: (() => void) | null;
   onPaint: (() => void) | null;
@@ -229,6 +249,23 @@ export function PlantPicker({ onPick, onDrawing, onPaint, busy, error, onClose }
         <h2>{w.t('What shall we plant?', 'Co posadzimy?')}</h2>
         <button className="close" aria-label={w.t('Close', 'Zamknij')} onClick={onClose}>×</button>
       </div>
+      {seeds.length > 0 && designs && onSow && (
+        <>
+          <p className="meta seed-tin-title">{w.t('From your seed tin', 'Z Twojej puszki z nasionami')}</p>
+          <div className="seed-tin">
+            {seeds.map((packet) => {
+              const name = designs.pansies.find((d) => designRef(d.id) === packet.variety)?.name || w.flower('pansy');
+              return (
+                <button key={packet.id} data-sound="soil" onClick={() => onSow(packet.id)} aria-label={`${name}, ${packet.count}`}>
+                  <SeedPacketArt packet={packet} designs={designs} />
+                  <span className="seed-name">{name}</span>
+                  <span className="seed-count">× {packet.count}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
       <div className="picker">
         {SPECIES_IDS.map((s) => (
           <button key={s} data-sound="soil" onClick={() => onPick(s)}>
@@ -440,6 +477,12 @@ export function PlantCard({ plant, now, inWindowView, onWater, onMove, onWindow,
         </span>
         <span>{growthText(plant, now, w)}</span>
       </p>
+      {plant.trait && (
+        <p className={`trait-line trait-${plant.trait.kind}`}>
+          <span className="trait-chip">{t(...TRAIT_WORDS[plant.trait.kind].name)}</span>
+          <span>{t(...TRAIT_WORDS[plant.trait.kind].about)}</span>
+        </p>
+      )}
       <div className={!inWindowView || (inWindowView && onTrim) ? 'actions five' : 'actions'}>
         <button data-sound="water" onClick={onWater}>
           <svg viewBox="-14 -14 28 28" aria-hidden="true">

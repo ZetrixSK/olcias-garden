@@ -2,13 +2,14 @@ import { SKY_KINDS, type Theme, type Weather } from '../theme/palettes';
 import { plantedAtForStage, stageAt } from './growth';
 import { imagesInUse, MAX_DRAWINGS, NO_DECOR, parseDecor, type Decor, type Drawing, type Photo, type Wallpaper } from './decor';
 import { memoryImages, NO_MEMORIES, parseMemories, type Memories } from './memories';
+import { noteWeather, parseTrait, parseWeatherSeen, rollTraits, type Trait, type WeatherSeen } from './traits';
 import { MAX_NAME, MAX_NOTE, MAX_PRESSED, parsePressed, pressedToday, pressingOf, type Pressing } from './pressed';
 import { parseOwnRoom, type OwnRoom } from '../theme/ownRoom';
 import { parseLang, parseMe, type Lang, type Me } from '../i18n';
 import { parseCandle, parseCandleLit, type CandleLit, type CandleLook } from './candle';
 import { parseDiary, withEntry, withoutEntry, type Diary, type Mood } from './diary';
 import { designId, NO_DESIGNS, PANSY_PRESETS, parseDesigns, upsert, type Designs, type PansyDesign, type PotDesign, type PotRef } from './designs';
-import { lastNight, runNights, settleMiddleDir, trimmed, type Vine } from './vines';
+import { lastNight, nightsBetween, runNights, settleMiddleDir, trimmed, type Vine } from './vines';
 import { parseCuttings, parseParcels, parsePlaced, pruneCuttings, type Bouquet, type Cutting, type PlacedBouquet } from './bouquets';
 import { POT_KINDS, SPECIES, SPECIES_IDS, type GardenPot, type SpeciesId, type Stage } from './species';
 
@@ -41,7 +42,14 @@ export type Plant = {
   vine: Vine | null;
   /** A name she gave it, if any. */
   name: string | null;
+  /** Something a night left on it (enchanted, dewy, sun-kissed, frosted, willowy), for good. */
+  trait: Trait | null;
 };
+
+/** Seeds of one of her bratek designs, waiting in the seed tin. */
+export type SeedPacket = { id: string; variety: string; count: number; made: number };
+export const MAX_PACKETS = 40;
+export const MAX_SEEDS = 6;
 
 export type View = 'room' | 'shelves';
 /** The letter: waiting to be read, kept after reading, or thrown away for good. */
@@ -117,6 +125,10 @@ export type GardenState = {
   post: Post;
   /** Her photos and paintings, and the albums she keeps them in. */
   memories: Memories;
+  /** The weather the garden saw on recent days while it was open, so a night can answer to it. */
+  weatherSeen: WeatherSeen;
+  /** Her seed tin: packets of seeds from her own designs. */
+  seeds: SeedPacket[];
 };
 
 /** Her tag, the tags she has sent to, and how many bouquets came since she last opened the post box. */
@@ -170,6 +182,7 @@ export function starterGarden(now: number): GardenState {
     display,
     vine: null,
     name: null,
+    trait: null,
   });
   return {
     version: SAVE_VERSION,
@@ -195,6 +208,8 @@ export function starterGarden(now: number): GardenState {
     cuttings: [],
     post: { tag: null, contacts: [], unread: 0 },
     memories: NO_MEMORIES,
+    weatherSeen: {},
+    seeds: [],
   };
 }
 
@@ -239,7 +254,7 @@ export function addPlant(state: GardenState, slot: SlotId, species: SpeciesId, n
   if (plantAt(state, slot) || drawingAt(state, slot) || bouquetAt(state, slot)) return state;
   const plant: Plant = {
     id, species, slot, pot: SPECIES[species].pot, variety: species === 'pansy' ? variety : null,
-    plantedAt: now, waterings: [], display: null, vine: null, name: null,
+    plantedAt: now, waterings: [], display: null, vine: null, name: null, trait: null,
   };
   return { ...state, plants: [...state.plants, plant] };
 }
@@ -420,9 +435,34 @@ export function unpress(state: GardenState, pressId: string): GardenState {
 
 /** Catches up on every 3:00 since the last visit. Returns the same object when nothing is due. */
 export function catchUpNights(state: GardenState, now: number): GardenState {
-  const { plants, checkedAt } = runNights(state.plants, state.vinesCheckedAt, now, state.settings.vines);
+  // each night since the last check may leave a trait on a plant that had sprouted by then
+  const traited = rollTraits(state.plants, nightsBetween(state.vinesCheckedAt, now), state.weatherSeen, (p, at) => stageAt(p.species, p, at) !== 'seed');
+  const { plants, checkedAt } = runNights(traited, state.vinesCheckedAt, now, state.settings.vines);
   if (checkedAt === state.vinesCheckedAt) return state;
   return { ...state, plants, vinesCheckedAt: checkedAt };
+}
+
+/** Remembers today's weather, for the night to come. */
+export function sawWeather(state: GardenState, now: number, w: { sky: 'clear' | 'cloudy' | 'rain'; night: boolean }): GardenState {
+  const weatherSeen = noteWeather(state.weatherSeen, now, w);
+  return weatherSeen === state.weatherSeen ? state : { ...state, weatherSeen };
+}
+
+/** A packet of seeds of one of her designs, into the tin. */
+export function addSeeds(state: GardenState, variety: string, count: number, now: number, id = newId()): GardenState {
+  const n = Math.max(1, Math.min(MAX_SEEDS, Math.round(count)));
+  if (state.seeds.length >= MAX_PACKETS) return state;
+  return { ...state, seeds: [...state.seeds, { id, variety, count: n, made: now }] };
+}
+
+/** Sows one seed from a packet in an empty place; an empty packet is thrown away. */
+export function sowSeed(state: GardenState, packetId: string, slot: SlotId, now: number, id = newId()): GardenState {
+  const packet = state.seeds.find((s) => s.id === packetId);
+  if (!packet || packet.count < 1) return state;
+  const planted = addPlant(state, slot, 'pansy', now, id, packet.variety);
+  if (planted === state) return state;
+  const seeds = state.seeds.flatMap((s) => (s.id !== packetId ? [s] : s.count > 1 ? [{ ...s, count: s.count - 1 }] : []));
+  return { ...planted, seeds };
 }
 
 export function takeDown(state: GardenState, id: string): GardenState {
@@ -523,6 +563,7 @@ function parsePlant(v: unknown, designs: Designs): Plant | null {
     display: WINDOW_SPOTS.includes(display as WindowSpot) ? (display as WindowSpot) : null,
     vine: parseVine(vine, species as SpeciesId),
     name: typeof name === 'string' && name.trim() ? name.trim().slice(0, MAX_NAME) : null,
+    trait: parseTrait(v.trait),
   };
 }
 
@@ -651,5 +692,20 @@ export function parseSave(input: unknown, now = Date.now()): GardenState | null 
     cuttings: parseCuttings(raw.cuttings),
     post: parsePost(raw.post),
     memories: parseMemories(raw.memories),
+    weatherSeen: parseWeatherSeen(raw.weatherSeen),
+    seeds: parseSeeds(raw.seeds, designs),
   };
+}
+
+function parseSeeds(v: unknown, designs: Designs): SeedPacket[] {
+  if (!Array.isArray(v)) return [];
+  const out: SeedPacket[] = [];
+  for (const x of v) {
+    if (!isObj(x) || typeof x.id !== 'string' || typeof x.variety !== 'string' || !isTime(x.made)) continue;
+    const count = typeof x.count === 'number' ? Math.round(x.count) : 0;
+    // only seeds of a design she still has can grow into it
+    if (count < 1 || parseVariety(x.variety, 'pansy', designs) !== x.variety) continue;
+    if (out.length < MAX_PACKETS) out.push({ id: x.id, variety: x.variety, count: Math.min(MAX_SEEDS, count), made: x.made });
+  }
+  return out;
 }

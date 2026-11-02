@@ -11,7 +11,7 @@ const H = 3_600_000;
 const NOW = new Date(2026, 9, 17, 10, 0).getTime();
 
 function pansy(extra: Partial<Plant> = {}): Plant {
-  return { id: 'a', species: 'pansy', slot: 'row3-a', pot: 'wide', variety: null, plantedAt: NOW, waterings: [], display: null, vine: null, name: null, ...extra };
+  return { id: 'a', species: 'pansy', slot: 'row3-a', pot: 'wide', variety: null, plantedAt: NOW, waterings: [], display: null, vine: null, name: null, trait: null, ...extra };
 }
 const garden = (plants: Plant[]): GardenState => ({ ...starterGarden(NOW), plants });
 

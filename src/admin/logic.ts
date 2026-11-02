@@ -136,6 +136,8 @@ export function describe(a: Pick<ActionRow, 'kind' | 'payload'>, g: GardenState 
       return `Move ${plant} to the ${slotName(p.slot)}`;
     case 'window':
       return p.spot === null ? `Take ${plant} out of the window` : `Put ${plant} in the window (${spotName(p.spot)})`;
+    case 'trait':
+      return p.kind === null ? `Take the trait off ${plant}` : `Give ${plant} a trait: ${String(p.kind)}`;
     case 'moment': {
       const m = p.moment as Moment;
       return `${MOMENT_NAMES[m] ?? String(m)} for ${typeof p.minutes === 'number' ? p.minutes : 30} min`;

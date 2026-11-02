@@ -208,7 +208,7 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
               <Icon>{CAMERA_ICON}</Icon>
               {t('Save a picture', 'Zapisz obrazek')}
             </button>
-            <p className="hint">{t('Make your own', 'Zrób coś swojego')}</p>
+            <p className="hint">{t('Design your own', 'Zaprojektuj coś swojego')}</p>
             <button
               className="wide two-line"
               onClick={() => {
