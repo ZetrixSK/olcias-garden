@@ -333,13 +333,7 @@ export function WallSparkles({ points, cy = 0, night }: { points: ReadonlyArray<
       {points.map(([x, y, s], i) => (
         <g key={i} transform={`translate(${x} ${cy + y}) scale(${s})`}>
           <circle r="7" fill="#f2d48e" opacity={night ? 0.16 : 0.1} />
-          {/* its brightness while it waits to start twinkling goes through --o, like the twinkle itself */}
-          <path
-            className="twinkle"
-            style={{ animationDelay: `${(i * 1.37) % 4}s`, animationDuration: `${3 + (i % 3)}s`, ['--o' as string]: night ? 0.85 : 0.7 }}
-            d={SPARKLE}
-            fill="#f2d48e"
-          />
+          <path className="twinkle" style={{ animationDelay: `${(i * 1.37) % 4}s`, animationDuration: `${3 + (i % 3)}s` }} d={SPARKLE} fill="#f2d48e" opacity={night ? 0.85 : 0.7} />
         </g>
       ))}
     </g>

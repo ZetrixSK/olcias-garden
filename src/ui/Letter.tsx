@@ -2,6 +2,28 @@ import { useState } from 'react';
 import { LETTER } from '../letter';
 import { useWords } from '../i18n';
 
+/** A little wax seal pressed with a heart, under the name at the end of the letter. */
+function WaxHeart() {
+  return (
+    <svg className="wax-heart" viewBox="-20 -20 40 40" aria-hidden="true">
+      {/* the wax, spread a little unevenly where it was pressed */}
+      <path
+        d="M1,-15.5 C6,-16.2 8.6,-12.4 12.4,-11.2 C16.4,-8.4 14.6,-3.4 16.4,0.8 C17.2,6.2 12.6,8.2 10.4,12.2 C6.6,16.4 2.2,13.4 -2,15.4 C-7.2,16.2 -9.4,12.4 -12.4,10.2 C-16.6,6.4 -14.2,2.2 -16.4,-2.2 C-16.4,-7.4 -12.2,-9.4 -10.2,-12.4 C-7,-15.6 -3.6,-14.6 1,-15.5 Z"
+        fill="#b5476a"
+        stroke="#7a2843"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+      {/* the ring the stamp left, and the heart pressed into it */}
+      <circle r="10.4" fill="none" stroke="#8e2f4f" strokeWidth="1.4" opacity="0.8" />
+      <path d="M0,-3.2 C-2.4,-7.4 -8,-5.6 -7,-1.4 C-6.4,1.6 -2.6,4.2 0,6.6 C2.6,4.2 6.4,1.6 7,-1.4 C8,-5.6 2.4,-7.4 0,-3.2 Z" fill="#8e2f4f" />
+      <path d="M-4.8,-4.2 C-5.8,-3.6 -6,-2.4 -5.6,-1.4" fill="none" stroke="#e58aa6" strokeWidth="1.1" strokeLinecap="round" opacity="0.8" />
+      {/* light catching the raised edge of the wax */}
+      <path d="M-11,-8 C-8.4,-11.6 -4.4,-13 -0.6,-13.2" fill="none" stroke="#f3c1cf" strokeWidth="1.4" strokeLinecap="round" opacity="0.7" />
+    </svg>
+  );
+}
+
 /**
  * The letter, on paper, with a wax seal. The first time it only offers to be kept, so the first
  * moment isn't a choice; read again from the envelope, it can also be thrown away (asking first).
@@ -27,7 +49,12 @@ export function Letter({ first = false, onKeep, onThrowAway }: { first?: boolean
           {paragraphs.map((t, i) => (
             <p key={i}>{t}</p>
           ))}
-          {LETTER.signature && <p className="letter-signature">{LETTER.signature}</p>}
+          {LETTER.signature && (
+            <p className="letter-signature">
+              {LETTER.signature}
+              <WaxHeart />
+            </p>
+          )}
         </div>
         <div className="letter-actions">
           {confirm ? (
