@@ -123,6 +123,19 @@ export async function claimTag(tag: string): Promise<{ tag: string } | { error: 
   }
 }
 
+/** The tag the post has for this phone: a tag, null if none, or undefined if the post can't be reached. */
+export async function myTag(): Promise<string | null | undefined> {
+  try {
+    const id = await deviceId();
+    const sb = await remote();
+    const { data, error } = await sb.from('mailboxes').select('tag').eq('device', id).maybeSingle();
+    if (error) return undefined;
+    return data ? String(data.tag) : null;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Sends something to a tag. Null once it's on its way. */
 export async function sendMail(to: string, kind: 'bouquet', payload: unknown): Promise<PostError | null> {
   try {

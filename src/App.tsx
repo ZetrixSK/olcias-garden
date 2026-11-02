@@ -80,7 +80,7 @@ import { VisitView, visitorNotice, type Visiting } from './ui/Visit';
 import { ViewSwiper } from './ui/ViewSwiper';
 import { applyAction } from './remote/actions';
 import { useMail } from './remote/useMail';
-import { accessRules, blockedTags, claimTag, sendMail, setAccess, setBlocked, visitAction, visitGarden, type PostError } from './remote/client';
+import { accessRules, blockedTags, claimTag, myTag, sendMail, setAccess, setBlocked, visitAction, visitGarden, type PostError } from './remote/client';
 import { dayKey, onThisDay } from './garden/diary';
 import type { Restored } from './garden/backup';
 import { pressedToday } from './garden/pressed';
@@ -474,6 +474,24 @@ export function App() {
     setGarden((g) => (g ? postSeen(g) : g));
     setMode({ kind: 'post' });
   }, []);
+  // once a session, her tag is checked against the post: if the post has lost it (the server's copy
+  // was cleared, or this is a new sign-in on the same phone), it's taken again while it's still free,
+  // and forgotten if someone else has it since; if the post knows a different one, the post's wins
+  const tagChecked = useRef(false);
+  useEffect(() => {
+    if (!sharing || tagChecked.current) return;
+    tagChecked.current = true;
+    void (async () => {
+      const server = await myTag();
+      const local = gardenRef.current?.post.tag ?? null;
+      if (server === undefined || server === local) return;
+      if (server) return setGarden((g) => (g ? setTag(g, server) : g));
+      if (!local) return;
+      const r = await claimTag(local);
+      if ('error' in r && r.error === 'offline') return;
+      setGarden((g) => (g ? setTag(g, 'error' in r ? null : r.tag) : g));
+    })();
+  }, [sharing]);
   /** Takes (or changes) her tag in the post; resolves with why not, or null. */
   const claim = useCallback(async (tag: string) => {
     const r = await claimTag(tag);
