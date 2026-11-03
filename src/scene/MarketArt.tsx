@@ -88,6 +88,13 @@ export function PanJezyk({ mood = 'waiting' }: { mood?: KeeperMood }) {
       <path d={spikes(0, -54, 42, 40, 16, 0.15, Math.PI * 0.92, Math.PI * 2.08)} fill="#7d5536" {...ink} />
       <path d={spikes(0, -55, 34, 32, 13, 0.14, Math.PI * 1.0, Math.PI * 2.0)} fill="#9a6a42" stroke="none" />
       <path d="M-24,-78 l2,-4 M-12,-86 l1,-4.6 M2,-89 l0,-4.6 M15,-85 l-1,-4.6 M26,-77 l-2,-4" stroke="#c9a070" strokeWidth="1.3" strokeLinecap="round" />
+      {/* the pencil, tucked behind his ear: its end hidden by his head, its tip poking out of his spines */}
+      <g transform="translate(12 -70) rotate(-48)">
+        <path d="M0,-1.9 L20,-1.9 L20,1.9 L0,1.9 Z" fill="#f2c94c" {...thin} />
+        <path d="M20,-1.9 L24.6,0 L20,1.9 Z" fill="#f1d7b0" {...thin} />
+        <circle cx="24.2" cy="0" r="0.7" fill={INK} />
+        <path d="M2,0 L18,0" stroke="#e2b23a" strokeWidth="0.8" />
+      </g>
       {/* round little body and his apron */}
       <path d="M-30,-36 C-34,-16 -26,-2 0,-2 C26,-2 34,-16 30,-36 C22,-46 -22,-46 -30,-36 Z" fill="#a37549" {...ink} />
       <path d="M-18,-36 L18,-36 L21,-6 C12,-2 -12,-2 -21,-6 Z" fill="#f2a6bb" {...ink} />
@@ -136,12 +143,6 @@ export function PanJezyk({ mood = 'waiting' }: { mood?: KeeperMood }) {
       ) : (
         <path d="M-3.4,-46.4 Q-1.7,-44.4 0,-46.4 Q1.7,-44.4 3.4,-46.4" fill="none" stroke={INK} strokeWidth="1" strokeLinecap="round" />
       )}
-      {/* the pencil, tucked into his spines */}
-      <g transform="translate(24 -86) rotate(-38)">
-        <path d="M0,-1.8 L13,-1.8 L13,1.8 L0,1.8 Z" fill="#f2c94c" {...thin} />
-        <path d="M13,-1.8 L17.4,0 L13,1.8 Z" fill="#f1d7b0" {...thin} />
-        <path d="M-2.6,-1.8 L0,-1.8 L0,1.8 L-2.6,1.8 Z" fill="#f2a6bb" {...thin} />
-      </g>
       {asleep && (
         <g className="keeper-z" fill="none" stroke={INK} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
           <path d="M30,-90 L37,-90 L30,-83 L37,-83" />
