@@ -12,7 +12,48 @@ export type PansyColors = {
   whiskers?: boolean;
   /** No markings at all on the lower petals, only the little golden eye. */
   clear?: boolean;
+  /** Market bratki only: speckles, candy stripes, or a star at the heart. */
+  pattern?: 'speckle' | 'stripe' | 'star';
 };
+
+const SPECKLES: Array<[number, number, number]> = [
+  [-18, -14, 1.3], [-12, -18, 1], [-20, -6, 0.9], [-9, -10, 0.8], [14, -16, 1.2], [20, -10, 1], [9, -12, 0.9], [17, -3, 0.8],
+  [-20, 8, 1.1], [-15, 14, 0.9], [19, 9, 1.1], [14, 15, 0.9], [-6, 22, 1], [5, 24, 1.1], [0, 17, 0.8], [-11, 22, 0.7], [11, 21, 0.8],
+];
+
+/** The market's patterns, laid over the petals and under the face. */
+function PetalPattern({ c }: { c: PansyColors }) {
+  if (c.pattern === 'speckle') {
+    return (
+      <g fill={c.face} opacity="0.75">
+        {SPECKLES.map(([x, y, r], i) => (
+          <circle key={i} cx={x} cy={y} r={r} />
+        ))}
+      </g>
+    );
+  }
+  if (c.pattern === 'stripe') {
+    return (
+      <g stroke={c.face} strokeWidth="1.6" strokeLinecap="round" opacity="0.7" fill="none">
+        <path d="M-4,6 C-10,10 -16,14 -22,14 M-3,8 C-6,14 -10,20 -14,24 M0,9 L0,27 M3,8 C6,14 10,20 14,24 M4,6 C10,10 16,14 22,14" />
+        <path d="M-4,0 C-10,-6 -14,-12 -16,-20 M4,0 C10,-6 14,-12 16,-20" />
+      </g>
+    );
+  }
+  if (c.pattern === 'star') {
+    return (
+      <g>
+        <g fill="#fff6d8" opacity="0.9">
+          {[[-17, -15, 1.2], [-10, -20, 0.8], [15, -18, 1], [21, -9, 0.7], [-21, 9, 0.9], [18, 12, 1], [-8, 23, 0.8], [8, 25, 0.9]].map(([x, y, r], i) => (
+            <circle key={i} cx={x} cy={y} r={r} />
+          ))}
+        </g>
+        <path d="M0,-9 L2.6,-1.6 L10.2,-1.6 L4,3 L6.4,10.6 L0,6 L-6.4,10.6 L-4,3 L-10.2,-1.6 L-2.6,-1.6 Z" fill="#f2d16b" className="ink-thin" />
+      </g>
+    );
+  }
+  return null;
+}
 
 /** Pink and near-black, after her favourite colours. */
 export const PANSY_OLCIA: PansyColors = {
@@ -78,6 +119,7 @@ export function PansyFlower({ x, y, rot = 0, s = 1, c }: { x: number; y: number;
       {petal(P.sideR, c.low)}
       {petal(P.low, c.low)}
       <path d="M-9,26 C-4,27.5 4,28.5 10,26.5 C8,29 4,30 0,29 C-3,28 -6,28.5 -9,26 Z" fill={c.lowShade} />
+      {c.pattern && <PetalPattern c={c} />}
       {c.whiskers ? (
         <g stroke={c.face} strokeWidth="0.9" strokeLinecap="round" fill="none">
           <path d="M0,7 L0,17 M-3,7 L-6,16 M3,7 L6,16 M-5,6 L-10,13 M5,6 L10,13" />

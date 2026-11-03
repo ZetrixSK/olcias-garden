@@ -328,6 +328,12 @@ export function VisitorsPanel({ garden, send }: { garden: GardenState; send: Sen
         disabled={() => (v.request ? 'Someone is already at the door.' : null)}
         onPick={(visitor) => send('visitor', { visitor })}
       />
+      <p className="hint">
+        Petals in her purse: {garden.market.petals}. Trinkets: {garden.market.owned.length}
+        {garden.market.milton ? ' and Milton' : ''}.
+      </p>
+      <Choice value={null} options={[{ id: '5', label: '+5 petals' }, { id: '20', label: '+20 petals' }]} onPick={(n) => send('petals', { n: Number(n) })} />
+      <Choice value={null} options={[{ id: '3', label: 'Open the night market for 3 h' }]} onPick={(h) => send('nightmarket', { hours: Number(h) })} />
       {locked.length > 0 && (
         <>
           <p className="hint">Flowers she can't plant yet (visitors bring the seeds):</p>

@@ -93,4 +93,4 @@ export function keepPackages(list: Package[]): Package[] {
 
 /** Two bratek designs that would look the same. */
 export const sameLook = (a: PansyDesign, b: PansyDesign) =>
-  a.top === b.top && a.low === b.low && a.face === b.face && a.faceColor === b.faceColor && (a.edge ?? null) === (b.edge ?? null);
+  a.top === b.top && a.low === b.low && a.face === b.face && a.faceColor === b.faceColor && (a.edge ?? null) === (b.edge ?? null) && (a.pattern ?? null) === (b.pattern ?? null);

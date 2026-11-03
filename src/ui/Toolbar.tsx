@@ -61,6 +61,30 @@ const ALBUM_ICON = (
   </g>
 );
 
+/** A little lantern, for the night market. */
+const LANTERN_ICON = (
+  <g>
+    <path d="M0,-11 L0,-7 M-4,-7 L4,-7 L5,-4 L-5,-4 Z M-4,-4 L-3.4,7 L3.4,7 L4,-4 M-5,7 L5,7 L4,10 L-4,10 Z" />
+    <path d="M0,-1 C-1.6,1 -1,3.4 0,4 C1,3.4 1.6,1 0,-1 Z" />
+  </g>
+);
+
+/** A market stall with a striped awning. */
+const STALL_ICON = (
+  <g>
+    <path d="M-10,-7 L10,-7 L10,-3 C8,-1 6,-1 5,-3 C4,-1 1,-1 0,-3 C-1,-1 -4,-1 -5,-3 C-6,-1 -8,-1 -10,-3 Z M-5,-7 L-5,-3 M0,-7 L0,-3 M5,-7 L5,-3" />
+    <path d="M-8,-2 L-8,10 M8,-2 L8,10 M-10,4 L10,4 L10,10 L-10,10 Z" />
+  </g>
+);
+
+/** A small box with a lid, for her trinkets. */
+const BOX_ICON = (
+  <g>
+    <path d="M-9,-2 L9,-2 L9,9 L-9,9 Z M-10,-6 L10,-6 L10,-2 L-10,-2 Z" />
+    <path d="M-1.6,-6 L-1.6,2 L1.6,2 L1.6,-6 M-4,-9 C-2,-11 0,-8 0,-6 C0,-8 2,-11 4,-9" />
+  </g>
+);
+
 /** A round-topped front door with a knocker. */
 const DOOR_ICON = (
   <g>
@@ -90,12 +114,17 @@ const LANG_ABOUT: Record<Lang, string> = {
   mixed: 'English, with Polish flower names',
 };
 
-export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onDiary, memory, onBook, onMemories, onNews, newsUnseen, onBackup, onPicture, onDecorate, onBouquet, onPost, postTag, onClock, onStudio, onOwnRoom, door, onDoor, onVisitors }: {
+export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onDiary, memory, onBook, onMemories, onNews, newsUnseen, onBackup, onPicture, onDecorate, onBouquet, onPost, postTag, onClock, onStudio, onOwnRoom, door, onDoor, onVisitors, onMarket, onBox, nightMarket }: {
   /** Someone at the door: knocking (she hasn't opened yet) or waiting with their note; null if nobody. */
   door: 'knocking' | 'waiting' | null;
   onDoor: () => void;
   /** The book of everyone who has come to the door. */
   onVisitors: () => void;
+  /** The market (Pan Jeżyk by day, Pani Ćma on weekend nights) and her box of trinkets. */
+  onMarket: () => void;
+  onBox: () => void;
+  /** The night market is open and still has cards she hasn't turned over. */
+  nightMarket: boolean;
   settings: Settings;
   weather: Weather;
   status: WeatherStatus;
@@ -165,6 +194,16 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
         >
           <Icon>{DOOR_ICON}</Icon>
           {door === 'knocking' && <span className="memory-dot" />}
+        </button>
+      )}
+      {nightMarket && (
+        <button
+          className={`fab right ${door ? 'fourth' : 'third'} lantern-fab`}
+          aria-label={t('The night market is open', 'Nocny targ jest otwarty')}
+          data-sound="page"
+          onClick={onMarket}
+        >
+          <Icon>{LANTERN_ICON}</Icon>
         </button>
       )}
       <button className="fab right" aria-label={menuName} aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
@@ -242,6 +281,26 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
             >
               <Icon>{DOOR_ICON}</Icon>
               {t('Visitors', 'Goście')}
+            </button>
+            <button
+              className="wide with-icon"
+              onClick={() => {
+                setMenu(false);
+                onMarket();
+              }}
+            >
+              <Icon>{STALL_ICON}</Icon>
+              {t('Market', 'Targ')}
+            </button>
+            <button
+              className="wide with-icon"
+              onClick={() => {
+                setMenu(false);
+                onBox();
+              }}
+            >
+              <Icon>{BOX_ICON}</Icon>
+              {t('Trinket box', 'Szkatułka')}
             </button>
             <button
               className="wide with-icon"

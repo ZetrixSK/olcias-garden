@@ -154,6 +154,10 @@ export function describe(a: Pick<ActionRow, 'kind' | 'payload'>, g: GardenState 
       return `Send ${String(p.visitor)} to her door`;
     case 'unlock':
       return `Let her plant ${speciesName(p.species)}`;
+    case 'petals':
+      return `Give her ${String(p.n)} petals`;
+    case 'nightmarket':
+      return `Open the night market for ${typeof p.hours === 'number' ? p.hours : 3} h`;
     default:
       return a.kind;
   }

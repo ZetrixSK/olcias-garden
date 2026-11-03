@@ -1,3 +1,5 @@
+import { TRINKETS } from './garden/market';
+import { CardBack, Milton, PanJezyk, PaniCma, Stall, TrinketArt } from './scene/MarketArt';
 import { VISITOR_IDS } from './garden/visitors';
 import { VisitorArt } from './scene/VisitorArt';
 import { POT_KINDS, SPECIES, SPECIES_IDS, STAGES, type SpeciesId } from './garden/species';
@@ -110,6 +112,47 @@ export function VisitorGallery() {
           </g>
         )),
       )}
+    </svg>
+  );
+}
+
+/** Dev-only sheet of the market: both keepers, the stalls, every trinket and Milton, opened with ?marketart. */
+export function MarketGallery() {
+  return (
+    <svg viewBox="0 0 400 760" style={{ width: '100%', background: 'var(--wall)' }}>
+      <defs>
+        <radialGradient id="stall-glow">
+          <stop offset="0" stopColor="#ffd98a" stopOpacity="0.5" />
+          <stop offset="1" stopColor="#ffd98a" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      {(['waiting', 'happy', 'asleep'] as const).map((m, i) => (
+        <g key={m} transform={`translate(${60 + i * 90} 120)`}>
+          <PanJezyk mood={m} />
+        </g>
+      ))}
+      <g transform="translate(330 120) scale(0.9)">
+        <PaniCma />
+      </g>
+      <g transform="translate(110 340) scale(0.36)">
+        <Stall night={false} keeper={<PanJezyk />} />
+      </g>
+      <g transform="translate(290 340) scale(0.36)">
+        <Stall night keeper={<PaniCma />} />
+      </g>
+      {TRINKETS.map((t, i) => (
+        <g key={t.id} transform={`translate(${30 + (i % 8) * 48} ${t.kind === 'charm' ? 420 + Math.floor(i / 8) * 70 : 460 + Math.floor(i / 8) * 70}) scale(1.5)`}>
+          <TrinketArt id={t.id} />
+        </g>
+      ))}
+      <g transform="translate(200 700) scale(1.6)">
+        <Milton />
+      </g>
+      <g transform="translate(300 640) scale(1)">
+        <foreignObject width="60" height="84">
+          <CardBack />
+        </foreignObject>
+      </g>
     </svg>
   );
 }

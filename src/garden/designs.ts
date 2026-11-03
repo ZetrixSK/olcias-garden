@@ -28,7 +28,12 @@ export type PansyDesign = {
   faceColor: string;
   /** A thin coloured edge around every petal, or none. */
   edge: string | null;
+  /** Only on bratki from the market: speckles, candy stripes or a star at the heart. */
+  pattern?: PansyPattern;
 };
+
+export const PANSY_PATTERNS = ['speckle', 'stripe', 'star'] as const;
+export type PansyPattern = (typeof PANSY_PATTERNS)[number];
 
 export const POT_PATTERNS = ['none', 'scallops', 'dots', 'stripes', 'bands', 'hearts', 'moons', 'checks', 'zigzag', 'flowers'] as const;
 export type PotPattern = (typeof POT_PATTERNS)[number];
@@ -79,6 +84,7 @@ export function parsePansy(v: unknown): PansyDesign | null {
     face: PANSY_FACES.includes(v.face as PansyFace) ? (v.face as PansyFace) : 'blotch',
     faceColor: color(v.faceColor, '#241326'),
     edge: typeof v.edge === 'string' && HEX.test(v.edge) ? v.edge : null,
+    ...(PANSY_PATTERNS.includes(v.pattern as PansyPattern) ? { pattern: v.pattern as PansyPattern } : {}),
   };
 }
 

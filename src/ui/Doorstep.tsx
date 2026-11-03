@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { FLYING, VisitorArt, type VisitorMood } from '../scene/VisitorArt';
+import { Blossom } from '../scene/MarketArt';
 import { MAX_HEARTS, type Gift, type Request, type Thanks, type VisitorId } from '../garden/visitors';
 import type { Vase } from '../garden/bouquets';
 import { roomTint, type Weather } from '../theme/palettes';
@@ -188,8 +189,9 @@ function PetalRow({ n }: { n: number }) {
     <svg className="petal-row" viewBox="-4 -12 112 22" role="img" aria-label={`${n}/5`}>
       {Array.from({ length: 5 }, (_, i) => (
         <g key={i} transform={`translate(${10 + i * 22} 0)`} className={i < n ? 'petal on' : 'petal'} style={{ animationDelay: `${0.25 + i * 0.18}s` }}>
-          <path d="M0,8 C-9,2 -9,-8 0,-10 C9,-8 9,2 0,8 Z" fill={i < n ? '#ef93ad' : 'none'} stroke="var(--ink)" strokeWidth="1.2" strokeDasharray={i < n ? undefined : '2 2'} />
-          {i < n && <path d="M0,5 C-1,0 -1,-4 0,-7" fill="none" stroke="#d66f8c" strokeWidth="0.9" />}
+          <g transform="scale(1.05)">
+            <Blossom empty={i >= n} />
+          </g>
         </g>
       ))}
     </svg>
@@ -347,6 +349,9 @@ export function Doorstep({ request, thanks, weather, onOpen, onMake, onNotNow, o
               <h2>{name}</h2>
               <PetalRow n={thanks.petals} />
               <p className="visitor-says">„{thanksLine(w, visitor, thanks.petals, pick)}”</p>
+              <p className="hint petals-earned">
+                {t(`+${thanks.petals} ${thanks.petals === 1 ? 'petal' : 'petals'} in your purse`, `+${thanks.petals} ${w.plural(thanks.petals, 'płatek', 'płatki', 'płatków')} do sakiewki`)}
+              </p>
               {thanks.firstFav && <p className="hint">{t('You found their favourite thing!', 'Odkryto ulubioną rzecz!')}</p>}
               <Hearts n={thanks.hearts} />
               {thanks.gift && (

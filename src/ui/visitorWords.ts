@@ -418,22 +418,22 @@ export function giftLine(w: W, g: Gift, vaseName: (v: Vase) => string): { title:
     case 'species':
       return {
         title: w.t(`Seeds: ${w.flower(g.species)}`, `Nasiona: ${w.flower(g.species)}`),
-        text: w.t('A new flower. You can plant it now, on any empty shelf.', 'Nowy kwiat. Możesz go teraz posadzić na każdym wolnym miejscu.'),
+        text: w.t('Ready to plant.', 'Gotowe do sadzenia.'),
       };
     case 'ribbon':
       return {
         title: w.t(`A ribbon: ${RIBBON_NAMES[g.color]?.[0] ?? ''}`, `Wstążka: ${RIBBON_NAMES[g.color]?.[1].toLowerCase() ?? ''}`),
-        text: w.t('It’s with your ribbons now, for bouquets.', 'Jest już z Twoimi wstążkami, do bukietów.'),
+        text: w.t('For bouquets.', 'Do bukietów.'),
       };
     case 'vase':
       return {
         title: w.t(`A vase: ${vaseName(g.vase)}`, `Wazon: ${vaseName(g.vase).toLowerCase()}`),
-        text: w.t('For bouquets, from now on.', 'Od teraz do bukietów.'),
+        text: w.t('For bouquets.', 'Do bukietów.'),
       };
     case 'design':
       return {
         title: w.t(`Seeds of their bratek, “${g.design.name}” × ${g.count}`, `Nasiona bratka „${g.design.name}” × ${g.count}`),
-        text: w.t('They’re in your seed tin.', 'Są w Twojej puszce z nasionami.'),
+        text: w.t('In your seed tin.', 'W puszce z nasionami.'),
       };
   }
 }

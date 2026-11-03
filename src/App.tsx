@@ -2,6 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   addDrawing,
   addSeeds,
+  buyFromNightStall,
+  buyFromStall,
+  figureAt,
+  moveFigure,
+  standFigure,
+  visitDayStall,
+  visitNightStall,
+  withMarket,
   birthdayAtDoor,
   giveToVisitor,
   knock,
@@ -93,6 +101,10 @@ import { FirstCover } from './ui/FirstCover';
 import { TRAIT_WORDS } from './ui/traitWords';
 import { WhatsNew } from './ui/WhatsNew';
 import { Doorstep } from './ui/Doorstep';
+import { MarketStall } from './ui/Market';
+import { TrinketBox } from './ui/TrinketBox';
+import { miltonSays } from './ui/marketWords';
+import { MILTON, nightMarketKey, toggleCharm, turnCard } from './garden/market';
 import { VisitorBook } from './ui/VisitorBook';
 import { goodbyeLine, say, VISITOR_NAME } from './ui/visitorWords';
 import { ambienceIfMade } from './sound/ambience';
@@ -176,7 +188,17 @@ function devOverrides(g: GardenState): GardenState {
     knocker && (VISITOR_IDS as readonly string[]).includes(knocker)
       ? { ...g, visitors: { ...g.visitors, request: makeRequest(knocker as VisitorId, g.visitors, Date.now(), Math.random, newId(), g.designs.pansies) } }
       : g;
-  return updateSettings(withVisitor, patch);
+  // ?nightmarket opens Pani Ćma's stall whatever the day; ?petals=50 fills her purse, to try the market
+  const petals = Number(q.get('petals'));
+  const withMarketDev = {
+    ...withVisitor,
+    market: {
+      ...withVisitor.market,
+      ...(q.has('nightmarket') ? { nightUntil: Date.now() + 3 * 3_600_000 } : {}),
+      ...(petals > 0 ? { petals } : {}),
+    },
+  };
+  return updateSettings(withMarketDev, patch);
 }
 
 /** Dev only: ?vines=pansy@sill-1:0.6,rose@sill-3:1,pansy@sill-2:1:left draws vines for the art prototype. */
@@ -315,6 +337,11 @@ export function App() {
   const [doorOpen, setDoorOpen] = useState(false);
   const [thanks, setThanks] = useState<Thanks | null>(null);
   const [visitorsOpen, setVisitorsOpen] = useState(false);
+  /** The market, her trinket box, and a figure she just tapped (Milton talking, the music box playing…). */
+  const [marketOpen, setMarketOpen] = useState(false);
+  const [boxOpen, setBoxOpen] = useState(false);
+  const [figureFx, setFigureFx] = useState<{ id: string; kind: 'talk' | 'play' | 'shake' | 'light' | 'wiggle'; line?: string } | null>(null);
+  const figureTimer = useRef(0);
   const [memoriesOpen, setMemoriesOpen] = useState<{ at: string | null } | false>(false);
   const [easel, setEasel] = useState<Easel | null>(null);
   const [memoryBusy, setMemoryBusy] = useState<string | null>(null);
@@ -679,16 +706,44 @@ export function App() {
   const past = memoriesOnThisDay(garden.memories, new Date(now));
   const memory = diarySeenOn !== today && (onThisDay(garden.diary, today).length > 0 || past.length > 0);
 
+  /** She taps a figure: Milton wobbles and says something, the music box plays, the snow globe snows… */
+  const tapFigure = (id: string) => {
+    const w = words(settings.lang, settings.me);
+    const fx =
+      id === MILTON
+        ? { id, kind: 'talk' as const, line: miltonSays(w, Math.floor(Math.random() * 100)) }
+        : id === 'musicbox'
+          ? { id, kind: 'play' as const }
+          : id === 'snowglobe'
+            ? { id, kind: 'shake' as const }
+            : id === 'moonlamp'
+              ? { id, kind: 'light' as const }
+              : { id, kind: 'wiggle' as const };
+    if (id === 'musicbox') ambienceIfMade()?.effect('musicbox');
+    setFigureFx(fx);
+    window.clearTimeout(figureTimer.current);
+    figureTimer.current = window.setTimeout(() => setFigureFx(null), fx.kind === 'talk' ? 4200 : fx.kind === 'play' ? 3600 : fx.kind === 'light' ? 6000 : 2600);
+  };
+
   const onSlot = (slot: SlotId) => {
     const here = plantAt(garden, slot);
     const drawing = drawingAt(garden, slot);
     const bouquet = bouquetAt(garden, slot);
+    const figure = figureAt(garden, slot);
     if (mode.kind === 'move') {
       const id = mode.id;
       update((g) =>
-        g.decor.drawings.some((d) => d.id === id) ? moveDrawing(g, id, slot) : g.bouquets.some((b) => b.id === id) ? moveBouquet(g, id, slot) : movePlant(g, id, slot),
+        g.decor.drawings.some((d) => d.id === id)
+          ? moveDrawing(g, id, slot)
+          : g.bouquets.some((b) => b.id === id)
+            ? moveBouquet(g, id, slot)
+            : g.market.figures.some((f) => f.id === id)
+              ? moveFigure(g, id, slot)
+              : movePlant(g, id, slot),
       );
       setMode({ kind: 'idle' });
+    } else if (figure && !here && !drawing && !bouquet) {
+      tapFigure(figure.id);
     } else if (here) {
       setMode(mode.kind === 'card' && mode.id === here.id ? { kind: 'idle' } : { kind: 'card', id: here.id });
     } else if (drawing) {
@@ -921,6 +976,16 @@ export function App() {
   const vines: VineSpec[] = devVineList.length ? devVineList : vineSpecs(garden, shown.plants);
 
   const cardPlant = mode.kind === 'card' ? garden.plants.find((p) => p.id === mode.id) : undefined;
+  /** This weekend's night market, while it's open. */
+  const nightKey = nightMarketKey(now, weather.night, garden.market);
+  const nightLeft = nightKey !== null && !(garden.market.night?.key === nightKey && garden.market.night.cards.every((id) => garden.market.night!.bought.includes(id)));
+  const openMarket = () => {
+    const t = Date.now();
+    const key = nightMarketKey(t, weather.night, garden.market);
+    if (key) update((g) => visitNightStall(g, key));
+    else if (!weather.night) update((g) => visitDayStall(g, t));
+    setMarketOpen(true);
+  };
   /** Whoever is at the door with a request, if anyone. */
   const waiting = garden.visitors.request;
   const stylePlant = mode.kind === 'style' ? garden.plants.find((p) => p.id === mode.id) : undefined;
@@ -947,7 +1012,7 @@ export function App() {
       >
         <ViewSwiper
           view={settings.view}
-          enabled={mode.kind === 'idle' && !lapse && !letterOpen && !diaryOpen && !bookOpen && !memoriesOpen && !newsOpen && !easel && !welcoming && !askTag && !doorOpen && !thanks && !visitorsOpen}
+          enabled={mode.kind === 'idle' && !lapse && !letterOpen && !diaryOpen && !bookOpen && !memoriesOpen && !newsOpen && !easel && !welcoming && !askTag && !doorOpen && !thanks && !visitorsOpen && !marketOpen && !boxOpen}
           onChange={(view) => setSettings({ view })}
           room={
             <Scene
@@ -971,6 +1036,8 @@ export function App() {
               rainbow={rainbow}
               moments={moments}
               flyer={waiting && FLYING.includes(waiting.visitor) ? waiting.visitor : null}
+              miltonSays={figureFx?.id === MILTON ? (figureFx.line ?? null) : null}
+              onMilton={() => tapFigure(MILTON)}
               candle={candle}
               candleOn={candleOn}
               onCandle={() => setSettings({ candleLit: !candleOn })}
@@ -1004,6 +1071,7 @@ export function App() {
               wateringId={wateringId}
               onSlot={onSlot}
               onSign={openSign}
+              figureFx={figureFx}
             />
           }
         />
@@ -1035,6 +1103,9 @@ export function App() {
           door={waiting ? (waiting.seen ? 'waiting' : 'knocking') : null}
           onDoor={() => setDoorOpen(true)}
           onVisitors={() => setVisitorsOpen(true)}
+          onMarket={openMarket}
+          onBox={() => setBoxOpen(true)}
+          nightMarket={nightLeft}
           onPost={openPost}
           postTag={garden.post.tag}
           onOwnRoom={(edit) => {
@@ -1525,6 +1596,44 @@ export function App() {
           />
         )}
         {visitorsOpen && <VisitorBook visitors={garden.visitors} onClose={() => setVisitorsOpen(false)} />}
+        {marketOpen && (
+          <MarketStall
+            garden={garden}
+            weather={weather}
+            nightKey={nightKey}
+            onBuySeed={(id) => {
+              const g = gardenRef.current;
+              const r = g ? buyFromStall(g, id, Date.now()) : null;
+              if (!r) return false;
+              setGarden(r.garden);
+              return true;
+            }}
+            onTurn={(i) => update((g) => withMarket(g, (m) => turnCard(m, i)))}
+            onBuyTrinket={(id) => {
+              const g = gardenRef.current;
+              const r = g ? buyFromNightStall(g, id) : null;
+              if (!r) return false;
+              setGarden(r);
+              return true;
+            }}
+            onClose={() => setMarketOpen(false)}
+          />
+        )}
+        {boxOpen && (
+          <TrinketBox
+            market={garden.market}
+            canStand={freeShelfSlots(garden).length > 0}
+            onToggleCharm={(id) => update((g) => withMarket(g, (m) => toggleCharm(m, id)))}
+            onStand={(id) => update((g) => (freeShelfSlots(g)[0] ? standFigure(g, id, freeShelfSlots(g)[0]!) : g))}
+            onPutAway={(id) => update((g) => standFigure(g, id, null))}
+            onMove={(id) => {
+              setBoxOpen(false);
+              if (settings.view !== 'shelves') setSettings({ view: 'shelves' });
+              setMode({ kind: 'move', id });
+            }}
+            onClose={() => setBoxOpen(false)}
+          />
+        )}
         {newsOpen && <WhatsNew onClose={() => setNewsOpen(false)} />}
         {letterOpen && !lapse && (
           <Letter

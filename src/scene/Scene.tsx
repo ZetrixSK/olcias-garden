@@ -25,6 +25,7 @@ import { useGrowingVines } from './useGrowingVines';
 import { FloorParcels } from '../ui/Bouquets';
 import { Letterbox } from './Letterbox';
 import { VisitorArt } from './VisitorArt';
+import { Garland, Milton } from './MarketArt';
 import type { VisitorId } from '../garden/visitors';
 
 /** Where each window spot stands: x, the surface it stands on, the drawing scale and the tap area's width. */
@@ -191,7 +192,11 @@ const Backdrop = memo(function Backdrop({ theme, sky, night, twilight, season, o
 });
 
 /** Curtains, pictures, sign, floor and the dogs. */
-const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hideCurtains, phase, mood, occasion, onBook, photoUrl, onFrame, parcels, onParcels, mailNews, onPost, name, onSign, curtainsClosed, onCurtains, onCurtainsOpen }: {
+const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hideCurtains, phase, mood, occasion, onBook, photoUrl, onFrame, parcels, onParcels, mailNews, onPost, name, onSign, curtainsClosed, onCurtains, onCurtainsOpen, milton, miltonSays, onMilton }: {
+  /** Milton, in the dogs' bed, if he has come; what he's saying, if she just tapped him. */
+  milton: boolean;
+  miltonSays: string | null;
+  onMilton?: () => void;
   curtainsClosed: boolean;
   /** Tapping the curtains draws them or ties them back (only in her own garden). */
   onCurtains?: () => void;
@@ -235,6 +240,18 @@ const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hi
           <DogBed part="back" />
           <Dogs mood={mood} />
           <DogBed part="front" />
+          {/* Milton, in his own basket on the edge of the bed, between the dogs; they keep him company */}
+          {milton && (
+            <g transform="translate(236 846) scale(1.05)" className="tappable" role="button" aria-label="Milton" onClick={onMilton}>
+              <Milton talking={miltonSays !== null} />
+              <rect x="-28" y="-50" width="56" height="54" fill="transparent" />
+            </g>
+          )}
+          {milton && miltonSays && (
+            <foreignObject x="96" y="708" width="150" height="64" className="milton-bubble-box" pointerEvents="none">
+              <div className="milton-bubble">{miltonSays}</div>
+            </foreignObject>
+          )}
         </g>
         {occasion === 'halloween' ? (
           <>
@@ -294,7 +311,10 @@ const SillBoard = memo(Sill);
 const Trinket = memo(ShelfTrinket);
 const Candle = memo(SillCandle);
 
-export function Scene({ theme, weather, viewH, vines, still = false, moments = [], onParcels, onPost, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, onSign, onCurtains, rainbow = false, candle = null, candleOn, onCandle, flyer = null, ...rest }: {
+export function Scene({ theme, weather, viewH, vines, still = false, moments = [], onParcels, onPost, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, onSign, onCurtains, rainbow = false, candle = null, candleOn, onCandle, flyer = null, miltonSays = null, onMilton, ...rest }: {
+  /** What Milton is saying, for a moment after she taps him. */
+  miltonSays?: string | null;
+  onMilton?: () => void;
   /** A flying visitor waiting at the door, seen outside the window meanwhile. */
   flyer?: VisitorId | null;
   theme: Theme;
@@ -369,6 +389,8 @@ export function Scene({ theme, weather, viewH, vines, still = false, moments = [
 
       {/* vines climb behind the shelf board, like the ropes, and behind the pots on the sill */}
       <Vines placed={placed} snip={snip} />
+      {/* her charms, on a string across the window */}
+      <Garland charms={rest.garden.market.garland} />
       <ShelfBoard />
       <WindowRow row="shelf" {...spots} />
       <Trinket theme={theme} />
@@ -404,6 +426,9 @@ export function Scene({ theme, weather, viewH, vines, still = false, moments = [
         curtainsClosed={curtainsClosed}
         onCurtains={onCurtains}
         onCurtainsOpen={onCurtainsOpen}
+        milton={rest.garden.market.milton}
+        miltonSays={miltonSays}
+        onMilton={onMilton}
       />
       <Lights theme={theme} sky={weather.sky} night={weather.night} twilight={weather.twilight ?? null} phase={phaseAt(rest.now)} occasion={cal.occasion} dy={dy} wallMid={wallMid} fx={candleFlame(theme, candle)[0]} fy={candleFlame(theme, candle)[1]} candleOn={candleOn} shower={moments.includes('shooting-stars')} veiled={veiled} />
       {weather.night && (

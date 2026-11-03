@@ -17,7 +17,7 @@ const LAYER_OF: Record<Events, Layer> = { drops: 'rain', birds: 'birds', 'cricke
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 
 /** The small sounds of touching things: a button, watering, the candle, paper, soil. */
-export const EFFECTS = ['tap', 'water', 'light', 'blow', 'page', 'soil', 'knock'] as const;
+export const EFFECTS = ['tap', 'water', 'light', 'blow', 'page', 'soil', 'knock', 'musicbox'] as const;
 export type Effect = (typeof EFFECTS)[number];
 
 /**
@@ -286,6 +286,16 @@ export class Ambience {
           this.hush(at + t, 'bandpass', rand(3000, 6000), 0.9, [[0.004, rand(0.03, 0.07)], [0.04, 0]]);
         }
         break;
+      case 'musicbox': {
+        // a little tune on a music box comb: bright, plucked, a touch slower at the end
+        const tune = [1318.5, 1568, 1760, 1568, 1318.5, 1174.7, 1318.5, 1046.5, 1174.7, 1318.5];
+        tune.forEach((f, i) => {
+          const t = at + i * 0.24 + (i >= 8 ? (i - 7) * 0.08 : 0);
+          this.fxNote(t, f, f * 0.998, 0.9, 0.09);
+          this.fxNote(t, f * 2, f * 2, 0.25, 0.025);
+        });
+        break;
+      }
       case 'knock':
         // two knocks on a wooden door with the brass ring: a low thud and a little clack each
         for (const t of [0, 0.29]) {

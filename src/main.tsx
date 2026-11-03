@@ -10,7 +10,7 @@ import '@fontsource/grenze-gotisch/latin-ext-600.css';
 import './styles.css';
 import { App } from './App';
 import { ErrorBoundary } from './ui/ErrorBoundary';
-import { BouquetGallery, Gallery, IconArt, PressedGallery, VisitorGallery } from './Gallery';
+import { BouquetGallery, Gallery, IconArt, MarketGallery, PressedGallery, VisitorGallery } from './Gallery';
 import { paletteVars } from './theme/palettes';
 
 // the page's safety net (index.html) stands down: the garden has started
@@ -68,6 +68,10 @@ createRoot(document.getElementById('root')!).render(
     {import.meta.env.DEV && location.search.includes('icon') ? (
       <div className="garden" style={paletteVars('cozy', { sky: 'clear', night: false })}>
         <IconArt pad={Number(new URLSearchParams(location.search).get('pad') ?? 0.14)} />
+      </div>
+    ) : import.meta.env.DEV && location.search.includes('marketart') ? (
+      <div className="garden" style={paletteVars('cozy', { sky: 'clear', night: false })}>
+        <MarketGallery />
       </div>
     ) : import.meta.env.DEV && location.search.includes('visitors') ? (
       <div className="garden" style={paletteVars('cozy', { sky: 'clear', night: false })}>

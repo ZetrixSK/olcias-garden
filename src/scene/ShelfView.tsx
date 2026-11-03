@@ -1,3 +1,5 @@
+import { Milton, TrinketArt } from './MarketArt';
+import { MILTON } from '../garden/market';
 import { SLOT_IDS, type GardenState, type SlotId } from '../garden/state';
 import { POT_HEIGHT } from '../plants/Pots';
 import { plantLook } from '../plants/looks';
@@ -98,7 +100,9 @@ function Hanger({ x, rimY }: { x: number; rimY: number }) {
   );
 }
 
-export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movingId, wateringId, onSlot, paper = null, pictures = {}, drawingId = null, bouquetId = null, rainbow = false, moments = [], candle = null, candleOn, onCandle, onSign }: {
+export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movingId, wateringId, onSlot, paper = null, pictures = {}, drawingId = null, bouquetId = null, rainbow = false, moments = [], candle = null, candleOn, onCandle, onSign, figureFx = null }: {
+  /** A figure she just tapped, and what it's doing about it: Milton talking, the music box playing… */
+  figureFx?: { id: string; kind: 'talk' | 'play' | 'shake' | 'light' | 'wiggle'; line?: string } | null;
   theme: Theme;
   weather: Weather;
   viewH: number;
@@ -145,6 +149,10 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
     <svg className="scene" viewBox={`0 ${minY.toFixed(1)} 400 ${h.toFixed(1)}`} preserveAspectRatio="xMidYMid meet">
       <WallMotifs />
       <defs>
+        <radialGradient id="moonlamp-glow">
+          <stop offset="0" stopColor="#fff3c8" stopOpacity="0.55" />
+          <stop offset="1" stopColor="#fff3c8" stopOpacity="0" />
+        </radialGradient>
         <clipPath id="shelf-window-clip">
           <path d={OPENING} />
         </clipPath>
@@ -191,6 +199,8 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
         const plant = bySlot.get(slot);
         const drawing = plant ? undefined : garden.decor.drawings.find((d) => d.slot === slot);
         const bouquet = plant || drawing ? undefined : garden.bouquets.find((b) => b.slot === slot);
+        const figure = plant || drawing || bouquet ? undefined : garden.market.figures.find((f) => f.slot === slot);
+        const fx = figure && figureFx?.id === figure.id ? figureFx : null;
         const potH = plant ? POT_HEIGHT[plantLook(plant, garden.designs).shape] * PLANT_SCALE : 30;
         const rimY = pos.y - potH;
         return (
@@ -212,6 +222,17 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
                     <BouquetArt bouquet={bouquet} />
                   </g>
                   {bouquet.id === bouquetId && <ellipse cx="0" cy="4" rx="34" ry="6" fill="none" className="ink selected-ring" strokeDasharray="4 5" />}
+                </g>
+              ) : figure ? (
+                <g className={`${figure.id === movingId ? 'moving ' : ''}figure-fx-${fx?.kind ?? 'none'}${fx?.kind === 'play' ? ' playing' : ''}${fx?.kind === 'shake' ? ' shaken' : ''}${fx?.kind === 'light' ? ' lit' : ''}`}>
+                  <g transform="scale(1.35)">
+                    {figure.id === MILTON ? <Milton talking={fx?.kind === 'talk'} /> : <TrinketArt id={figure.id} />}
+                  </g>
+                  {fx?.kind === 'talk' && fx.line && (
+                    <foreignObject x="-70" y="-118" width="140" height="64" className="milton-bubble-box">
+                      <div className="milton-bubble">{fx.line}</div>
+                    </foreignObject>
+                  )}
                 </g>
               ) : plant ? (
                 <GardenPlanter

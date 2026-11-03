@@ -3,6 +3,7 @@ import { designId, PANSY_PRESETS, parsePansy, parsePot, type PotRef } from '../g
 import { POT_KINDS, SPECIES_IDS, STAGES, type SpeciesId, type Stage } from '../garden/species';
 import { TRAITS, type TraitKind } from '../garden/traits';
 import { makeRequest, VISITOR_IDS, type VisitorId } from '../garden/visitors';
+import { earnPetals } from '../garden/market';
 import {
   addPlant, drawingAt, isHanging, MAX_REMOTE_DONE, movePlant, newId, parseSettings, placeInWindow, plantAt, removePlant,
   savePansyDesign, savePotDesign, setPlantName, setPot, setPressNote, setVariety, SLOT_IDS, takeDown, trimVine, waterPlant,
@@ -176,6 +177,19 @@ function visitor(g: GardenState, p: Payload, now: number): Result {
   return done({ ...g, visitors: { ...g.visitors, request, last: request.visitor } });
 }
 
+/** Puts a few petals in her purse. */
+function petals(g: GardenState, p: Payload): Result {
+  const n = typeof p.n === 'number' && Number.isFinite(p.n) ? Math.round(p.n) : 0;
+  if (n < 1 || n > 200) return skip('Between 1 and 200 petals at a time.');
+  return done({ ...g, market: earnPetals(g.market, n) });
+}
+
+/** Opens Pani Ćma's night market for a few hours, whatever the day. */
+function nightMarket(g: GardenState, p: Payload, now: number): Result {
+  const hours = typeof p.hours === 'number' && Number.isFinite(p.hours) ? Math.max(1, Math.min(12, p.hours)) : 3;
+  return done({ ...g, market: { ...g.market, nightUntil: now + hours * 3_600_000 } });
+}
+
 /** Lets her plant a flower she couldn't yet, as if a visitor had brought the seeds. */
 function unlock(g: GardenState, p: Payload): Result {
   if (!SPECIES_IDS.includes(p.species as SpeciesId)) return skip('That is not a flower.');
@@ -293,6 +307,8 @@ const KINDS: Record<string, (g: GardenState, p: Payload, now: number, world: Wor
   trait,
   visitor,
   unlock,
+  petals,
+  nightmarket: nightMarket,
 };
 
 /** What was already done with this action here, if anything. */

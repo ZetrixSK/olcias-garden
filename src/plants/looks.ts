@@ -29,6 +29,7 @@ export function designColors(d: PansyDesign): PansyColors {
     ...(d.edge ? { edge: d.edge } : {}),
     ...(d.face === 'whiskers' ? { whiskers: true } : {}),
     ...(d.face === 'clear' ? { clear: true } : {}),
+    ...(d.pattern ? { pattern: d.pattern } : {}),
   };
 }
 

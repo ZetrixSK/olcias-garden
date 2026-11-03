@@ -4078,3 +4078,441 @@ body {
   filter: brightness(0) blur(1.2px);
   opacity: 0.32;
 }
+
+/* ---- the market's little lives ---- */
+.keeper-bob {
+  animation: keeper-bob 3.4s ease-in-out infinite;
+}
+@keyframes keeper-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1.6px); }
+}
+.keeper-sleep {
+  animation: keeper-sleep 4.2s ease-in-out infinite;
+}
+@keyframes keeper-sleep {
+  0%, 100% { transform: scale(1, 1); }
+  50% { transform: scale(1.015, 0.985); }
+}
+.keeper-z {
+  animation: keeper-z 3s ease-in-out infinite;
+}
+@keyframes keeper-z {
+  0% { opacity: 0; transform: translateY(3px); }
+  40% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-6px); }
+}
+.moth-wings {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: moth-wings 5s ease-in-out infinite;
+}
+@keyframes moth-wings {
+  0%, 80%, 100% { transform: scaleX(1); }
+  86% { transform: scaleX(0.9); }
+  92% { transform: scaleX(1); }
+}
+.candle-flicker {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: candle-flicker 1.6s ease-in-out infinite;
+}
+@keyframes candle-flicker {
+  0%, 100% { transform: scale(1, 1); }
+  50% { transform: scale(0.9, 1.12); }
+}
+/* Milton gives a little wobble now and then, all by himself */
+.milton {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: milton-wobble 19s ease-in-out infinite;
+}
+.milton.talking {
+  animation: milton-talk 0.9s ease-in-out;
+}
+@keyframes milton-wobble {
+  0%, 90%, 100% { transform: rotate(0); }
+  92% { transform: rotate(-7deg); }
+  94% { transform: rotate(6deg); }
+  96% { transform: rotate(-3deg); }
+  98% { transform: rotate(1deg); }
+}
+@keyframes milton-talk {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-9deg); }
+  45% { transform: rotate(8deg); }
+  70% { transform: rotate(-4deg); }
+}
+.musicbox-turn {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.playing .musicbox-turn {
+  animation: musicbox-turn 2.4s linear infinite;
+}
+@keyframes musicbox-turn {
+  to { transform: rotate(360deg); }
+}
+.shaken .snow-swirl {
+  animation: snow-swirl 2.6s ease-out;
+}
+@keyframes snow-swirl {
+  0% { transform: translate(0, 6px); }
+  30% { transform: translate(-2px, -8px); }
+  100% { transform: translate(0, 0); }
+}
+.moonlamp-glow {
+  opacity: 0;
+  transition: opacity 0.6s;
+}
+.garden.night .moonlamp-glow,
+.lit .moonlamp-glow {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .keeper-bob, .keeper-sleep, .keeper-z, .moth-wings, .candle-flicker, .milton, .milton.talking, .playing .musicbox-turn, .shaken .snow-swirl {
+    animation: none;
+  }
+}
+
+/* ---- the market ---- */
+.market {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Kalam', system-ui, sans-serif;
+  color: #3d2633;
+  animation: fade-in 0.35s ease-out;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.market-close {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  right: calc(env(safe-area-inset-right, 0px) + 10px);
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  border: 1.5px solid #3d2633;
+  background: #f8f1e4;
+  font: inherit;
+  font-size: 24px;
+  color: #3d2633;
+}
+.market-scene {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+.market-card {
+  flex: none;
+  max-height: 58vh;
+  overflow-y: auto;
+  padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  background: #f8f1e4;
+  border-top: 1.5px solid #3d2633;
+  border-radius: 22px 22px 0 0;
+  margin-top: -22px;
+  position: relative;
+  box-shadow: 0 -6px 18px rgba(40, 24, 34, 0.18);
+}
+.market-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.market-top .visitor-says {
+  flex: 1;
+  text-align: left;
+  margin: 2px 0 8px;
+  font-size: 17px;
+}
+.purse {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 14px;
+  border: 1.5px solid currentColor;
+  font-size: 17px;
+  font-weight: 700;
+  background: #fffaf0;
+  color: #3d2633;
+}
+.sheet-head .purse {
+  margin-left: auto;
+  margin-right: 8px;
+}
+.petal-icon {
+  width: 17px;
+  height: 17px;
+  flex: none;
+}
+.seed-stall {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.seed-stall button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 6px 2px;
+  border-radius: 14px;
+  border: 1.5px dashed rgba(61, 38, 51, 0.4);
+  background: transparent;
+  font: inherit;
+  color: inherit;
+}
+.seed-stall button.on {
+  border: 2px solid #3d2633;
+  background: #fffaf0;
+}
+.seed-stall button.bought {
+  opacity: 0.45;
+}
+.seed-stall svg {
+  width: 52px;
+  height: 66px;
+}
+.seed-stall .seed-name {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+}
+.seed-price {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 14px;
+}
+.market-detail {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #fffaf0;
+  border: 1px solid rgba(61, 38, 51, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: sheet-in 0.25s ease-out;
+}
+.market-detail strong {
+  font-size: 18px;
+}
+.market-detail .rarity {
+  font-size: 13px;
+  font-weight: 700;
+  filter: brightness(0.75);
+}
+.market-detail p {
+  margin: 2px 0 6px;
+  font-size: 15px;
+  line-height: 1.3;
+}
+.market-detail button.primary {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 14px;
+  font: inherit;
+  border: 1.5px solid #3d2633;
+  background: #3d2633;
+  color: #f8f1e4;
+}
+.market-detail button.primary .petal-icon circle {
+  stroke: #f8f1e4;
+}
+.market-how {
+  margin-top: 10px;
+  text-align: center;
+}
+/* the night cards: turned over with a flip */
+.night-cards {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  perspective: 600px;
+}
+.mcard {
+  width: 60px;
+  height: 84px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+}
+.mcard-inner {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.3, 1.3, 0.5, 1);
+}
+.mcard.turned .mcard-inner {
+  transform: rotateY(180deg);
+}
+.mcard-back,
+.mcard-front {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 8px;
+}
+.mcard-back svg {
+  width: 100%;
+  height: 100%;
+}
+.mcard-front {
+  transform: rotateY(180deg);
+  display: grid;
+  place-items: center;
+  background: #fffaf0;
+  border: 3px solid var(--rarity);
+  box-shadow: inset 0 0 0 1px #3d2633, 0 0 0 1px #3d2633;
+}
+.mcard-front svg {
+  width: 46px;
+  height: 46px;
+}
+.mcard.on .mcard-front {
+  transform: rotateY(180deg) translateY(-4px);
+}
+.mcard.bought .mcard-front {
+  opacity: 0.6;
+}
+.mcard-mark {
+  position: absolute;
+  right: 4px;
+  bottom: 2px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.milton-card .mcard-back svg rect:first-child {
+  fill: #5a3a6e;
+}
+/* the trinket box */
+.trinket-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.sheet .trinket-tile {
+  aspect-ratio: 1;
+  padding: 4px;
+  min-height: 0;
+  border: 2px solid var(--rarity);
+  border-radius: 12px;
+  background: #fffaf0;
+}
+.sheet .trinket-tile[aria-pressed='true'] {
+  box-shadow: 0 0 0 2px #3d2633;
+}
+.trinket-tile svg {
+  width: 100%;
+  height: 100%;
+}
+.sheet .trinket-tile.unknown {
+  border-style: dashed;
+  background: transparent;
+}
+.trinket-tile.unknown svg {
+  filter: brightness(0);
+  opacity: 0.16;
+}
+.trinket-tile.out {
+  position: relative;
+}
+.trinket-tile.out::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #e86f8c;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mcard-inner { transition: none; }
+}
+
+/* charms swaying on their string */
+.charm-sway {
+  transform-origin: 0 0;
+  animation: charm-sway 3.6s ease-in-out infinite;
+}
+@keyframes charm-sway {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+}
+.figure-fx-wiggle > g {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: figure-wiggle 0.7s ease-in-out;
+}
+@keyframes figure-wiggle {
+  0%, 100% { transform: scale(1.35) rotate(0); }
+  30% { transform: scale(1.35) rotate(-6deg); }
+  65% { transform: scale(1.35) rotate(5deg); }
+}
+.milton-bubble-box {
+  overflow: visible;
+}
+.milton-bubble {
+  position: relative;
+  margin: 0 auto;
+  width: fit-content;
+  max-width: 136px;
+  padding: 5px 9px;
+  border-radius: 12px;
+  border: 1.2px solid #3d2633;
+  background: #fffaf0;
+  color: #3d2633;
+  font-family: 'Kalam', system-ui, sans-serif;
+  font-size: 11px;
+  line-height: 1.2;
+  text-align: center;
+  animation: sheet-in 0.25s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .charm-sway, .figure-fx-wiggle > g { animation: none; }
+}
+
+.fab.fourth {
+  top: calc(env(safe-area-inset-top, 0px) + 178px);
+}
+.lantern-fab svg {
+  animation: lantern-sway 3s ease-in-out infinite;
+  transform-origin: 50% 10%;
+}
+@keyframes lantern-sway {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lantern-fab svg { animation: none; }
+}
+
+.seed-stall .petal-icon,
+.market-detail .petal-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.market-scene {
+  overflow: visible;
+}
