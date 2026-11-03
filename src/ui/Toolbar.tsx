@@ -61,6 +61,16 @@ const ALBUM_ICON = (
   </g>
 );
 
+/** A round-topped front door with a knocker. */
+const DOOR_ICON = (
+  <g>
+    <path d="M-7,10 L-7,-3 A7,7 0 0 1 7,-3 L7,10 Z" />
+    <path d="M-10,10 L10,10" />
+    <circle cx="0" cy="-2" r="2.2" />
+    <circle cx="4" cy="3" r="0.6" />
+  </g>
+);
+
 function Icon({ children }: { children: JSX.Element }) {
   return <svg viewBox="-14 -14 28 28">{children}</svg>;
 }
@@ -80,7 +90,12 @@ const LANG_ABOUT: Record<Lang, string> = {
   mixed: 'English, with Polish flower names',
 };
 
-export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onDiary, memory, onBook, onMemories, onNews, newsUnseen, onBackup, onPicture, onDecorate, onBouquet, onPost, postTag, onClock, onStudio, onOwnRoom }: {
+export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onDiary, memory, onBook, onMemories, onNews, newsUnseen, onBackup, onPicture, onDecorate, onBouquet, onPost, postTag, onClock, onStudio, onOwnRoom, door, onDoor, onVisitors }: {
+  /** Someone at the door: knocking (she hasn't opened yet) or waiting with their note; null if nobody. */
+  door: 'knocking' | 'waiting' | null;
+  onDoor: () => void;
+  /** The book of everyone who has come to the door. */
+  onVisitors: () => void;
   settings: Settings;
   weather: Weather;
   status: WeatherStatus;
@@ -141,6 +156,17 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
       <button className="fab right second" aria-label={t('While you were away', 'Kiedy Cię nie było')} onClick={onClock}>
         <Icon>{CLOCK_ICON}</Icon>
       </button>
+      {door && (
+        <button
+          className={`fab right third door-fab${door === 'knocking' ? ' knocking' : ''}`}
+          aria-label={door === 'knocking' ? t('Someone is knocking at the door', 'Ktoś puka do drzwi') : t('Someone is waiting at the door', 'Ktoś czeka pod drzwiami')}
+          data-sound="page"
+          onClick={onDoor}
+        >
+          <Icon>{DOOR_ICON}</Icon>
+          {door === 'knocking' && <span className="memory-dot" />}
+        </button>
+      )}
       <button className="fab right" aria-label={menuName} aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
         <Icon>{weatherIcon(weather)}</Icon>
         {status === 'live' && <span className="live-dot" />}
@@ -206,6 +232,16 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
             >
               <Icon>{ALBUM_ICON}</Icon>
               {t('Memories', 'Wspomnienia')}
+            </button>
+            <button
+              className="wide with-icon"
+              onClick={() => {
+                setMenu(false);
+                onVisitors();
+              }}
+            >
+              <Icon>{DOOR_ICON}</Icon>
+              {t('Visitors', 'Goście')}
             </button>
             <button
               className="wide with-icon"

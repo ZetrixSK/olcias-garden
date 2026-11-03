@@ -1,4 +1,5 @@
 import { TRAITS } from '../garden/traits';
+import { VISITOR_IDS } from '../garden/visitors';
 import { TRAIT_WORDS } from '../ui/traitWords';
 import { useState, type ReactNode } from 'react';
 import { stageAt } from '../garden/growth';
@@ -307,6 +308,32 @@ export function BookPanel({ garden, send }: { garden: GardenState; send: Send })
           </li>
         ))}
       </ul>
+    </Panel>
+  );
+}
+
+/** Her visitors: who's at the door, sending one round, and the flowers she can plant. */
+export function VisitorsPanel({ garden, send }: { garden: GardenState; send: Send }) {
+  const v = garden.visitors;
+  const locked = SPECIES_IDS.filter((s) => !v.unlocked.includes(s));
+  return (
+    <Panel title="Her visitors">
+      <p className="hint">
+        {v.request ? `At the door: ${v.request.visitor}${v.request.seen ? '' : ' (still knocking)'}.` : `Nobody at the door. Next one from ${new Date(v.nextAt).toLocaleString()}.`}
+      </p>
+      <p className="hint">Send one round now:</p>
+      <Choice
+        value={null}
+        options={VISITOR_IDS.map((id) => ({ id, label: `${id}${v.friends[id] ? ` (${v.friends[id]!.hearts}♥)` : ''}` }))}
+        disabled={() => (v.request ? 'Someone is already at the door.' : null)}
+        onPick={(visitor) => send('visitor', { visitor })}
+      />
+      {locked.length > 0 && (
+        <>
+          <p className="hint">Flowers she can't plant yet (visitors bring the seeds):</p>
+          <Choice value={null} options={locked.map((s) => ({ id: s, label: SPECIES[s].name }))} onPick={(species) => send('unlock', { species })} />
+        </>
+      )}
     </Panel>
   );
 }

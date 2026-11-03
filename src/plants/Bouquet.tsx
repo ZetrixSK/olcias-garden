@@ -8,13 +8,21 @@ import { PressedSprig } from './Pressed';
 export const stemPalette = (s: Stem) => (s.design ? pansyPalette(designRef(s.design.id), { pansies: [s.design], pots: NO_DESIGNS.pots }) : pansyPalette(s.variety, NO_DESIGNS));
 
 /** Where each vase's mouth is, which the stems go into: its height and half its width. */
-const MOUTH: Record<Vase, { y: number; w: number }> = { jar: { y: -34, w: 10 }, jug: { y: -38, w: 9 }, bottle: { y: -44, w: 4 } };
+const MOUTH: Record<Vase, { y: number; w: number }> = {
+  jar: { y: -34, w: 10 },
+  jug: { y: -38, w: 9 },
+  bottle: { y: -44, w: 4 },
+  can: { y: -30, w: 10 },
+  cauldron: { y: -24, w: 13 },
+};
 
 /** The back of the vase's mouth, drawn behind the stems. */
 function VaseBack({ vase }: { vase: Vase }) {
   const m = MOUTH[vase];
   if (vase === 'jar') return <ellipse cx="0" cy={m.y} rx={m.w} ry="2.6" fill="#c9dcdc" fillOpacity="0.5" className="ink-thin" />;
   if (vase === 'jug') return <ellipse cx="0" cy={m.y} rx={m.w} ry="2.4" fill="#3a2d2a" className="ink-thin" />;
+  if (vase === 'can') return <ellipse cx="0" cy={m.y} rx={m.w} ry="2.4" fill="#4a5652" className="ink-thin" />;
+  if (vase === 'cauldron') return <ellipse cx="0" cy={m.y} rx={m.w} ry="3" fill="#120c14" className="ink-thin" />;
   return <ellipse cx="0" cy={m.y} rx={m.w} ry="1.4" fill="#1d1420" className="ink-thin" />;
 }
 
@@ -52,8 +60,31 @@ function VaseFront({ vase, ribbon }: { vase: Vase; ribbon: string | null }) {
           <path d="M-9,-26 C-10.6,-20 -10.6,-12 -10,-5" fill="none" stroke="#7a6478" strokeWidth="1.4" strokeLinecap="round" />
         </>
       )}
+      {vase === 'can' && (
+        <>
+          {/* Rechotka's old watering can: a long spout, a handle over the top, a dent or two */}
+          <path className="ink" fill="#8fa39c" d="M10,-20 C16,-24 22,-30 28,-40 L31,-38.6 C26,-28 20,-18 12,-10 Z" />
+          <path className="ink-thin" fill="#a9bab3" d="M26.6,-41.6 L32.6,-38.4 L33.6,-40.6 L27.8,-43.6 Z" />
+          <path className="ink" fill="none" strokeWidth="2.2" d="M-11,-26 C-14,-44 12,-46 9,-28" />
+          <path className="ink" fill="#a2b5ae" d="M-10,-30 L10,-30 L12,-2 C12,-0.6 11,0 9.6,0 L-9.6,0 C-11,0 -12,-0.6 -12,-2 Z" />
+          <path d="M-12,-20 L12,-20" stroke="#7a8d86" strokeWidth="1.2" />
+          <path d="M-7,-27 C-8.6,-20 -8.6,-10 -7.4,-3" fill="none" stroke="#dce6e1" strokeWidth="1.6" strokeLinecap="round" />
+          <path d="M5,-12 C6.4,-11 6.6,-8.6 5.4,-7.6" fill="none" stroke="#7a8d86" strokeWidth="0.9" strokeLinecap="round" />
+        </>
+      )}
+      {vase === 'cauldron' && (
+        <>
+          {/* Wiedźmusia's little cauldron, on three stubby legs, with a rim and a ring for a handle */}
+          <path className="ink" fill="#1f1722" d="M-10,-4 L-12,1.6 L-8,1.6 Z M10,-4 L12,1.6 L8,1.6 Z" />
+          <path className="ink" fill="#2a2030" d="M-14,-22 C-17,-14 -16,-6 -9,-2.4 C-4,0 4,0 9,-2.4 C16,-6 17,-14 14,-22 Z" />
+          <path className="ink" fill="#3a2d40" d="M-15,-24 C-15,-26 15,-26 15,-24 C15,-21.4 -15,-21.4 -15,-24 Z" />
+          <path className="ink-thin" fill="none" strokeWidth="1.4" d="M-16.4,-19 C-20,-19 -20,-13 -16.2,-13 M16.4,-19 C20,-19 20,-13 16.2,-13" />
+          <path d="M-10,-18 C-12,-12 -10,-7 -6,-5" fill="none" stroke="#5a4862" strokeWidth="1.6" strokeLinecap="round" />
+          <path d="M-2,-11.6 L0,-14 L2,-11.6 L0,-9.2 Z" fill="#e2ad3f" opacity="0.85" />
+        </>
+      )}
       {ribbon && (
-        <g transform={`translate(${vase === 'bottle' ? 0 : -1} ${m.y + (vase === 'bottle' ? 11 : 6)})`}>
+        <g transform={`translate(${vase === 'bottle' ? 0 : -1} ${m.y + (vase === 'bottle' ? 11 : vase === 'cauldron' ? 4 : 6)})`}>
           <path className="ink-thin" fill={ribbon} d="M0,0 C-3,-5 -9,-6 -9,-2 C-9,1.6 -4,2 0,0 Z M0,0 C3,-5 9,-6 9,-2 C9,1.6 4,2 0,0 Z" />
           <path className="ink-thin" fill={ribbon} d="M-1,1 C-2,5 -4,9 -6,11 L-3.6,10.6 L-2.6,12.6 C-0.8,9 0.2,5 0.4,1.4 Z M1,1 C2.4,4.6 4.4,8 6.6,10 L4.2,10 L3.8,12.2 C2,9 0.6,5 0,1.6 Z" />
           <ellipse className="ink-thin" cx="0" cy="0" rx="1.8" ry="2" fill={ribbon} />

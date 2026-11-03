@@ -1,4 +1,6 @@
 import { MysterySeedsArt } from './Packages';
+import { whoHasSeeds, type VisitorId } from '../garden/visitors';
+import { say, VISITOR_NAME } from './visitorWords';
 import { useState, type ReactNode } from 'react';
 import { isSoilWet, nextStage, stageAt, waterWouldHelp } from '../garden/growth';
 import { MAX_NAME } from '../garden/pressed';
@@ -235,8 +237,12 @@ function SeedPacketArt({ packet, designs }: { packet: SeedPacket; designs: Desig
   );
 }
 
-export function PlantPicker({ onPick, onDrawing, onPaint, seeds = [], designs, onSow, busy, error, onClose }: {
+export function PlantPicker({ onPick, onDrawing, onPaint, seeds = [], designs, onSow, busy, error, onClose, unlocked, met = [] }: {
   onPick: (s: SpeciesId) => void;
+  /** The flowers she can plant; the others show as outlines, with whose seeds they are. */
+  unlocked?: readonly SpeciesId[];
+  /** Visitors she has met, so the hint can name who has the seeds. */
+  met?: readonly VisitorId[];
   /** Her seed tin: packets of her own designs, sown one seed at a time. */
   seeds?: SeedPacket[];
   designs?: Designs;
@@ -249,6 +255,9 @@ export function PlantPicker({ onPick, onDrawing, onPaint, seeds = [], designs, o
   onClose: () => void;
 }) {
   const w = useWords();
+  const [asked, setAsked] = useState<SpeciesId | null>(null);
+  const open = (s: SpeciesId) => !unlocked || unlocked.includes(s);
+  const keeper = asked ? whoHasSeeds(asked) : null;
   return (
     <div className="sheet" role="dialog" aria-label={w.t('Plant something', 'Posadź coś')}>
       <div className="sheet-head">
@@ -275,16 +284,31 @@ export function PlantPicker({ onPick, onDrawing, onPaint, seeds = [], designs, o
         </>
       )}
       <div className="picker">
-        {SPECIES_IDS.map((s) => (
-          <button key={s} data-sound="soil" onClick={() => onPick(s)}>
-            <Preview species={s} />
-            <span className="pl" style={fitName(w.flower(s))}>
-              {w.flower(s)}
-            </span>
-            {w.flowerSub(s) && <span className="en">{w.flowerSub(s)}</span>}
-          </button>
-        ))}
+        {SPECIES_IDS.map((s) =>
+          open(s) ? (
+            <button key={s} data-sound="soil" onClick={() => onPick(s)}>
+              <Preview species={s} />
+              <span className="pl" style={fitName(w.flower(s))}>
+                {w.flower(s)}
+              </span>
+              {w.flowerSub(s) && <span className="en">{w.flowerSub(s)}</span>}
+            </button>
+          ) : (
+            <button key={s} className="locked" aria-pressed={asked === s} onClick={() => setAsked((a) => (a === s ? null : s))}>
+              <Preview species={s} />
+              <span className="pl">?</span>
+            </button>
+          ),
+        )}
       </div>
+      {asked && (
+        <p className="hint locked-hint">
+          {w.t('Not yet: ', 'Jeszcze nie: ')}
+          {keeper && met.includes(keeper)
+            ? w.t(`${say(w, VISITOR_NAME[keeper])} has these seeds. Make them a bouquet when they knock.`, `te nasiona ma ${say(w, VISITOR_NAME[keeper])}. Ułóż bukiet, kiedy zapuka.`)
+            : w.t('one of your visitors has these seeds. Make them a bouquet when they knock.', 'te nasiona ma ktoś z gości. Ułóż mu bukiet, kiedy zapuka.')}
+        </p>
+      )}
       {onDrawing && (
         <div className="press-row">
           <button onClick={onDrawing} disabled={busy}>

@@ -150,6 +150,10 @@ export function describe(a: Pick<ActionRow, 'kind' | 'payload'>, g: GardenState 
       return `A new ${p.type === 'pot' ? 'pot' : 'bratek'} design`;
     case 'note':
       return 'A note in her book';
+    case 'visitor':
+      return `Send ${String(p.visitor)} to her door`;
+    case 'unlock':
+      return `Let her plant ${speciesName(p.species)}`;
     default:
       return a.kind;
   }

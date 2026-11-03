@@ -3652,3 +3652,429 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .parcel-art { animation: none; }
 }
+
+/* ---- visitors: little lives of their own ---- */
+.visitor-blink {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: visitor-blink 4.6s infinite;
+}
+@keyframes visitor-blink {
+  0%, 93%, 100% { transform: scaleY(1); }
+  95.5% { transform: scaleY(0.1); }
+}
+.visitor-hover {
+  animation: visitor-hover 2.4s ease-in-out infinite;
+}
+@keyframes visitor-hover {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+.visitor-float {
+  animation: visitor-hover 3.6s ease-in-out infinite;
+}
+.visitor-wing {
+  animation: visitor-wing 0.16s ease-in-out infinite alternate;
+}
+.visitor-wing.right {
+  animation-name: visitor-wing-r;
+}
+@keyframes visitor-wing {
+  from { transform: rotate(-10deg); }
+  to { transform: rotate(8deg); }
+}
+@keyframes visitor-wing-r {
+  from { transform: rotate(10deg); }
+  to { transform: rotate(-8deg); }
+}
+.visitor-tail {
+  animation: visitor-tail 3.8s ease-in-out infinite;
+}
+@keyframes visitor-tail {
+  0%, 60%, 100% { transform: rotate(0); }
+  70% { transform: rotate(-9deg); }
+  80% { transform: rotate(5deg); }
+}
+.visitor-sway {
+  animation: visitor-sway 3.2s ease-in-out infinite;
+}
+@keyframes visitor-sway {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(3deg); }
+}
+.visitor-wave {
+  animation: visitor-wave 2.6s ease-in-out infinite;
+}
+@keyframes visitor-wave {
+  0%, 55%, 100% { transform: rotate(0); }
+  65% { transform: rotate(-12deg); }
+  75% { transform: rotate(6deg); }
+  85% { transform: rotate(-8deg); }
+}
+.visitor-tilt {
+  transform: rotate(-7deg);
+}
+.visitor-joy {
+  animation: visitor-joy 1.8s ease-out infinite;
+}
+@keyframes visitor-joy {
+  0% { transform: translateY(4px); opacity: 0; }
+  25% { opacity: 1; }
+  100% { transform: translateY(-10px); opacity: 0; }
+}
+.mood-delighted > g {
+  animation: visitor-hop 0.9s ease-in-out 2;
+}
+@keyframes visitor-hop {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-7px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .visitor-blink, .visitor-hover, .visitor-float, .visitor-wing, .visitor-tail, .visitor-sway, .visitor-wave, .visitor-joy, .mood-delighted > g {
+    animation: none;
+  }
+}
+
+/* ---- the front door ---- */
+.doorstep {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Kalam', system-ui, sans-serif;
+  color: #3d2633;
+  animation: fade-in 0.35s ease-out;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.doorstep-scene {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  background: var(--wall);
+}
+.doorstep-card {
+  flex: none;
+  max-height: 52vh;
+  overflow-y: auto;
+  padding: 14px 18px calc(16px + env(safe-area-inset-bottom, 0px));
+  background: #f8f1e4;
+  border-top: 1.5px solid #3d2633;
+  border-radius: 22px 22px 0 0;
+  margin-top: -22px;
+  position: relative;
+  box-shadow: 0 -6px 18px rgba(40, 24, 34, 0.18);
+}
+.doorstep-card h2 {
+  margin: 0;
+  text-align: center;
+  font-size: 22px;
+}
+.doorstep-card .letter-actions {
+  flex-wrap: wrap;
+  width: auto;
+  max-width: 100%;
+}
+.knock-words {
+  margin: 4px 0 0;
+  text-align: center;
+  font-size: 26px;
+  font-weight: 700;
+}
+.doorstep-card .hint {
+  text-align: center;
+}
+.front-door {
+  transition: transform 0.9s cubic-bezier(0.5, 0, 0.3, 1);
+}
+.front-door.open {
+  transform: scaleX(-0.3);
+}
+.front-door.knocking .knocker {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  animation: knocker 2.4s ease-in-out infinite;
+}
+.front-door.knocking {
+  animation: door-knock 2.4s ease-in-out infinite;
+}
+@keyframes knocker {
+  0%, 60%, 100% { transform: rotate(0); }
+  66% { transform: rotate(-26deg); }
+  72% { transform: rotate(0); }
+  78% { transform: rotate(-26deg); }
+  84% { transform: rotate(0); }
+}
+@keyframes door-knock {
+  0%, 70%, 100% { transform: translateX(0); }
+  72% { transform: translateX(1.2px); }
+  74% { transform: translateX(0); }
+  84% { transform: translateX(1.2px); }
+  86% { transform: translateX(0); }
+}
+.door-visitor {
+  animation: visitor-in 0.6s cubic-bezier(0.2, 0.8, 0.3, 1.2);
+}
+@keyframes visitor-in {
+  from { opacity: 0; translate: 0 10px; }
+  to { opacity: 1; translate: 0 0; }
+}
+.door-rain path {
+  animation: door-rain 0.8s linear infinite;
+}
+@keyframes door-rain {
+  from { transform: translate(0, -20px); }
+  to { transform: translate(-6px, 20px); }
+}
+.visitor-note {
+  padding: 8px 14px 6px;
+  border-radius: 12px;
+  background-color: #fffaf0;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 27px, rgba(138, 53, 80, 0.13) 27px 28px);
+  border: 1px solid rgba(61, 38, 51, 0.2);
+  font-size: 17px;
+  line-height: 28px;
+  transform: rotate(-0.6deg);
+}
+.visitor-note p {
+  margin: 0;
+}
+.visitor-note ul {
+  margin: 4px 0;
+  padding-left: 22px;
+  list-style: none;
+}
+.visitor-note li::before {
+  content: '';
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin: 0 8px 1px -18px;
+  border: 1.4px solid #8a3550;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+}
+.visitor-note .note-sign {
+  text-align: right;
+  font-style: italic;
+}
+.visitor-says {
+  margin: 6px 0 4px;
+  text-align: center;
+  font-size: 18px;
+  line-height: 1.35;
+}
+.petal-row {
+  display: block;
+  width: 150px;
+  margin: 6px auto 0;
+}
+.petal-row .petal.on {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: petal-in 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) backwards;
+}
+@keyframes petal-in {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+.heart-row {
+  display: block;
+  width: 110px;
+  margin: 4px auto 6px;
+}
+.gift {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  border: 1.5px dashed rgba(61, 38, 51, 0.4);
+  background: #fffaf0;
+  animation: sheet-in 0.4s ease-out 0.9s backwards;
+}
+.gift-art {
+  flex: none;
+  width: 64px;
+  height: 64px;
+}
+.gift-art svg {
+  width: 100%;
+  height: 100%;
+}
+.gift p {
+  margin: 2px 0 0;
+  font-size: 15px;
+  line-height: 1.3;
+}
+@media (prefers-reduced-motion: reduce) {
+  .front-door, .front-door.knocking, .front-door.knocking .knocker, .door-visitor, .door-rain path, .petal-row .petal.on, .gift {
+    animation: none;
+    transition: none;
+  }
+}
+/* someone knocking: the door button gives a little double tap now and then */
+.door-fab.knocking svg {
+  animation: door-fab-knock 2.4s ease-in-out infinite;
+}
+@keyframes door-fab-knock {
+  0%, 64%, 100% { transform: rotate(0); }
+  68% { transform: rotate(-9deg); }
+  72% { transform: rotate(0); }
+  76% { transform: rotate(-9deg); }
+  80% { transform: rotate(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .door-fab.knocking svg { animation: none; }
+}
+/* a visitor's wishes, in the bouquet studio: a little tick for each one met */
+.wish-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 16px;
+}
+.wish-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.wish-list .tick {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  opacity: 0.6;
+}
+.wish-list li.part .tick {
+  opacity: 1;
+  background: linear-gradient(90deg, #ef93ad 50%, transparent 50%);
+}
+.wish-list li.met .tick {
+  opacity: 1;
+  background: #ef93ad radial-gradient(circle, #fff 0 2px, transparent 2.5px);
+  animation: petal-in 0.35s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+/* flowers she can't plant yet: an outline, as if drawn in pencil, waiting for their seeds */
+.picker button.locked svg {
+  filter: grayscale(1) contrast(0.6) brightness(1.25);
+  opacity: 0.38;
+}
+.picker button.locked {
+  border-style: dashed;
+}
+.picker button.locked .pl {
+  opacity: 0.6;
+}
+.locked-hint {
+  margin: 8px 4px 0;
+}
+/* the visitors' book */
+.visitor-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 2px 8px;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+.visitor-tabs::-webkit-scrollbar {
+  display: none;
+}
+.sheet .visitor-tabs button {
+  flex: none;
+  width: 58px;
+  height: 64px;
+  padding: 2px;
+  border-style: dashed;
+}
+.sheet .visitor-tabs button[aria-pressed='true'] {
+  border-style: solid;
+  border-width: 2px;
+}
+.visitor-tabs svg {
+  width: 100%;
+  height: 100%;
+}
+.visitor-tabs button.unknown svg {
+  filter: brightness(0);
+  opacity: 0.18;
+}
+.visitor-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.visitor-head h3 {
+  margin: 0;
+  font-size: 22px;
+}
+.visitor-big {
+  flex: none;
+  width: 104px;
+  height: 112px;
+}
+.visitor-hearts {
+  display: flex;
+  gap: 4px;
+  margin: 4px 0;
+}
+.visitor-hearts span {
+  width: 14px;
+  height: 13px;
+  background: currentColor;
+  opacity: 0.18;
+  clip-path: path('M7,13 C1,8.6 0,5 1.4,2.6 C2.8,0.4 6,0.6 7,3 C8,0.6 11.2,0.4 12.6,2.6 C14,5 13,8.6 7,13 Z');
+}
+.visitor-hearts span.on {
+  background: #e86f8c;
+  opacity: 1;
+}
+.visitor-bio {
+  margin: 8px 0 6px;
+  font-size: 16px;
+  line-height: 1.35;
+}
+.visitor-likes {
+  margin: 0 0 8px;
+  padding-left: 18px;
+  font-size: 15px;
+  line-height: 1.4;
+}
+.visitor-likes li.hidden {
+  opacity: 0.5;
+  font-style: italic;
+}
+.visitor-likes li.fav {
+  font-weight: 700;
+}
+.visitor-bouquets {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+}
+.visitor-bouquets svg {
+  flex: none;
+  width: 72px;
+  height: 76px;
+}
+.window-flyer > g {
+  animation: window-flyer 9s ease-in-out infinite;
+}
+@keyframes window-flyer {
+  0%, 100% { translate: 0 0; }
+  30% { translate: 70px -16px; }
+  60% { translate: 26px 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .window-flyer > g { animation: none; }
+}
+.door-shadow {
+  filter: brightness(0) blur(1.2px);
+  opacity: 0.32;
+}

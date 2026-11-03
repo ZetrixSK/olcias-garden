@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
-import { MAX_NOTE, MAX_STEMS, RIBBONS, stemOf, stemsLeft, VASES, type Bouquet, type Vase } from '../garden/bouquets';
+import { BASE_VASES, MAX_NOTE, MAX_STEMS, RIBBONS, stemOf, stemsLeft, type Bouquet, type Vase } from '../garden/bouquets';
+import { wishMet, type Request } from '../garden/visitors';
+import { RIBBON_NAMES as RIBBON_WORDS, say, VISITOR_NAME, wishLine } from './visitorWords';
 import { hash } from '../garden/vines';
 import { freeShelfSlots, newId, type GardenState, type Plant } from '../garden/state';
 import { useWords } from '../i18n';
@@ -10,9 +12,12 @@ import { ClaimTag, postMessage, TagInput, validTag } from './Post';
 import type { PostError } from '../remote/client';
 import { Section, Swatches } from './Studio';
 
-const VASE_NAMES: Record<Vase, [string, string]> = { jar: ['Glass jar', 'Słoik'], jug: ['Jug', 'Dzbanek'], bottle: ['Old bottle', 'Buteleczka'] };
-const RIBBON_NAMES: Record<string, string> = {
-  '#c95d7f': 'Rose', '#2b2229': 'Black', '#f2c4cf': 'Blush', '#b9a3e3': 'Lilac', '#c9a45c': 'Gold', '#a7b598': 'Sage',
+export const VASE_NAMES: Record<Vase, [string, string]> = {
+  jar: ['Glass jar', 'Słoik'],
+  jug: ['Jug', 'Dzbanek'],
+  bottle: ['Old bottle', 'Buteleczka'],
+  can: ['Watering can', 'Konewka'],
+  cauldron: ['Little cauldron', 'Kociołek'],
 };
 
 /** A bouquet drawn large enough to admire, in its own little frame. */
@@ -38,9 +43,15 @@ function MiniSprig({ plant, garden }: { plant: Plant; garden: GardenState }) {
  * Making a bouquet: stems cut from her flowers in bloom (a few from each plant a day, and they're
  * none the worse for it), a vase, a ribbon and a few words on a card.
  */
-export function BouquetStudio({ garden, now, onKeep, onSend, onClaim, canSend, onClose }: {
+export function BouquetStudio({ garden, now, onKeep, onSend, onClaim, canSend, onClose, forVisitor, night = false, onGive }: {
   garden: GardenState;
   now: number;
+  /** Made for someone at the door: their wishes are pinned at the top, ticked off as they're met. */
+  forVisitor?: Request | null;
+  /** Whether it's night, for a wish to have it picked at night. */
+  night?: boolean;
+  /** Hands the bouquet to the visitor at the door. */
+  onGive?: (bouquet: Bouquet, cutFrom: string[]) => void;
   /** Keeps the bouquet: it goes on the shelves, or in a box on the floor if there's no room. */
   onKeep: (bouquet: Bouquet, cutFrom: string[]) => void;
   /** Sends it to a tag; resolves with why not, or null once it's on its way. */
@@ -73,6 +84,10 @@ export function BouquetStudio({ garden, now, onKeep, onSend, onClaim, canSend, o
   const full = picked.length >= MAX_STEMS;
   const noRoom = freeShelfSlots(garden).length === 0;
   const name = (p: Plant) => p.name ?? w.flower(p.species);
+  const ribbons = [...RIBBONS, ...garden.visitors.ribbons];
+  const vases = [...BASE_VASES, ...garden.visitors.vases];
+  const ribbonNames = Object.fromEntries(Object.entries(RIBBON_WORDS).map(([k, v]) => [k, t(...v)]));
+  const visitor = forVisitor ?? null;
 
   return (
     <div className="sheet studio" role="dialog" aria-label={t('Make a bouquet', 'Ułóż bukiet')}>
@@ -120,6 +135,21 @@ export function BouquetStudio({ garden, now, onKeep, onSend, onClaim, canSend, o
         </div>
       ) : (
       <div className="studio-body">
+        {visitor && (
+          <Section title={t(`For ${say(w, VISITOR_NAME[visitor.visitor])}`, `Dla: ${say(w, VISITOR_NAME[visitor.visitor])}`)}>
+            <ul className="wish-list">
+              {visitor.wishes.map((wish, i) => {
+                const met = wishMet(wish, { ...bouquet, night });
+                return (
+                  <li key={i} className={met >= 1 ? 'met' : met > 0 ? 'part' : undefined}>
+                    <span className="tick" aria-hidden="true" />
+                    {wishLine(w, wish)}
+                  </li>
+                );
+              })}
+            </ul>
+          </Section>
+        )}
         <Section title={t('Flowers in bloom', 'Kwitnące kwiaty')}>
           {blooming.length === 0 ? (
             <p className="hint">
@@ -156,7 +186,7 @@ export function BouquetStudio({ garden, now, onKeep, onSend, onClaim, canSend, o
         )}
         <Section title={t('Vase', 'Wazon')}>
           <div className="options three">
-            {VASES.map((v) => (
+            {vases.map((v) => (
               <button key={v} aria-pressed={vase === v} onClick={() => setVase(v)}>
                 <svg viewBox="-20 -50 40 54" aria-hidden="true">
                   <BouquetArt bouquet={{ id: v, stems: [], vase: v, ribbon, note: '', seed: 1 }} showNote={false} />
@@ -167,7 +197,7 @@ export function BouquetStudio({ garden, now, onKeep, onSend, onClaim, canSend, o
           </div>
         </Section>
         <Section title={t('Ribbon', 'Wstążka')}>
-          <Swatches colors={RIBBONS} value={ribbon} none names={RIBBON_NAMES} onPick={setRibbon} />
+          <Swatches colors={ribbons} value={ribbon} none names={ribbonNames} onPick={setRibbon} />
         </Section>
         <Section title={t('A card', 'Karteczka')}>
           <input
@@ -203,6 +233,10 @@ export function BouquetStudio({ garden, now, onKeep, onSend, onClaim, canSend, o
               {sending ? t('Sending…', 'Wysyłam…') : t(`Send to #${to || '…'}`, `Wyślij do #${to || '…'}`)}
             </button>
           </>
+        ) : visitor && onGive ? (
+          <button className="primary" disabled={stems.length === 0} data-sound="page" onClick={() => onGive(bouquet, picked)}>
+            {t(`Give it to ${say(w, VISITOR_NAME[visitor.visitor])}`, `Daj: ${say(w, VISITOR_NAME[visitor.visitor])}`)}
+          </button>
         ) : (
           <>
             {canSend && (

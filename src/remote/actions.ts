@@ -2,6 +2,7 @@ import { growthHours, plantedAtForStage, stageAt } from '../garden/growth';
 import { designId, PANSY_PRESETS, parsePansy, parsePot, type PotRef } from '../garden/designs';
 import { POT_KINDS, SPECIES_IDS, STAGES, type SpeciesId, type Stage } from '../garden/species';
 import { TRAITS, type TraitKind } from '../garden/traits';
+import { makeRequest, VISITOR_IDS, type VisitorId } from '../garden/visitors';
 import {
   addPlant, drawingAt, isHanging, MAX_REMOTE_DONE, movePlant, newId, parseSettings, placeInWindow, plantAt, removePlant,
   savePansyDesign, savePotDesign, setPlantName, setPot, setPressNote, setVariety, SLOT_IDS, takeDown, trimVine, waterPlant,
@@ -167,6 +168,21 @@ function trait(g: GardenState, p: Payload, now: number): Result {
   return done({ ...g, plants: g.plants.map((x) => (x.id === plant.id ? { ...x, trait: { kind: p.kind as TraitKind, at: now } } : x)) });
 }
 
+/** Sends a visitor to her door now, with a request of their own choosing. */
+function visitor(g: GardenState, p: Payload, now: number): Result {
+  if (!(VISITOR_IDS as readonly unknown[]).includes(p.visitor)) return skip('There is no such visitor.');
+  if (g.visitors.request) return skip('Someone is already waiting at her door.');
+  const request = makeRequest(p.visitor as VisitorId, g.visitors, now, Math.random, newId(), g.designs.pansies);
+  return done({ ...g, visitors: { ...g.visitors, request, last: request.visitor } });
+}
+
+/** Lets her plant a flower she couldn't yet, as if a visitor had brought the seeds. */
+function unlock(g: GardenState, p: Payload): Result {
+  if (!SPECIES_IDS.includes(p.species as SpeciesId)) return skip('That is not a flower.');
+  if (g.visitors.unlocked.includes(p.species as SpeciesId)) return skip('She can already plant it.');
+  return done({ ...g, visitors: { ...g.visitors, unlocked: SPECIES_IDS.filter((s) => s === p.species || g.visitors.unlocked.includes(s)) } });
+}
+
 /** Moves a plant to another place on the shelves, swapping with whatever stands there. */
 function move(g: GardenState, p: Payload): Result {
   const plant = findPlant(g, p);
@@ -275,6 +291,8 @@ const KINDS: Record<string, (g: GardenState, p: Payload, now: number, world: Wor
   window: windowSpot,
   trim,
   trait,
+  visitor,
+  unlock,
 };
 
 /** What was already done with this action here, if anything. */

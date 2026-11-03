@@ -11,8 +11,9 @@ import { parseCandle, parseCandleLit, type CandleLit, type CandleLook } from './
 import { parseDiary, withEntry, withoutEntry, type Diary, type Mood } from './diary';
 import { designId, designRef, NO_DESIGNS, PANSY_PRESETS, parseDesigns, upsert, type Designs, type PansyDesign, type PotDesign, type PotRef } from './designs';
 import { lastNight, nightsBetween, runNights, settleMiddleDir, trimmed, type Vine } from './vines';
-import { parseCuttings, parseParcels, parsePlaced, pruneCuttings, type Bouquet, type Cutting, type PlacedBouquet } from './bouquets';
+import { parseBouquet, parseCuttings, parseParcels, parsePlaced, pruneCuttings, type Bouquet, type Cutting, type PlacedBouquet } from './bouquets';
 import { POT_KINDS, SPECIES, SPECIES_IDS, type GardenPot, type SpeciesId, type Stage } from './species';
+import { arrive, birthdayGifts, giveBouquet, momentAt, noVisitors, notNow, parseVisitors, seeRequest, type Gift, type Thanks, type Visitors } from './visitors';
 
 export const SLOT_IDS = [
   'hang-l', 'sill-l', 'sill-r', 'hang-r',
@@ -143,6 +144,8 @@ export type GardenState = {
   seeds: SeedPacket[];
   /** Packages that came in the post: the ones still wrapped, and opened ones with their letters. */
   packages: Package[];
+  /** Who knocks at the door asking for bouquets, how fond of her they are, and what they gave her. */
+  visitors: Visitors;
 };
 
 /** Her tag, the tags she has sent to, and how many bouquets came since she last opened the post box. */
@@ -226,6 +229,7 @@ export function starterGarden(now: number): GardenState {
     weatherSeen: {},
     seeds: [],
     packages: [],
+    visitors: noVisitors(now),
   };
 }
 
@@ -791,6 +795,7 @@ export function parseSave(input: unknown, now = Date.now()): GardenState | null 
     weatherSeen: parseWeatherSeen(raw.weatherSeen),
     seeds: parseSeeds(raw.seeds, designs),
     packages: parsePackages(raw.packages),
+    visitors: parseVisitors(raw.visitors, plants.map((p) => p.species), now, parseBouquet),
   };
 }
 
@@ -805,4 +810,51 @@ function parseSeeds(v: unknown, designs: Designs): SeedPacket[] {
     if (out.length < MAX_PACKETS) out.push({ id: x.id, variety: x.variety, count: Math.min(MAX_SEEDS, count), made: x.made, ...(x.mystery === true ? { mystery: true as const } : {}) });
   }
   return out;
+}
+
+// ---- visitors at the door -------------------------------------------------------------------
+
+/** Someone may knock, depending on the hour, the weather and the time of year. */
+export function knock(state: GardenState, now: number, weather: { sky: 'clear' | 'cloudy' | 'rain'; night: boolean }, halloween: boolean, rand: () => number = Math.random): GardenState {
+  const visitors = arrive(state.visitors, now, momentAt(now, weather, halloween), rand, newId(), state.designs.pansies);
+  return visitors === state.visitors ? state : { ...state, visitors };
+}
+
+/** She opened the door to whoever knocked. */
+export function openDoor(state: GardenState): GardenState {
+  const visitors = seeRequest(state.visitors);
+  return visitors === state.visitors ? state : { ...state, visitors };
+}
+
+/** "Not now": they go, kindly, and someone comes another time. */
+export function sendAway(state: GardenState, now: number, rand: () => number = Math.random): GardenState {
+  return { ...state, visitors: notNow(state.visitors, now, rand) };
+}
+
+/** A visitor's bratek comes as seeds: the design is kept, and a packet goes in her tin. */
+function seedsFrom(g: GardenState, gift: Gift, now: number): GardenState {
+  if (gift.kind !== 'design') return g;
+  const kept = g.designs.pansies.some((d) => d.id === gift.design.id) ? g : savePansyDesign(g, gift.design);
+  return addSeeds(kept, designRef(gift.design.id), gift.count, now);
+}
+
+/**
+ * She hands the visitor the bouquet: its stems are cut from her plants, and their thanks (petals,
+ * a heart, perhaps a gift) are kept. Null if nobody is waiting.
+ */
+export function giveToVisitor(state: GardenState, bouquet: Bouquet, cutFrom: string[], night: boolean, now: number, rand: () => number = Math.random): { garden: GardenState; thanks: Thanks } | null {
+  const given = giveBouquet(state.visitors, bouquet, night, now, rand);
+  if (!given) return null;
+  let garden: GardenState = { ...cutStems(state, cutFrom, now), visitors: given.visitors };
+  if (given.thanks.gift) garden = seedsFrom(garden, given.thanks.gift, now);
+  return { garden, thanks: given.thanks };
+}
+
+/** On her birthday the visitors she knows leave her gifts at the door, once a year. */
+export function birthdayAtDoor(state: GardenState, now: number): { garden: GardenState; gifts: ReturnType<typeof birthdayGifts>['gifts'] } {
+  const { visitors, gifts } = birthdayGifts(state.visitors, now);
+  if (gifts.length === 0) return { garden: visitors === state.visitors ? state : { ...state, visitors }, gifts };
+  let garden: GardenState = { ...state, visitors };
+  for (const { gift } of gifts) garden = seedsFrom(garden, gift, now);
+  return { garden, gifts };
 }

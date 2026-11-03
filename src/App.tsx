@@ -2,6 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   addDrawing,
   addSeeds,
+  birthdayAtDoor,
+  giveToVisitor,
+  knock,
+  openDoor,
+  sendAway,
   giveAway,
   secretDesigns,
   openPackage,
@@ -87,6 +92,13 @@ import { packagePayload } from './garden/packages';
 import { FirstCover } from './ui/FirstCover';
 import { TRAIT_WORDS } from './ui/traitWords';
 import { WhatsNew } from './ui/WhatsNew';
+import { Doorstep } from './ui/Doorstep';
+import { VisitorBook } from './ui/VisitorBook';
+import { goodbyeLine, say, VISITOR_NAME } from './ui/visitorWords';
+import { ambienceIfMade } from './sound/ambience';
+import { FLYING } from './scene/VisitorArt';
+import { makeRequest, VISITOR_IDS, type Thanks, type VisitorId } from './garden/visitors';
+import { occasionShown } from './theme/seasons';
 import { LATEST } from './changelog';
 import { VisitView, visitorNotice, type Visiting } from './ui/Visit';
 import { ViewSwiper } from './ui/ViewSwiper';
@@ -158,7 +170,13 @@ function devOverrides(g: GardenState): GardenState {
     patch.weatherMode = 'manual';
     patch.manual = { sky: weather, night: q.get('night') === '1' };
   }
-  return updateSettings(g, patch);
+  // ?knock=atrament has that visitor knocking straight away, to see the door
+  const knocker = q.get('knock');
+  const withVisitor =
+    knocker && (VISITOR_IDS as readonly string[]).includes(knocker)
+      ? { ...g, visitors: { ...g.visitors, request: makeRequest(knocker as VisitorId, g.visitors, Date.now(), Math.random, newId(), g.designs.pansies) } }
+      : g;
+  return updateSettings(withVisitor, patch);
 }
 
 /** Dev only: ?vines=pansy@sill-1:0.6,rose@sill-3:1,pansy@sill-2:1:left draws vines for the art prototype. */
@@ -220,7 +238,7 @@ type Mode =
   /** one of her drawings on the shelves */
   | { kind: 'drawing'; id: string }
   /** making a bouquet, looking at one on the shelves, or the box of parcels on the floor */
-  | { kind: 'bouquetStudio' }
+  | { kind: 'bouquetStudio'; forVisitor?: true }
   | { kind: 'bouquet'; id: string }
   | { kind: 'parcels' }
   | { kind: 'post' }
@@ -293,6 +311,10 @@ export function App() {
   const [diaryOpen, setDiaryOpen] = useState(false);
   /** The album book: shut, open on its shelf (null), or open on one picture. */
   const [newsOpen, setNewsOpen] = useState(false);
+  /** The front door, opened to whoever knocked; and their thanks once they have the bouquet. */
+  const [doorOpen, setDoorOpen] = useState(false);
+  const [thanks, setThanks] = useState<Thanks | null>(null);
+  const [visitorsOpen, setVisitorsOpen] = useState(false);
   const [memoriesOpen, setMemoriesOpen] = useState<{ at: string | null } | false>(false);
   const [easel, setEasel] = useState<Easel | null>(null);
   const [memoryBusy, setMemoryBusy] = useState<string | null>(null);
@@ -451,6 +473,38 @@ export function App() {
     if (!hasGarden || AWAY) return;
     update((g) => sawWeather(g, Date.now(), weather));
   }, [hasGarden, weather.sky, weather.night, dayOfMonth, update]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // someone may knock at the door, now and then, depending on the hour and the weather; on her
+  // birthday, the ones she knows leave her gifts instead
+  const halloween = occasionShown(now) === 'halloween';
+  const letterRead = garden?.settings.letter !== 'unread';
+  useEffect(() => {
+    if (!hasGarden || AWAY) return;
+    const g = gardenRef.current;
+    // nobody knocks until she has read the letter and the garden is hers
+    if (!g || g.settings.letter === 'unread' || welcoming) return;
+    const t = Date.now();
+    const bday = birthdayAtDoor(g, t);
+    if (bday.gifts.length > 0) {
+      update((x) => birthdayAtDoor(x, t).garden);
+      const w = words(g.settings.lang, g.settings.me);
+      setNotice({
+        title: w.t('Happy birthday!', 'Wszystkiego najlepszego!'),
+        text: w.t(
+          `Your visitors left you presents at the door: ${bday.gifts.map((x) => say(w, VISITOR_NAME[x.visitor])).join(', ')}.`,
+          `Goście zostawili Ci prezenty pod drzwiami: ${bday.gifts.map((x) => say(w, VISITOR_NAME[x.visitor])).join(', ')}.`,
+        ),
+      });
+      return;
+    }
+    update((x) => knock(x, t, weather, halloween));
+  }, [hasGarden, now, weather.sky, weather.night, halloween, welcoming, letterRead, update]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // a knock at the door when someone new arrives (heard only with the room's sounds on)
+  const knockingId = garden?.visitors.request && !garden.visitors.request.seen ? garden.visitors.request.id : null;
+  useEffect(() => {
+    if (knockingId) ambienceIfMade()?.effect('knock');
+  }, [knockingId]);
 
   // when rain stops by day, a rainbow stays over the lake for a while
   const lastSky = useRef(weather.sky);
@@ -867,6 +921,8 @@ export function App() {
   const vines: VineSpec[] = devVineList.length ? devVineList : vineSpecs(garden, shown.plants);
 
   const cardPlant = mode.kind === 'card' ? garden.plants.find((p) => p.id === mode.id) : undefined;
+  /** Whoever is at the door with a request, if anyone. */
+  const waiting = garden.visitors.request;
   const stylePlant = mode.kind === 'style' ? garden.plants.find((p) => p.id === mode.id) : undefined;
   const studioPlant = mode.kind === 'potStudio' && mode.forPlant ? garden.plants.find((p) => p.id === mode.forPlant) : undefined;
 
@@ -891,7 +947,7 @@ export function App() {
       >
         <ViewSwiper
           view={settings.view}
-          enabled={mode.kind === 'idle' && !lapse && !letterOpen && !diaryOpen && !bookOpen && !memoriesOpen && !newsOpen && !easel && !welcoming && !askTag}
+          enabled={mode.kind === 'idle' && !lapse && !letterOpen && !diaryOpen && !bookOpen && !memoriesOpen && !newsOpen && !easel && !welcoming && !askTag && !doorOpen && !thanks && !visitorsOpen}
           onChange={(view) => setSettings({ view })}
           room={
             <Scene
@@ -914,6 +970,7 @@ export function App() {
               onPost={sharing ? openPost : undefined}
               rainbow={rainbow}
               moments={moments}
+              flyer={waiting && FLYING.includes(waiting.visitor) ? waiting.visitor : null}
               candle={candle}
               candleOn={candleOn}
               onCandle={() => setSettings({ candleLit: !candleOn })}
@@ -975,6 +1032,9 @@ export function App() {
           newsUnseen={settings.seenVersion !== null && settings.seenVersion !== LATEST}
           onDecorate={openDecorate}
           onBouquet={() => setMode({ kind: 'bouquetStudio' })}
+          door={waiting ? (waiting.seen ? 'waiting' : 'knocking') : null}
+          onDoor={() => setDoorOpen(true)}
+          onVisitors={() => setVisitorsOpen(true)}
           onPost={openPost}
           postTag={garden.post.tag}
           onOwnRoom={(edit) => {
@@ -1003,6 +1063,8 @@ export function App() {
             onPaint={isHanging(mode.slot) ? null : () => void openEasel(null, null, mode.slot)}
             seeds={garden.seeds}
             designs={garden.designs}
+            unlocked={garden.visitors.unlocked}
+            met={Object.keys(garden.visitors.friends) as VisitorId[]}
             onSow={(packetId) => {
               const t = Date.now();
               setNow(t);
@@ -1098,6 +1160,18 @@ export function App() {
           <BouquetStudio
             garden={garden}
             now={now}
+            forVisitor={mode.forVisitor ? waiting : null}
+            night={weather.night}
+            onGive={(b, cutFrom) => {
+              const g = gardenRef.current;
+              if (!g) return;
+              const t = Date.now();
+              const given = giveToVisitor(g, { ...b, at: t }, cutFrom, weather.night, t);
+              if (!given) return;
+              setGarden(given.garden);
+              setThanks(given.thanks);
+              setMode({ kind: 'idle' });
+            }}
             canSend={sharing}
             onClaim={claim}
             onSend={async (b, cutFrom, to) => {
@@ -1424,6 +1498,33 @@ export function App() {
             onLater={() => setSettings({ tagAsked: true })}
           />
         )}
+        {(doorOpen || thanks) && (
+          <Doorstep
+            key={thanks ? 'thanks' : (waiting?.id ?? 'door')}
+            request={waiting}
+            thanks={thanks}
+            weather={weather}
+            onOpen={() => update(openDoor)}
+            onMake={() => {
+              setDoorOpen(false);
+              setMode({ kind: 'bouquetStudio', forVisitor: true });
+            }}
+            onNotNow={() => {
+              const who = gardenRef.current?.visitors.request?.visitor;
+              update((g) => sendAway(g, Date.now()));
+              setDoorOpen(false);
+              if (who) {
+                const w = words(settings.lang, settings.me);
+                setNotice({ title: say(w, VISITOR_NAME[who]), text: `„${goodbyeLine(w, who, Math.floor(Math.random() * 6))}”` });
+              }
+            }}
+            onClose={() => {
+              setDoorOpen(false);
+              setThanks(null);
+            }}
+          />
+        )}
+        {visitorsOpen && <VisitorBook visitors={garden.visitors} onClose={() => setVisitorsOpen(false)} />}
         {newsOpen && <WhatsNew onClose={() => setNewsOpen(false)} />}
         {letterOpen && !lapse && (
           <Letter

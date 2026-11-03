@@ -24,6 +24,8 @@ import { leanFor, runnerStart, VINE_PHASE, VineRunner, Vines, type PlacedVine, t
 import { useGrowingVines } from './useGrowingVines';
 import { FloorParcels } from '../ui/Bouquets';
 import { Letterbox } from './Letterbox';
+import { VisitorArt } from './VisitorArt';
+import type { VisitorId } from '../garden/visitors';
 
 /** Where each window spot stands: x, the surface it stands on, the drawing scale and the tap area's width. */
 const SPOT_POS: Record<WindowSpot, { x: number; base: number; scale: number; w: number; h: number }> = {
@@ -161,7 +163,7 @@ type Calendar = { season: Season; occasion: Occasion };
 const phaseAt = (now: number) => Math.round(moonPhase(now) * 100) / 100;
 
 /** Sky, landscape, wall and window frame: they only change with the theme and the weather. */
-const Backdrop = memo(function Backdrop({ theme, sky, night, twilight, season, occasion, paper, outside }: Lit & Calendar & { paper: OwnPaper | null; outside: Outside }) {
+const Backdrop = memo(function Backdrop({ theme, sky, night, twilight, season, occasion, paper, outside, flyer }: Lit & Calendar & { paper: OwnPaper | null; outside: Outside; flyer: VisitorId | null }) {
   const weather = { sky, night, twilight };
   return (
     <>
@@ -171,6 +173,12 @@ const Backdrop = memo(function Backdrop({ theme, sky, night, twilight, season, o
         <SeasonBranch season={season} />
         <LakeLife visitors={outside.visitors} fog={outside.fog} />
         <SeasonAir season={season} weather={weather} />
+        {/* a visitor who flies (the bumblebee, the ghost) waits by the window while they're at the door */}
+        {flyer && (
+          <g className="window-flyer" transform="translate(150 168) scale(0.46)">
+            <VisitorArt id={flyer} />
+          </g>
+        )}
         {/* outside, so they pass behind the shelf and the plants */}
         {occasion === 'halloween' && night && sky !== 'rain' && <Bats />}
         {sky === 'rain' && <Rain />}
@@ -286,7 +294,9 @@ const SillBoard = memo(Sill);
 const Trinket = memo(ShelfTrinket);
 const Candle = memo(SillCandle);
 
-export function Scene({ theme, weather, viewH, vines, still = false, moments = [], onParcels, onPost, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, onSign, onCurtains, rainbow = false, candle = null, candleOn, onCandle, ...rest }: {
+export function Scene({ theme, weather, viewH, vines, still = false, moments = [], onParcels, onPost, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, onSign, onCurtains, rainbow = false, candle = null, candleOn, onCandle, flyer = null, ...rest }: {
+  /** A flying visitor waiting at the door, seen outside the window meanwhile. */
+  flyer?: VisitorId | null;
   theme: Theme;
   weather: Weather;
   viewH: number;
@@ -354,6 +364,7 @@ export function Scene({ theme, weather, viewH, vines, still = false, moments = [
         occasion={cal.occasion}
         paper={paper}
         outside={outside}
+        flyer={flyer}
       />
 
       {/* vines climb behind the shelf board, like the ropes, and behind the pots on the sill */}

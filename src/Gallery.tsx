@@ -1,3 +1,5 @@
+import { VISITOR_IDS } from './garden/visitors';
+import { VisitorArt } from './scene/VisitorArt';
 import { POT_KINDS, SPECIES, SPECIES_IDS, STAGES, type SpeciesId } from './garden/species';
 import { RIBBONS, VASES } from './garden/bouquets';
 import { BouquetArt, ParcelBox } from './plants/Bouquet';
@@ -92,6 +94,22 @@ export function BouquetGallery() {
       <g transform="translate(360 400) scale(1.4)">
         <ParcelBox count={2} />
       </g>
+    </svg>
+  );
+}
+
+/** Dev-only sheet of every visitor in every mood, opened with ?visitors. */
+export function VisitorGallery() {
+  const moods = ['waiting', 'happy', 'delighted', 'puzzled'] as const;
+  return (
+    <svg viewBox={`0 0 400 ${VISITOR_IDS.length * 120 + 30}`} style={{ width: '100%', background: 'var(--wall)' }}>
+      {VISITOR_IDS.map((v, r) =>
+        moods.map((m, c) => (
+          <g key={`${v}-${m}`} transform={`translate(${52 + c * 98} ${150 + r * 120}) scale(0.72)`}>
+            <VisitorArt id={v} mood={m} />
+          </g>
+        )),
+      )}
     </svg>
   );
 }

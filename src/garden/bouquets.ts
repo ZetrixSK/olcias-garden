@@ -8,8 +8,10 @@ import { SPECIES_IDS, type SpeciesId } from './species';
  * its colours (like a pressed flower does), so it looks the same in anyone's garden it's sent to.
  */
 
-export const VASES = ['jar', 'jug', 'bottle'] as const;
+export const VASES = ['jar', 'jug', 'bottle', 'can', 'cauldron'] as const;
 export type Vase = (typeof VASES)[number];
+/** The vases she always has; the others are gifts from visitors. */
+export const BASE_VASES: readonly Vase[] = ['jar', 'jug', 'bottle'];
 
 /** Ribbons tied round the vase; null for none. The same curated colours as her pots. */
 export const RIBBONS = ['#c95d7f', '#2b2229', '#f2c4cf', '#b9a3e3', '#c9a45c', '#a7b598'] as const;
