@@ -82,12 +82,12 @@ const PlanterArt = memo(function PlanterArt({ plant, stage, wet, shape, potDesig
             {plant.trait && <TraitGlow kind={plant.trait.kind} stage={stage} species={plant.species} />}
             {outgrown && (
               <g key={`was-${grew}`} className="outgrown">
-                <PlantArt species={plant.species} stage={outgrown} palette={palette} label={label} />
+                <PlantArt species={plant.species} stage={outgrown} palette={palette} label={label} rim={RIM[shape][0]} />
               </g>
             )}
             <g key={`grew-${grew}`} className={grew ? (stage === 'bloom' ? 'unfold bloom-in' : 'unfold') : undefined}>
               <g key={last ?? 0} className={last ? 'wobble' : undefined}>
-                <PlantArt species={plant.species} stage={stage} palette={palette} label={label} />
+                <PlantArt species={plant.species} stage={stage} palette={palette} label={label} rim={RIM[shape][0]} />
               </g>
             </g>
             {plant.trait && <TraitTouches kind={plant.trait.kind} stage={stage} species={plant.species} id={plant.id} />}

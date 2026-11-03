@@ -299,9 +299,18 @@ function useFitted(text: string, room: number) {
       setK(w > room ? room / w : 1);
     };
     measure();
-    void document.fonts?.ready.then(measure);
+    // the handwriting may not have arrived yet (on an iPhone it often hasn't even been asked for):
+    // ask for it, and measure again whenever fonts finish loading
+    const fonts = document.fonts;
+    void fonts?.ready.then(measure);
+    void fonts?.load('700 21px Kalam').then(measure, () => {});
+    void fonts?.load('600 22px "Grenze Gotisch"').then(measure, () => {});
+    fonts?.addEventListener?.('loadingdone', measure);
+    const late = window.setTimeout(measure, 1500);
     return () => {
       live = false;
+      fonts?.removeEventListener?.('loadingdone', measure);
+      window.clearTimeout(late);
     };
   }, [text, room]);
   return { ref, k };

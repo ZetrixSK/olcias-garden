@@ -1,3 +1,4 @@
+import { prefersStill } from '../motion';
 import { useEffect, useState } from 'react';
 import { FLYING, VisitorArt, type VisitorMood } from '../scene/VisitorArt';
 import { Blossom } from '../scene/MarketArt';
@@ -144,6 +145,37 @@ function FrontDoor({ open, knocking, visitor }: { open: boolean; knocking: boole
   );
 }
 
+/**
+ * The door once it has swung open, into the room: seen from the side now, its far edge nearer to
+ * us and so taller, its planks, window and knocker all foreshortened.
+ */
+function OpenDoor({ shown }: { shown: boolean }) {
+  return (
+    <g className={`open-door${shown ? ' shown' : ''}`}>
+      <path d="M110,470 L110,178 Q84,-35 58,156 L58,506 Z" fill="#8f6140" stroke="var(--ink)" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M110,470 L110,178 Q104,140 98,118 L98,476 Z" fill="#000" opacity="0.12" />
+      <g stroke="#75492b" strokeWidth="1.1">
+        {['M99.6,477.2 L99.6,115.0', 'M89.2,484.4 L89.2,78.2', 'M78.8,491.6 L78.8,73.8', 'M68.4,498.8 L68.4,101.8'].map((d) => (
+          <path key={d} d={d} />
+        ))}
+      </g>
+      <g strokeWidth="5" stroke="#75492b">
+        {['M110.0,300.0 L58.0,302.0', 'M110.0,430.0 L58.0,458.0'].map((d) => (
+          <path key={d} d={d} />
+        ))}
+      </g>
+      <ellipse cx="84.0" cy="171.2" rx="12" ry="28.6" fill="#f2dfb5" stroke="var(--ink)" strokeWidth="1.4" />
+      <path d="M72.0,171.2 L96.0,171.2 M84.0,142.6 L84.0,199.8" stroke="#75492b" strokeWidth="2.6" />
+      <ellipse cx="84.0" cy="171.2" rx="12" ry="28.6" fill="none" stroke="var(--ink)" strokeWidth="1.4" />
+      <ellipse cx="84.0" cy="246.0" rx="2.4" ry="5.4" fill="#c9a45c" stroke="var(--ink)" strokeWidth="0.9" />
+      <ellipse cx="84.0" cy="260.0" rx="5" ry="12.6" fill="none" stroke="#c9a45c" strokeWidth="3" />
+      <ellipse cx="63.7" cy="337.1" rx="3" ry="6" fill="#c9a45c" stroke="var(--ink)" strokeWidth="1" />
+      <path d="M58,156 L58,506" stroke="#b4855c" strokeWidth="2.4" />
+      <path d="M58,156 L58,506" stroke="var(--ink)" strokeWidth="1.2" />
+    </g>
+  );
+}
+
 /** The room side of the doorway: wall, frame, floor and the mat. */
 function Inside() {
   return (
@@ -263,7 +295,8 @@ export function Doorstep({ request, thanks, weather, onOpen, onMake, onNotNow, o
   const { t } = w;
   const visitor: VisitorId | null = thanks?.visitor ?? request?.visitor ?? null;
   const [open, setOpen] = useState(!!thanks || !!request?.seen);
-  const [shown, setShown] = useState(open);
+  /** The door is open (the closed one folds away and this one takes its place). */
+  const [swung, setSwung] = useState(open);
   /** Which of their lines they say this time. */
   const [pick] = useState(() => Math.floor(Math.random() * 6));
   /** She'd opened the door to them before, and they waited. */
@@ -283,12 +316,12 @@ export function Doorstep({ request, thanks, weather, onOpen, onMake, onNotNow, o
       window.clearInterval(loop);
     };
   }, [open]);
-  // the visitor steps into view once the door has swung
+  // the open door is shown once the closed one has folded away
   useEffect(() => {
-    if (!open || shown) return;
-    const timer = window.setTimeout(() => setShown(true), 650);
+    if (!open || swung) return;
+    const timer = window.setTimeout(() => setSwung(true), prefersStill() ? 0 : 380);
     return () => window.clearTimeout(timer);
-  }, [open, shown]);
+  }, [open, swung]);
   if (!visitor) return null;
   const name = say(w, VISITOR_NAME[visitor]);
   const mood: VisitorMood = thanks ? (thanks.petals >= 5 ? 'delighted' : thanks.petals >= 3 ? 'happy' : 'puzzled') : 'waiting';
@@ -316,13 +349,14 @@ export function Doorstep({ request, thanks, weather, onOpen, onMake, onNotNow, o
           <Outside weather={weather} />
           {/* the dusk falls on the room, not on the visitor, who stands in the lantern's light */}
           {weather.night && <rect x="-200" y="0" width="800" height="560" fill="#24224f" opacity="0.18" pointerEvents="none" />}
-          {open && shown && (
+          {open && (
             <g className="door-visitor" transform={`translate(200 ${flying ? 404 : 452}) scale(1.25)`}>
               <VisitorArt id={visitor} mood={mood} />
             </g>
           )}
           <Lantern lit={lit} />
-          <FrontDoor open={open} knocking={knocking} visitor={visitor} />
+          <OpenDoor shown={swung} />
+          {!swung && <FrontDoor open={open} knocking={knocking} visitor={visitor} />}
         </svg>
         <div className="doorstep-card">
           {knocking ? (

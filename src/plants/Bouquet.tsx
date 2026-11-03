@@ -16,6 +16,18 @@ const MOUTH: Record<Vase, { y: number; w: number }> = {
   cauldron: { y: -24, w: 13 },
 };
 
+/**
+ * Where the stems start, below the mouth, and how widely they fan out. A bottle's are gathered in
+ * its narrow neck, so they leave it upwards instead of out of its shoulders.
+ */
+const STEMS: Record<Vase, { below: number; fan: number }> = {
+  jar: { below: 10, fan: 1 },
+  jug: { below: 10, fan: 1 },
+  bottle: { below: 3, fan: 0.55 },
+  can: { below: 9, fan: 1 },
+  cauldron: { below: 8, fan: 1.05 },
+};
+
 /** The back of the vase's mouth, drawn behind the stems. */
 function VaseBack({ vase }: { vase: Vase }) {
   const m = MOUTH[vase];
@@ -116,11 +128,12 @@ export function BouquetArt({ bouquet, showNote = true }: { bouquet: Pick<Bouquet
   const { stems, vase, ribbon, seed } = bouquet;
   const r = rng(seed * 7919 + 13);
   const n = stems.length;
-  const spread = Math.min(78, 18 + n * 9);
   const m = MOUTH[vase];
+  const neck = STEMS[vase];
+  const spread = Math.min(78, 18 + n * 9) * neck.fan;
   const placed = stems.map((stem, i) => {
     const t = n === 1 ? 0.5 : i / (n - 1);
-    const angle = (t - 0.5) * spread + (r() - 0.5) * 10;
+    const angle = (t - 0.5) * spread + (r() - 0.5) * 10 * neck.fan;
     const s = 0.6 + r() * 0.12 - Math.abs(t - 0.5) * 0.08;
     const dx = (t - 0.5) * m.w * 0.9;
     return { stem, angle, s, dx, key: i, sprigSeed: hash(`${bouquet.id}/${i}/${seed}`) };
@@ -131,7 +144,7 @@ export function BouquetArt({ bouquet, showNote = true }: { bouquet: Pick<Bouquet
     <g>
       <VaseBack vase={vase} />
       {order.map((p) => (
-        <g key={p.key} transform={`translate(${p.dx.toFixed(1)} ${m.y + 10}) rotate(${p.angle.toFixed(1)}) scale(${p.s.toFixed(2)})`}>
+        <g key={p.key} transform={`translate(${p.dx.toFixed(1)} ${m.y + neck.below}) rotate(${p.angle.toFixed(1)}) scale(${p.s.toFixed(2)})`}>
           <PressedSprig species={p.stem.species} palette={stemPalette(p.stem)} seed={p.sprigSeed} />
         </g>
       ))}

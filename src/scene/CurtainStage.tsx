@@ -1,9 +1,10 @@
+import { prefersStill } from '../motion';
 import { useEffect, useRef, useState } from 'react';
 import type { Theme } from '../theme/palettes';
 import { CurtainCover, Curtains } from './Room';
 
 const DRAW_MS = 1200;
-const still = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+const still = prefersStill;
 const ease = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
 
 /**

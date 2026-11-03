@@ -9,10 +9,10 @@ import { HollyhockPlant, PumpkinPlant } from './Gothic';
 import { BatFlowerPlant, MoonflowerPlant } from './Night';
 
 /** Draws any species at any stage, rooted at (0,0) on the soil. */
-export function PlantArt({ species, stage, palette, label }: { species: SpeciesId; stage: Stage; palette?: PansyColors[]; label?: string }) {
+export function PlantArt({ species, stage, palette, label, rim }: { species: SpeciesId; stage: Stage; palette?: PansyColors[]; label?: string; rim?: number }) {
   switch (species) {
     case 'pansy':
-      return <PansyPlant stage={stage} palette={palette} label={label} />;
+      return <PansyPlant stage={stage} palette={palette} label={label} rim={rim} />;
     case 'tulip':
       return <TulipPlant stage={stage} label={label} />;
     case 'rose':

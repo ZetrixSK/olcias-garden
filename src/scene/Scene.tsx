@@ -25,7 +25,7 @@ import { useGrowingVines } from './useGrowingVines';
 import { FloorParcels } from '../ui/Bouquets';
 import { Letterbox } from './Letterbox';
 import { VisitorArt } from './VisitorArt';
-import { Garland, Milton } from './MarketArt';
+import { Garland, Milton, SpeechBubble } from './MarketArt';
 import type { VisitorId } from '../garden/visitors';
 
 /** Where each window spot stands: x, the surface it stands on, the drawing scale and the tap area's width. */
@@ -248,9 +248,7 @@ const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hi
             </g>
           )}
           {milton && miltonSays && (
-            <foreignObject x="96" y="708" width="150" height="64" className="milton-bubble-box" pointerEvents="none">
-              <div className="milton-bubble">{miltonSays}</div>
-            </foreignObject>
+            <SpeechBubble x={236} y={798} text={miltonSays} />
           )}
         </g>
         {occasion === 'halloween' ? (

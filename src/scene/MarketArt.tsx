@@ -693,3 +693,146 @@ export function Garland({ charms, from = [62, 228], to = [338, 228], sag = 14 }:
     </g>
   );
 }
+
+/**
+ * A speech bubble drawn in the picture itself (not as HTML laid over it, which Safari puts in the
+ * wrong place): the words wrapped onto a few short lines, with a little tail pointing down.
+ */
+export function SpeechBubble({ x, y, text, maxChars = 22 }: { x: number; y: number; text: string; maxChars?: number }) {
+  const lines: string[] = [];
+  for (const word of text.split(/\s+/)) {
+    const last = lines[lines.length - 1];
+    if (last !== undefined && (last + ' ' + word).length <= maxChars) lines[lines.length - 1] = `${last} ${word}`;
+    else lines.push(word);
+  }
+  const lineH = 11;
+  const w = Math.min(maxChars, Math.max(...lines.map((l) => l.length))) * 5.2 + 16;
+  const h = lines.length * lineH + 9;
+  return (
+    <g className="speech-bubble" transform={`translate(${x} ${y})`} pointerEvents="none">
+      <path
+        d={`M${-w / 2 + 8},${-h} L${w / 2 - 8},${-h} Q${w / 2},${-h} ${w / 2},${-h + 8} L${w / 2},-8 Q${w / 2},0 ${w / 2 - 8},0 L5,0 L0,7 L-4,0 L${-w / 2 + 8},0 Q${-w / 2},0 ${-w / 2},-8 L${-w / 2},${-h + 8} Q${-w / 2},${-h} ${-w / 2 + 8},${-h} Z`}
+        fill="#fffaf0"
+        stroke={INK}
+        strokeWidth="1.1"
+        strokeLinejoin="round"
+      />
+      <text x="0" y={-h + 13.5} textAnchor="middle" fontFamily="Kalam, system-ui, sans-serif" fontSize="9.6" fill="#3d2633">
+        {lines.map((l, i) => (
+          <tspan key={i} x="0" dy={i === 0 ? 0 : lineH}>
+            {l}
+          </tspan>
+        ))}
+      </text>
+    </g>
+  );
+}
+
+/**
+ * What makes the stall a market and not just a counter: a hanging sign, bunting, seed jars, crates
+ * of pansies and a sack of seeds by day; candles, a crystal ball and moths round the lanterns by
+ * night. Drawn in the market scene's own space (the counter's middle at x 200, the ground at 268).
+ */
+export function StallDressing({ night, closed, sign }: { night: boolean; closed: boolean; sign: string }) {
+  const pansy = (top: string, low: string) => designColors({ id: top, name: '', top, low, face: 'whiskers', faceColor: '#2c1733', edge: null });
+  const flagA = night ? '#a98bc4' : '#ef9db3';
+  const flagB = night ? '#e2ad3f' : '#fbf2e6';
+  return (
+    <g>
+      {/* the sign, hung above the awning on two strings */}
+      <path d="M168,52 L176,72 M232,52 L224,72" stroke={INK} strokeWidth="1" />
+      <circle cx="168" cy="52" r="1.6" fill="#c9a45c" />
+      <circle cx="232" cy="52" r="1.6" fill="#c9a45c" />
+      <g transform="rotate(-2 200 80)">
+        <path d="M162,70 L238,70 L240,90 L160,90 Z" fill={night ? '#3a2650' : '#c88e5d'} {...ink} />
+        <path d="M165,73 L235,73 L236.6,87 L163.4,87 Z" fill={night ? '#4b3466' : '#e2ae7f'} />
+        <text x="200" y="84.6" textAnchor="middle" fontFamily="Kalam" fontWeight="700" fontSize="12.5" fill={night ? '#f2d16b' : '#7a3a4a'}>
+          {sign}
+        </text>
+        {!night && <PansyFlower x={168} y={80} s={0.13} c={pansy('#2c1733', '#f0a8c0')} />}
+        {!night && <PansyFlower x={232} y={80} s={0.13} c={pansy('#b48ad6', '#f3e2ee')} />}
+        {night && <path d="M172,76 C167,77 167,84 172,85 C169,82.6 169,78.4 172,76 Z M230,77 l0.8,2 l2,0.6 l-2,0.6 l-0.8,2 l-0.8,-2 l-2,-0.6 l2,-0.6 Z" fill="#f2d16b" />}
+      </g>
+      {/* bunting along the front of the awning */}
+      <path d="M86,106 Q200,124 314,106" fill="none" stroke={INK} strokeWidth="0.9" />
+      {Array.from({ length: 11 }, (_, i) => {
+        const t = (i + 0.5) / 11;
+        const x = 86 + 228 * t;
+        const y = 106 + 18 * 4 * t * (1 - t) * 0.5 + 0.6;
+        return <path key={i} d={`M${(x - 5).toFixed(1)},${y.toFixed(1)} L${(x + 5).toFixed(1)},${y.toFixed(1)} L${x.toFixed(1)},${(y + 9).toFixed(1)} Z`} fill={i % 2 ? flagA : flagB} {...thin} />;
+      })}
+      {/* grass along the bottom */}
+      <path d="M40,330 L40,300 C90,296 140,302 200,298 C260,302 310,296 360,300 L360,330 Z" fill={night ? '#3a4a3c' : '#a9c48c'} />
+      {[60, 96, 128, 272, 306, 338].map((x, i) => (
+        <path key={x} d={`M${x},302 l-2,-6 M${x + 3},302 l0,-8 M${x + 6},302 l2,-6`} stroke={night ? '#2c382d' : '#7f9f66'} strokeWidth="1.2" strokeLinecap="round" opacity={i % 2 ? 0.8 : 1} />
+      ))}
+      {!closed && (night ? (
+        <>
+          {/* a crystal ball and a candle on the counter */}
+          <g transform="translate(132 254)">
+            <path d="M-8,0 L8,0 L6,-4 L-6,-4 Z" fill="#3a2d3b" {...thin} />
+            <circle cx="0" cy="-12" r="9" fill="#c9b2ea" fillOpacity="0.85" {...thin} />
+            <path d="M-4,-17 C-2,-19 1,-19.6 3,-19" fill="none" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" />
+          </g>
+          <g transform="translate(268 254)">
+            <path d="M-3.6,0 L3.6,0 L3.6,-14 L-3.6,-14 Z" fill="#f4ecf4" {...thin} />
+            <g className="candle-flicker">
+              <path d="M0,-16 C-2.4,-20 0,-23 0,-24 C0.6,-22 2.4,-20 0,-16 Z" fill="#f6c25a" {...thin} />
+            </g>
+          </g>
+          {/* moths round the lanterns */}
+          {[[96, 130, 0], [306, 126, 1.2]].map(([x, y, d]) => (
+            <g key={x} className="moth-flit" style={{ animationDelay: `${-(d ?? 0)}s` }} transform={`translate(${x} ${y})`}>
+              <path d="M0,0 C-4,-4 -7,-2 -6,1 C-5,3 -2,2 0,0 C2,2 5,3 6,1 C7,-2 4,-4 0,0 Z" fill="#e8dcf2" {...thin} />
+            </g>
+          ))}
+          {/* a crate under a cloth, and a stack of old books */}
+          <g transform="translate(76 300)">
+            <path d="M-22,0 L22,0 L22,-24 L-22,-24 Z" fill="#6a4a52" {...ink} />
+            <path d="M-24,-24 C-12,-30 12,-30 24,-24 L22,-12 C20,-10 18,-12 16,-10 L-16,-10 C-18,-12 -20,-10 -22,-12 Z" fill="#7a5c9a" {...ink} />
+            <path d="M-6,-27 l0.8,2 l2,0.6 l-2,0.6 l-0.8,2 l-0.8,-2 l-2,-0.6 l2,-0.6 Z" fill="#f2d16b" />
+          </g>
+          <g transform="translate(326 300)">
+            <path d="M-16,0 L16,0 L16,-7 L-16,-7 Z" fill="#8a4a5c" {...ink} />
+            <path d="M-14,-7 L13,-7 L13,-13 L-14,-13 Z" fill="#4a5c8a" {...ink} />
+            <path d="M-12,-13 L11,-13 L11,-18 L-12,-18 Z" fill="#c9a45c" {...ink} />
+          </g>
+        </>
+      ) : (
+        <>
+          {/* little jars of seeds on the counter */}
+          {[[124, '#7a4a2a'], [140, '#e2ad3f'], [260, '#5a3a2a'], [276, '#9db58a']].map(([x, seeds]) => (
+            <g key={x as number} transform={`translate(${x} 255)`}>
+              <path d="M-5.6,0 L5.6,0 L5.6,-10 C5.6,-12 4,-12.6 3.6,-13 L-3.6,-13 C-4,-12.6 -5.6,-12 -5.6,-10 Z" fill="#e6f0f0" fillOpacity="0.8" {...thin} />
+              <path d="M-5,-0.6 L5,-0.6 L5,-6 C2,-7 -2,-5 -5,-6 Z" fill={seeds as string} />
+              <path d="M-4,-14.6 L4,-14.6 L4,-12.6 L-4,-12.6 Z" fill="#ef9db3" {...thin} />
+            </g>
+          ))}
+          {/* crates of potted pansies on the left */}
+          <g transform="translate(76 300)">
+            <path d="M-24,0 L24,0 L24,-20 L-24,-20 Z" fill="#c88e5d" {...ink} />
+            <path d="M-24,-10 L24,-10 M-8,-20 L-8,0 M8,-20 L8,0" stroke="#a26d41" strokeWidth="1.1" />
+            {[[-14, '#2c1733', '#f0a8c0'], [0, '#f0b5c7', '#fbe3ea'], [14, '#7fa3d6', '#dbe7f6']].map(([x, a, b]) => (
+              <g key={x as number} transform={`translate(${x} -20)`}>
+                <path d="M-6,0 L6,0 L7,-8 L-7,-8 Z" fill="#c97a5a" {...thin} />
+                <path d="M-3,-8 C-5,-12 -2,-14 -1,-10 M3,-8 C5,-12 2,-14 1,-10" fill="#7fa36a" stroke={INK} strokeWidth="0.6" />
+                <PansyFlower x={0} y={-14} s={0.2} c={pansy(a as string, b as string)} />
+              </g>
+            ))}
+          </g>
+          {/* a sack of seeds and a watering can on the right */}
+          <g transform="translate(322 300)">
+            <path d="M-14,0 C-18,-6 -16,-18 -10,-22 C-12,-26 -4,-28 0,-25 C4,-28 12,-26 10,-22 C16,-18 18,-6 14,0 Z" fill="#d9bf8f" {...ink} />
+            <ellipse cx="0" cy="-22" rx="8" ry="2.6" fill="#7a4a2a" />
+            <path d="M-9,-8 C-3,-6 3,-6 9,-8" fill="none" stroke="#b39463" strokeWidth="1" />
+            <g transform="translate(22 0)">
+              <path d="M-7,0 L7,0 L8,-14 L-8,-14 Z" fill="#a2b5ae" {...thin} />
+              <path d="M7,-10 C11,-12 14,-16 16,-20" fill="none" stroke="#8fa39c" strokeWidth="2.4" strokeLinecap="round" />
+              <path d="M-5,-14 C-6,-21 5,-21 4,-14" fill="none" stroke={INK} strokeWidth="1.2" />
+            </g>
+          </g>
+        </>
+      ))}
+    </g>
+  );
+}

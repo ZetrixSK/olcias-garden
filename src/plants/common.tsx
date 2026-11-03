@@ -22,7 +22,8 @@ export function SeedMarker({ label }: { label: string }) {
     <g transform="translate(9 0) rotate(6)">
       <path className="ink" fill="#d8b98e" d="M-1.6,4 L-1.6,-24 L1.6,-24 L1.6,4 Z" />
       <path className="ink" fill="#efe1c6" d={`M${-w / 2},-38 L${w / 2},-38 L${w / 2},-23 L${-w / 2},-23 Z`} />
-      <text x="0" y="-27" textAnchor="middle" fontFamily="Kalam" fontWeight="700" fontSize="10.5" style={{ fill: 'var(--ink)' }}>
+      {/* squeezed to fit the board, whichever font the phone has to hand */}
+      <text x="0" y="-27" textAnchor="middle" fontFamily="Kalam" fontWeight="700" fontSize="10.5" textLength={w - 8} lengthAdjust="spacingAndGlyphs" style={{ fill: 'var(--ink)' }}>
         {label}
       </text>
     </g>

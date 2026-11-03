@@ -1,3 +1,4 @@
+import { prefersStill } from '../motion';
 import { useEffect, useRef, useState } from 'react';
 import type { VineSpec } from './Vines';
 
@@ -7,7 +8,7 @@ export const GROW_MS = 3200;
 type Tween = { from: number; to: number; start: number };
 
 const smooth = (x: number) => x * x * (3 - 2 * x);
-const prefersStill = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+
 
 /**
  * A vine that gets longer while she's looking (sent from the admin page, or the 3:00 check with the

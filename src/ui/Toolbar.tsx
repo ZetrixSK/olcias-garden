@@ -1,3 +1,4 @@
+import { phoneAsksStill } from '../motion';
 import { LATEST } from '../changelog';
 import { NEWS_ICON } from './WhatsNew';
 import { useState } from 'react';
@@ -61,6 +62,14 @@ const ALBUM_ICON = (
   </g>
 );
 
+/** A wrapped gift with a bow. */
+const GIFT_ICON = (
+  <g>
+    <path d="M-9,-3 L9,-3 L9,10 L-9,10 Z M-10,-7 L10,-7 L10,-3 L-10,-3 Z M0,-7 L0,10" />
+    <path d="M0,-7 C-3,-12 -8,-11 -6.4,-8.4 C-5.4,-7.4 -2.6,-7 0,-7 C2.6,-7 5.4,-7.4 6.4,-8.4 C8,-11 3,-12 0,-7" />
+  </g>
+);
+
 /** A little lantern, for the night market. */
 const LANTERN_ICON = (
   <g>
@@ -114,7 +123,7 @@ const LANG_ABOUT: Record<Lang, string> = {
   mixed: 'English, with Polish flower names',
 };
 
-export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onDiary, memory, onBook, onMemories, onNews, newsUnseen, onBackup, onPicture, onDecorate, onBouquet, onPost, postTag, onClock, onStudio, onOwnRoom, door, onDoor, onVisitors, onMarket, onBox, nightMarket }: {
+export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onDiary, memory, onBook, onMemories, onNews, newsUnseen, onBackup, onPicture, onDecorate, onBouquet, onPost, postTag, onClock, onStudio, onOwnRoom, door, onDoor, onVisitors, onMarket, onBox, nightMarket, giftWaiting, onGift }: {
   /** Someone at the door: knocking (she hasn't opened yet) or waiting with their note; null if nobody. */
   door: 'knocking' | 'waiting' | null;
   onDoor: () => void;
@@ -125,6 +134,9 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
   onBox: () => void;
   /** The night market is open and still has cards she hasn't turned over. */
   nightMarket: boolean;
+  /** A package still wrapped, waiting to be opened; tapping the gift opens it. */
+  giftWaiting: boolean;
+  onGift: () => void;
   settings: Settings;
   weather: Weather;
   status: WeatherStatus;
@@ -182,6 +194,17 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
         <Icon>{DIARY_ICON}</Icon>
         {memory && <span className="memory-dot" />}
       </button>
+      {giftWaiting && (
+        <button
+          className={`fab left ${settings.letter !== 'deleted' ? 'fourth' : 'third'} gift-fab`}
+          aria-label={t('A package is waiting', 'Czeka paczka')}
+          data-sound="page"
+          onClick={onGift}
+        >
+          <Icon>{GIFT_ICON}</Icon>
+          <span className="memory-dot" />
+        </button>
+      )}
       <button className="fab right second" aria-label={t('While you were away', 'Kiedy Cię nie było')} onClick={onClock}>
         <Icon>{CLOCK_ICON}</Icon>
       </button>
@@ -378,6 +401,26 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
               </button>
               <button aria-pressed={!settings.sound} onClick={() => onSettings({ sound: false })}>
                 {t('Off', 'Wył.')}
+              </button>
+            </div>
+            <p className="hint">{t('Button size', 'Rozmiar przycisków')}</p>
+            <div className="row three">
+              {(['s', 'm', 'l'] as const).map((h) => (
+                <button key={h} aria-pressed={settings.hud === h} onClick={() => onSettings({ hud: h })}>
+                  {h === 's' ? t('Small', 'Małe') : h === 'm' ? t('Medium', 'Średnie') : t('Large', 'Duże')}
+                </button>
+              ))}
+            </div>
+            <p className="hint">
+              {t('Animations', 'Animacje')}
+              {phoneAsksStill() && settings.motion === 'phone' && <small> · {t('the phone has Reduce Motion on', 'telefon ma ograniczony ruch')}</small>}
+            </p>
+            <div className="row two">
+              <button aria-pressed={settings.motion === 'phone'} onClick={() => onSettings({ motion: 'phone' })}>
+                {t('Like the phone', 'Jak w telefonie')}
+              </button>
+              <button aria-pressed={settings.motion === 'always'} onClick={() => onSettings({ motion: 'always' })}>
+                {t('Always', 'Zawsze')}
               </button>
             </div>
             <p className="hint">{t('Climbing vines', 'Pnącza')}</p>

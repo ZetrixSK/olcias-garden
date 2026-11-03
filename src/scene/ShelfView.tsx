@@ -228,11 +228,7 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
                   <g transform="scale(1.35)">
                     {figure.id === MILTON ? <Milton talking={fx?.kind === 'talk'} /> : <TrinketArt id={figure.id} />}
                   </g>
-                  {fx?.kind === 'talk' && fx.line && (
-                    <foreignObject x="-70" y="-118" width="140" height="64" className="milton-bubble-box">
-                      <div className="milton-bubble">{fx.line}</div>
-                    </foreignObject>
-                  )}
+
                 </g>
               ) : plant ? (
                 <GardenPlanter

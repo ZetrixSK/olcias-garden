@@ -1,3 +1,4 @@
+import { prefersStill, setMotion } from './motion';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   addDrawing,
@@ -102,7 +103,7 @@ import { TRAIT_WORDS } from './ui/traitWords';
 import { WhatsNew } from './ui/WhatsNew';
 import { Doorstep } from './ui/Doorstep';
 import { MarketStall } from './ui/Market';
-import { TrinketBox } from './ui/TrinketBox';
+import { FigureCard, TrinketBox } from './ui/TrinketBox';
 import { miltonSays } from './ui/marketWords';
 import { MILTON, nightMarketKey, toggleCharm, turnCard } from './garden/market';
 import { VisitorBook } from './ui/VisitorBook';
@@ -223,7 +224,7 @@ const AWAY_WATER = !new URLSearchParams(window.location.search).has('nowater');
 /** The shared copy is kept up to date in the real app; in dev only with ?sync, and never during a preview. */
 const SYNC = !AWAY && (import.meta.env.PROD || new URLSearchParams(window.location.search).has('sync'));
 
-const prefersStill = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+
 
 /**
  * A replay in progress: how far along it is, and whether it is fading out. When nothing grew only
@@ -263,6 +264,8 @@ type Mode =
   | { kind: 'bouquetStudio'; forVisitor?: true }
   | { kind: 'bouquet'; id: string }
   | { kind: 'parcels' }
+  /** one of her figures on the shelves */
+  | { kind: 'figure'; id: string }
   | { kind: 'post' }
   /** packing a package to send, and opening (or rereading) one that came */
   | { kind: 'compose' }
@@ -656,6 +659,10 @@ export function App() {
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', barColor);
   }, [barColor]);
 
+  // the garden moves unless the phone asks it to keep still and she hasn't chosen otherwise
+  const motion = settings?.motion ?? 'phone';
+  useEffect(() => setMotion(motion), [motion]);
+
   // the page's language follows hers, so the phone's keyboard and spellcheck do too
   const lang = settings?.lang ?? 'mixed';
   useEffect(() => {
@@ -744,6 +751,7 @@ export function App() {
       setMode({ kind: 'idle' });
     } else if (figure && !here && !drawing && !bouquet) {
       tapFigure(figure.id);
+      setMode(mode.kind === 'figure' && mode.id === figure.id ? { kind: 'idle' } : { kind: 'figure', id: figure.id });
     } else if (here) {
       setMode(mode.kind === 'card' && mode.id === here.id ? { kind: 'idle' } : { kind: 'card', id: here.id });
     } else if (drawing) {
@@ -979,6 +987,26 @@ export function App() {
   /** This weekend's night market, while it's open. */
   const nightKey = nightMarketKey(now, weather.night, garden.market);
   const nightLeft = nightKey !== null && !(garden.market.night?.key === nightKey && garden.market.night.cards.every((id) => garden.market.night!.bought.includes(id)));
+  /** Only one thing open at a time: opening one from the menu closes whatever else was open. */
+  const closeAll = () => {
+    setLetterOpen(false);
+    setBookOpen(false);
+    setDiaryOpen(false);
+    setMemoriesOpen(false);
+    setNewsOpen(false);
+    setVisitorsOpen(false);
+    setBoxOpen(false);
+    setMarketOpen(false);
+    setDoorOpen(false);
+    setThanks(null);
+    setMode({ kind: 'idle' });
+  };
+  const only =
+    <A extends unknown[]>(fn: (...a: A) => void) =>
+    (...a: A) => {
+      closeAll();
+      fn(...a);
+    };
   const openMarket = () => {
     const t = Date.now();
     const key = nightMarketKey(t, weather.night, garden.market);
@@ -1007,7 +1035,7 @@ export function App() {
     <LangProvider value={settings.lang}>
       <MeProvider value={settings.me}>
       <div
-        className={`garden theme-${theme}${uiDark ? ' ui-dark' : ''}${weather.night ? ' night' : ''}${weather.twilight === 'dusk' ? ' dusk' : ''}${lapse ? ' replaying' : ''}`}
+        className={`garden hud-${settings.hud} theme-${theme}${uiDark ? ' ui-dark' : ''}${weather.night ? ' night' : ''}${weather.twilight === 'dusk' ? ' dusk' : ''}${lapse ? ' replaying' : ''}`}
         style={paletteVars(theme, weather, seasonShown(now), own)}
       >
         <ViewSwiper
@@ -1083,36 +1111,41 @@ export function App() {
           onSettings={setSettings}
           onLiveWeather={liveWeather}
           locating={locating}
-          onLetter={() => setLetterOpen(true)}
-          onDiary={() => {
+          onLetter={only(() => setLetterOpen(true))}
+          onDiary={only(() => {
             setDiaryOpen(true);
             setDiarySeenOn(today);
-          }}
+          })}
           memory={memory}
-          onBackup={() => setMode({ kind: 'backup' })}
-          onPicture={() => setMode({ kind: 'picture' })}
-          onBook={openBook}
-          onMemories={() => setMemoriesOpen({ at: null })}
-          onNews={() => {
+          onBackup={only(() => setMode({ kind: 'backup' }))}
+          onPicture={only(() => setMode({ kind: 'picture' }))}
+          onBook={only(openBook)}
+          onMemories={only(() => setMemoriesOpen({ at: null }))}
+          onNews={only(() => {
             setNewsOpen(true);
             if (settings.seenVersion !== LATEST) setSettings({ seenVersion: LATEST });
-          }}
+          })}
           newsUnseen={settings.seenVersion !== null && settings.seenVersion !== LATEST}
-          onDecorate={openDecorate}
-          onBouquet={() => setMode({ kind: 'bouquetStudio' })}
+          onDecorate={only(openDecorate)}
+          onBouquet={only(() => setMode({ kind: 'bouquetStudio' }))}
           door={waiting ? (waiting.seen ? 'waiting' : 'knocking') : null}
-          onDoor={() => setDoorOpen(true)}
-          onVisitors={() => setVisitorsOpen(true)}
-          onMarket={openMarket}
-          onBox={() => setBoxOpen(true)}
+          onDoor={only(() => setDoorOpen(true))}
+          onVisitors={only(() => setVisitorsOpen(true))}
+          onMarket={only(openMarket)}
+          onBox={only(() => setBoxOpen(true))}
           nightMarket={nightLeft}
-          onPost={openPost}
+          giftWaiting={garden.packages.some((p) => p.opened === null)}
+          onGift={only(() => {
+            const first = gardenRef.current?.packages.find((p) => p.opened === null);
+            if (first) setMode({ kind: 'package', id: first.id });
+          })}
+          onPost={only(openPost)}
           postTag={garden.post.tag}
-          onOwnRoom={(edit) => {
+          onOwnRoom={only((edit) => {
             if (settings.own && !edit) setSettings({ useOwn: true });
             else setMode({ kind: 'roomStudio', draft: settings.own ?? startingRoom(settings.theme), editing: !!settings.own });
-          }}
-          onStudio={(what) =>
+          })}
+          onStudio={only((what) =>
             setMode(
               what === 'pot'
                 ? { kind: 'potStudio', editing: null, forPlant: null }
@@ -1120,12 +1153,12 @@ export function App() {
                   ? { kind: 'candleStudio', draft: settings.candle ?? (theme === 'witchy' ? { shape: 'taper', wax: '#2a1f2e' } : { shape: 'jar', wax: '#e7a7b6' }) }
                   : { kind: 'pansyStudio', editing: null, forSlot: null, forPlant: null },
             )
-          }
-          onClock={() => {
+          )}
+          onClock={only(() => {
             const o = opened.current;
             const tl = lastLapse.current ?? (o ? buildTimelapse(o.garden, o.at, Date.now()) : null);
             if (tl) playLapse(tl, false);
-          }}
+          })}
         />
         {mode.kind === 'pick' && (
           <PlantPicker
@@ -1617,6 +1650,17 @@ export function App() {
               return true;
             }}
             onClose={() => setMarketOpen(false)}
+          />
+        )}
+        {mode.kind === 'figure' && garden.market.figures.some((f) => f.id === mode.id) && (
+          <FigureCard
+            id={mode.id}
+            onMove={() => setMode({ kind: 'move', id: mode.id })}
+            onPutAway={() => {
+              update((g) => standFigure(g, mode.id, null));
+              setMode({ kind: 'idle' });
+            }}
+            onClose={() => setMode({ kind: 'idle' })}
           />
         )}
         {boxOpen && (

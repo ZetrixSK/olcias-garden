@@ -176,7 +176,11 @@ export function PansyBud({ x, y, rot, c }: { x: number; y: number; rot: number; 
 export const PANSY_MIX: PansyColors[] = [PANSY_OLCIA, PANSY_ROSY, PANSY_CREAM, PANSY_VELVET];
 
 /** A bratek at any stage; `palette` gives the colours of its four flowers (and its buds). */
-export function PansyPlant({ stage, palette = PANSY_MIX, label = 'bratek' }: { stage: Stage; palette?: PansyColors[]; label?: string }) {
+export function PansyPlant({ stage, palette = PANSY_MIX, label = 'bratek', rim = 46 }: { stage: Stage; palette?: PansyColors[]; label?: string; rim?: number }) {
+  // the leaves were drawn for the wide pot; in a narrower one they gather in closer, so they rest
+  // on its rim instead of hanging in the air beside it
+  const k = Math.max(0.6, Math.min(1, rim / 44));
+  const gather = k < 1 ? `scale(${k.toFixed(3)} 1)` : undefined;
   const [c0, c1, c2, c3] = [palette[0]!, palette[1 % palette.length]!, palette[2 % palette.length]!, palette[3 % palette.length]!];
   if (stage === 'seed') {
     return (
@@ -202,28 +206,34 @@ export function PansyPlant({ stage, palette = PANSY_MIX, label = 'bratek' }: { s
   if (stage === 'bud') {
     return (
       <g>
-        <PansyLeaf rot={-62} len={8} s={0.6} />
-        <PansyLeaf rot={58} len={9} s={0.62} />
+        <g transform={gather}>
+          <PansyLeaf rot={-62} len={8} s={0.6} />
+          <PansyLeaf rot={58} len={9} s={0.62} />
+        </g>
         <Stem d="M-1,0 C-3,-14 -8,-28 -12,-36 C-13,-38 -12,-40 -10,-40" w={1.8} />
         <Stem d="M1,0 C3,-16 8,-34 14,-44 C16,-46 18,-46 19,-44" w={1.8} />
         <PansyBud x={-10} y={-40} rot={20} c={c0} />
         <PansyBud x={19} y={-44} rot={-28} c={c3} />
         <PansyLeaf rot={-28} len={10} s={0.7} />
         <PansyLeaf rot={14} len={11} s={0.72} />
-        <PansyLeaf rot={-92} len={4} s={0.5} />
-        <PansyLeaf rot={88} len={4} s={0.52} />
+        <g transform={gather}>
+          <PansyLeaf rot={-92} len={4} s={0.5} />
+          <PansyLeaf rot={88} len={4} s={0.52} />
+        </g>
       </g>
     );
   }
   return (
     <g>
       {/* back leaves */}
-      <PansyLeaf rot={-70} len={14} s={1.05} />
-      <PansyLeaf rot={-42} len={20} s={1.1} />
-      <PansyLeaf rot={-12} len={24} s={1.0} />
-      <PansyLeaf rot={20} len={22} s={1.12} />
-      <PansyLeaf rot={48} len={18} s={1.05} />
-      <PansyLeaf rot={74} len={12} s={1.0} />
+      <g transform={gather}>
+        <PansyLeaf rot={-70} len={14} s={1.05} />
+        <PansyLeaf rot={-42} len={20} s={1.1} />
+        <PansyLeaf rot={-12} len={24} s={1.0} />
+        <PansyLeaf rot={20} len={22} s={1.12} />
+        <PansyLeaf rot={48} len={18} s={1.05} />
+        <PansyLeaf rot={74} len={12} s={1.0} />
+      </g>
       {/* flower stems */}
       <Stem d="M-3,-4 C-8,-22 -20,-40 -30,-56" w={2.2} />
       <Stem d="M0,-4 C1,-28 4,-52 8,-76" w={2.2} />
@@ -236,9 +246,11 @@ export function PansyPlant({ stage, palette = PANSY_MIX, label = 'bratek' }: { s
       <PansyFlower x={38} y={-52} rot={12} s={0.8} c={c2} />
       <PansyFlower x={8} y={-78} rot={3} s={0.92} c={c0} />
       {/* front leaves spilling over the rim */}
-      <PansyLeaf x={-14} y={0} rot={-108} len={6} s={0.95} />
-      <PansyLeaf x={16} y={0} rot={112} len={5} s={0.9} />
-      <PansyLeaf x={-2} y={0} rot={-160} len={2} s={0.8} />
+      <g transform={gather}>
+        <PansyLeaf x={-14} y={0} rot={-108} len={6} s={0.95} />
+        <PansyLeaf x={16} y={0} rot={112} len={5} s={0.9} />
+        <PansyLeaf x={-2} y={0} rot={-160} len={2} s={0.8} />
+      </g>
     </g>
   );
 }

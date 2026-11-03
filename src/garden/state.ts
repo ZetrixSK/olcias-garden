@@ -104,6 +104,10 @@ export type Settings = {
   curtainsClosed: boolean;
   /** The newest version she has seen in "What's new"; null until the garden first opens. */
   seenVersion: string | null;
+  /** Whether the garden moves: like the phone says ('phone'), or always. */
+  motion: 'phone' | 'always';
+  /** How big the round buttons are. */
+  hud: 's' | 'm' | 'l';
 };
 
 /** Long enough for a real name, short enough to fit on the sign. */
@@ -182,6 +186,8 @@ export const DEFAULT_SETTINGS: Settings = {
   tagAsked: false,
   curtainsClosed: false,
   seenVersion: null,
+  motion: 'phone',
+  hud: 'm',
 };
 
 export function newId(): string {
@@ -719,6 +725,9 @@ export function parseSettings(v: unknown): Settings {
     tagAsked: s.tagAsked === true,
     curtainsClosed: s.curtainsClosed === true,
     seenVersion: typeof s.seenVersion === 'string' && /^\d+\.\d+\.\d+$/.test(s.seenVersion) ? s.seenVersion : null,
+    motion: s.motion === 'always' ? 'always' : 'phone',
+    // gardens from before the setting keep the size they had
+    hud: s.hud === 'm' || s.hud === 'l' ? s.hud : 's',
   };
 }
 

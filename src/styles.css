@@ -146,10 +146,8 @@ body {
 .garden.replaying .outgrown {
   animation-duration: 0.8s;
 }
-@media (prefers-reduced-motion: reduce) {
-  .outgrown {
-    display: none;
-  }
+html.still .outgrown {
+  display: none;
 }
 
 /* a dog's name, shown for a moment when petted */
@@ -404,16 +402,14 @@ body {
   to { transform: scaleY(0.6); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  /* without motion, leaves and snow would hang in mid-air */
-  .season-air {
-    display: none;
-  }
-  *,
-  *::before,
-  *::after {
-    animation: none !important;
-  }
+/* without motion, leaves and snow would hang in mid-air */
+html.still .season-air {
+  display: none;
+}
+html.still *,
+html.still *::before,
+html.still *::after {
+  animation: none !important;
 }
 
 /*
@@ -470,12 +466,21 @@ body {
 }
 
 /* two round buttons in the top corners, small enough to stay out of the art */
+.garden {
+  --hud: 1;
+}
+.garden.hud-m {
+  --hud: 1.16;
+}
+.garden.hud-l {
+  --hud: 1.32;
+}
 .fab {
   position: fixed;
   top: calc(env(safe-area-inset-top, 0px) + 10px);
-  width: 46px;
-  height: 46px;
-  border-radius: 23px;
+  width: calc(46px * var(--hud));
+  height: calc(46px * var(--hud));
+  border-radius: 50%;
   display: grid;
   place-items: center;
   padding: 0;
@@ -497,10 +502,10 @@ body {
   background: rgba(38, 30, 56, 0.72);
 }
 .fab.second {
-  top: calc(env(safe-area-inset-top, 0px) + 66px);
+  top: calc(env(safe-area-inset-top, 0px) + 10px + 56px * var(--hud));
 }
 .fab.third {
-  top: calc(env(safe-area-inset-top, 0px) + 122px);
+  top: calc(env(safe-area-inset-top, 0px) + 10px + 112px * var(--hud));
 }
 /* the letter waits with a soft glow until it has been opened once */
 .letter-fab.unread {
@@ -516,8 +521,8 @@ body {
   }
 }
 .fab svg {
-  width: 26px;
-  height: 26px;
+  width: calc(26px * var(--hud));
+  height: calc(26px * var(--hud));
   fill: none;
   stroke: currentColor;
   stroke-width: 1.6;
@@ -552,10 +557,8 @@ body {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .view {
-    animation: none;
-  }
+html.still .view {
+  animation: none;
 }
 
 .live-dot {
@@ -622,7 +625,7 @@ body {
   font-family: 'Kalam', system-ui, sans-serif;
 }
 .weather-menu {
-  top: calc(env(safe-area-inset-top, 0px) + 64px);
+  top: calc(env(safe-area-inset-top, 0px) + 18px + 46px * var(--hud));
   right: calc(env(safe-area-inset-right, 0px) + 10px);
   width: min(250px, calc(100vw - 80px));
   /* on short screens (Safari with its bars) the menu scrolls rather than running off the bottom */
@@ -1434,6 +1437,8 @@ body {
   min-height: min(420px, 58vh);
   max-height: 64vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
   padding: 34px 26px 22px;
   background-color: #f8f1e4;
   background-image: repeating-linear-gradient(to bottom, transparent 0 29px, rgba(138, 53, 80, 0.13) 29px 30px);
@@ -1837,10 +1842,8 @@ body {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-@media (prefers-reduced-motion: reduce) {
-  .welcome-inner {
-    animation: none;
-  }
+html.still .welcome-inner {
+  animation: none;
 }
 
 /* her candle: the flame catches when lit, and a curl of smoke rises when it's blown out */
@@ -1947,12 +1950,10 @@ body {
   0%, 100% { transform: rotate(-2.4deg); }
   50% { transform: rotate(2.8deg); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .moon-open,
-  .moon-halo,
-  .whiskers {
-    animation: none;
-  }
+html.still .moon-open,
+html.still .moon-halo,
+html.still .whiskers {
+  animation: none;
 }
 
 /* bouquets */
@@ -2143,10 +2144,8 @@ body {
   from { opacity: 0; transform: translate(-50%, -16px); }
   to { opacity: 1; transform: translate(-50%, 0); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .arrival {
-    animation: none;
-  }
+html.still .arrival {
+  animation: none;
 }
 
 /* visiting someone else's garden: their garden over hers, with a bar to say whose it is */
@@ -2268,15 +2267,13 @@ body {
 .weather-menu button:active {
   transform: scale(0.94);
 }
-@media (prefers-reduced-motion: reduce) {
-  .weather-menu {
-    animation: none;
-  }
-  .fab:active,
-  .visit-bar button:active,
-  .weather-menu button:active {
-    transform: none;
-  }
+html.still .weather-menu {
+  animation: none;
+}
+html.still .fab:active,
+html.still .visit-bar button:active,
+html.still .weather-menu button:active {
+  transform: none;
 }
 
 /* ---- memories: a shelf of cloth albums, prints on the page, one large with its caption ---- */
@@ -3191,8 +3188,8 @@ body {
 @keyframes cover-lift {
   to { opacity: 0; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .first-cover.lifting { animation-duration: 0.01s; }
+html.still .first-cover.lifting {
+  animation-duration: 0.01s;
 }
 
 /* plant traits: a willowy plant sways long and slow; sun-kissed motes drift up; enchantment glows at night */
@@ -3649,8 +3646,8 @@ body {
   border-radius: 14px;
   background: rgba(40, 24, 34, 0.72);
 }
-@media (prefers-reduced-motion: reduce) {
-  .parcel-art { animation: none; }
+html.still .parcel-art {
+  animation: none;
 }
 
 /* ---- visitors: little lives of their own ---- */
@@ -3729,10 +3726,16 @@ body {
   0%, 100% { transform: translateY(0); }
   40% { transform: translateY(-7px); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .visitor-blink, .visitor-hover, .visitor-float, .visitor-wing, .visitor-tail, .visitor-sway, .visitor-wave, .visitor-joy, .mood-delighted > g {
-    animation: none;
-  }
+html.still .visitor-blink,
+html.still .visitor-hover,
+html.still .visitor-float,
+html.still .visitor-wing,
+html.still .visitor-tail,
+html.still .visitor-sway,
+html.still .visitor-wave,
+html.still .visitor-joy,
+html.still .mood-delighted > g {
+  animation: none;
 }
 
 /* ---- the front door ---- */
@@ -3785,10 +3788,22 @@ body {
   text-align: center;
 }
 .front-door {
-  transition: transform 0.9s cubic-bezier(0.5, 0, 0.3, 1);
+  transition: transform 0.4s cubic-bezier(0.5, 0, 0.8, 0.4);
 }
 .front-door.open {
-  transform: scaleX(-0.3);
+  transform: scaleX(0.28);
+}
+.open-door {
+  opacity: 0;
+}
+.open-door.shown {
+  opacity: 1;
+  transform-origin: 110px 320px;
+  animation: open-door-in 0.35s ease-out;
+}
+@keyframes open-door-in {
+  from { opacity: 0; transform: translateX(14px) scaleX(0.8); }
+  to { opacity: 1; transform: none; }
 }
 .front-door.knocking .knocker {
   transform-box: fill-box;
@@ -3908,11 +3923,15 @@ body {
   font-size: 15px;
   line-height: 1.3;
 }
-@media (prefers-reduced-motion: reduce) {
-  .front-door, .front-door.knocking, .front-door.knocking .knocker, .door-visitor, .door-rain path, .petal-row .petal.on, .gift {
-    animation: none;
+html.still .front-door,
+html.still .front-door.knocking,
+html.still .front-door.knocking .knocker,
+html.still .door-visitor,
+html.still .door-rain path,
+html.still .petal-row .petal.on,
+html.still .gift {
+  animation: none;
     transition: none;
-  }
 }
 /* someone knocking: the door button gives a little double tap now and then */
 .door-fab.knocking svg {
@@ -3925,8 +3944,8 @@ body {
   76% { transform: rotate(-9deg); }
   80% { transform: rotate(0); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .door-fab.knocking svg { animation: none; }
+html.still .door-fab.knocking svg {
+  animation: none;
 }
 /* a visitor's wishes, in the bouquet studio: a little tick for each one met */
 .wish-list {
@@ -4071,8 +4090,8 @@ body {
   30% { translate: 70px -16px; }
   60% { translate: 26px 14px; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .window-flyer > g { animation: none; }
+html.still .window-flyer > g {
+  animation: none;
 }
 .door-shadow {
   filter: brightness(0) blur(1.2px);
@@ -4169,10 +4188,16 @@ body {
 .lit .moonlamp-glow {
   opacity: 1;
 }
-@media (prefers-reduced-motion: reduce) {
-  .keeper-bob, .keeper-sleep, .keeper-z, .moth-wings, .candle-flicker, .milton, .milton.talking, .playing .musicbox-turn, .shaken .snow-swirl {
-    animation: none;
-  }
+html.still .keeper-bob,
+html.still .keeper-sleep,
+html.still .keeper-z,
+html.still .moth-wings,
+html.still .candle-flicker,
+html.still .milton,
+html.still .milton.talking,
+html.still .playing .musicbox-turn,
+html.still .shaken .snow-swirl {
+  animation: none;
 }
 
 /* ---- the market ---- */
@@ -4187,19 +4212,20 @@ body {
   -webkit-user-select: none;
   user-select: none;
 }
-.market-close {
-  position: absolute;
-  top: calc(env(safe-area-inset-top, 0px) + 10px);
-  right: calc(env(safe-area-inset-right, 0px) + 10px);
+.market .market-close {
   z-index: 2;
-  width: 44px;
-  height: 44px;
-  border-radius: 22px;
-  border: 1.5px solid #3d2633;
-  background: #f8f1e4;
-  font: inherit;
-  font-size: 24px;
-  color: #3d2633;
+}
+.moth-flit {
+  animation: moth-flit 2.6s ease-in-out infinite;
+}
+@keyframes moth-flit {
+  0%, 100% { translate: 0 0; }
+  25% { translate: 6px -5px; }
+  50% { translate: -3px -9px; }
+  75% { translate: -7px -2px; }
+}
+html.still .moth-flit {
+  animation: none;
 }
 .market-scene {
   flex: 1 1 auto;
@@ -4446,8 +4472,8 @@ body {
   border-radius: 50%;
   background: #e86f8c;
 }
-@media (prefers-reduced-motion: reduce) {
-  .mcard-inner { transition: none; }
+html.still .mcard-inner {
+  transition: none;
 }
 
 /* charms swaying on their string */
@@ -4488,12 +4514,16 @@ body {
   text-align: center;
   animation: sheet-in 0.25s ease-out;
 }
-@media (prefers-reduced-motion: reduce) {
-  .charm-sway, .figure-fx-wiggle > g { animation: none; }
+html.still .charm-sway,
+html.still .figure-fx-wiggle > g {
+  animation: none;
 }
 
 .fab.fourth {
-  top: calc(env(safe-area-inset-top, 0px) + 178px);
+  top: calc(env(safe-area-inset-top, 0px) + 10px + 168px * var(--hud));
+}
+.gift-fab svg {
+  animation: door-fab-knock 3.2s ease-in-out infinite;
 }
 .lantern-fab svg {
   animation: lantern-sway 3s ease-in-out infinite;
@@ -4503,8 +4533,8 @@ body {
   0%, 100% { transform: rotate(-4deg); }
   50% { transform: rotate(4deg); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .lantern-fab svg { animation: none; }
+html.still .lantern-fab svg {
+  animation: none;
 }
 
 .seed-stall .petal-icon,
@@ -4515,4 +4545,27 @@ body {
 
 .market-scene {
   overflow: visible;
+}
+.figure-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 4px 0 10px;
+}
+.figure-card svg {
+  flex: none;
+  width: 76px;
+  height: 76px;
+}
+.figure-card .rarity {
+  font-size: 13px;
+  font-weight: 700;
+  filter: brightness(0.75);
+}
+.figure-card p {
+  margin: 2px 0 0;
+  font-size: 16px;
+}
+html.still .gift-fab svg {
+  animation: none;
 }

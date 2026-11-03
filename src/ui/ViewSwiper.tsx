@@ -1,3 +1,4 @@
+import { prefersStill } from '../motion';
 import { memo, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
 export type View = 'room' | 'shelves';
@@ -11,7 +12,7 @@ const FLICK = 0.5;
 const SLOP = 10;
 const GLIDE = 'transform 360ms cubic-bezier(0.22, 0.9, 0.3, 1)';
 
-const prefersStill = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+
 const at = (index: number, px = 0) => `translate3d(calc(${-index * 100}% + ${px}px), 0, 0)`;
 
 type Idle = (cb: () => void, o?: { timeout: number }) => number;

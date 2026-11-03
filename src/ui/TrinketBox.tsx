@@ -101,3 +101,40 @@ export function TrinketBox({ market, canStand, onToggleCharm, onStand, onPutAway
     </div>
   );
 }
+
+/** A figure on the shelves, looked at closely: what it is, and moving it or putting it away. */
+export function FigureCard({ id, onMove, onPutAway, onClose }: { id: string; onMove: () => void; onPutAway: () => void; onClose: () => void }) {
+  const w = useWords();
+  const { t } = w;
+  const tr = TRINKETS.find((x) => x.id === id);
+  return (
+    <div className="sheet" role="dialog" aria-label={t(...TRINKET_NAME[id]!)}>
+      <div className="sheet-head">
+        <h2>{t(...TRINKET_NAME[id]!)}</h2>
+        <button className="close" aria-label={t('Close', 'Zamknij')} onClick={onClose}>
+          ×
+        </button>
+      </div>
+      <div className="figure-card">
+        <TrinketPortrait id={id} />
+        <div>
+          {tr && (
+            <span className="rarity" style={{ color: RARITY_COLOUR[tr.rarity] }}>
+              {t(...RARITY_NAME[tr.rarity])}
+            </span>
+          )}
+          <p>{say(w, TRINKET_ABOUT[id]!)}</p>
+        </div>
+      </div>
+      <div className="actions two-wide">
+        <button onClick={onMove}>
+          <svg viewBox="-14 -14 28 28" aria-hidden="true">
+            <path d="M-10,0 L10,0 M6,-4 L10,0 L6,4 M-6,-4 L-10,0 L-6,4" />
+          </svg>
+          {t('Move', 'Przesuń')}
+        </button>
+        <button onClick={onPutAway}>{t('Put it in the box', 'Schowaj do szkatułki')}</button>
+      </div>
+    </div>
+  );
+}

@@ -6,7 +6,7 @@ import { PlantArt } from '../plants/PlantArt';
 import { PansyFlower } from '../plants/Pansy';
 import { designColors } from '../plants/looks';
 import { BouquetArt } from '../plants/Bouquet';
-import { Blossom, CardBack, PaniCma, PanJezyk, RARITY_COLOUR, Stall, TrinketPortrait, type KeeperMood } from '../scene/MarketArt';
+import { Blossom, CardBack, StallDressing, PaniCma, PanJezyk, RARITY_COLOUR, Stall, TrinketPortrait, type KeeperMood } from '../scene/MarketArt';
 import type { Weather } from '../theme/palettes';
 import { cmaDone, cmaHello, CMA_MILTON, cmaShort, cmaThanks, jezykAsleep, jezykEmpty, jezykHello, jezykShort, jezykThanks, RARITY_NAME, seedAbout, seedName, TRINKET_ABOUT, TRINKET_NAME } from './marketWords';
 import { say } from './visitorWords';
@@ -116,10 +116,12 @@ export function MarketStall({ garden, weather, nightKey, onBuySeed, onTurn, onBu
     <>
       <div className="scrim letter-scrim" />
       <div className={`market${night ? ' at-night' : ''}`} role="dialog" aria-label={night ? t('The night market', 'Nocny targ') : t('The market', 'Targ')}>
-        <button className="close market-close" aria-label={t('Close', 'Zamknij')} onClick={onClose}>
-          ×
+        <button className="fab right market-close" aria-label={t('Close', 'Zamknij')} onClick={onClose}>
+          <svg viewBox="-14 -14 28 28" aria-hidden="true">
+            <path d="M-7,-7 L7,7 M7,-7 L-7,7" />
+          </svg>
         </button>
-        <svg className="market-scene" viewBox="50 40 300 290" preserveAspectRatio="xMidYMax meet">
+        <svg className="market-scene" viewBox="50 36 300 294" preserveAspectRatio="xMidYMax meet">
           <defs>
             <linearGradient id="market-sky" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0" stopColor={night || closed ? '#231d42' : '#9ec7e4'} />
@@ -157,6 +159,7 @@ export function MarketStall({ garden, weather, nightKey, onBuySeed, onTurn, onBu
           <g transform="translate(200 268) scale(0.88)">
             <Stall night={night} closed={closed} keeper={keeper} />
           </g>
+          <StallDressing night={night || closed} closed={closed} sign={night ? t('Night market', 'Nocny targ') : t('Market', 'Targ')} />
         </svg>
         <div className="market-card">
           <div className="market-top">
