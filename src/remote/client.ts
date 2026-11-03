@@ -137,7 +137,7 @@ export async function myTag(): Promise<string | null | undefined> {
 }
 
 /** Sends something to a tag. Null once it's on its way. */
-export async function sendMail(to: string, kind: 'bouquet', payload: unknown): Promise<PostError | null> {
+export async function sendMail(to: string, kind: 'bouquet' | 'package', payload: unknown): Promise<PostError | null> {
   try {
     await deviceId();
     const sb = await remote();
@@ -148,7 +148,8 @@ export async function sendMail(to: string, kind: 'bouquet', payload: unknown): P
   }
 }
 
-export type Mail = { id: string; from_tag: string; kind: string; payload: unknown; created_at: string };
+/** `from_tag` is null for a package sent without a name. */
+export type Mail = { id: string; from_tag: string | null; kind: string; payload: unknown; created_at: string };
 
 /** Post that has arrived and not yet been taken in, oldest first. */
 export async function inbox(): Promise<Mail[]> {

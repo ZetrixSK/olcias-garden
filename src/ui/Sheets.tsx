@@ -1,3 +1,4 @@
+import { MysterySeedsArt } from './Packages';
 import { useState, type ReactNode } from 'react';
 import { isSoilWet, nextStage, stageAt, waterWouldHelp } from '../garden/growth';
 import { MAX_NAME } from '../garden/pressed';
@@ -79,8 +80,10 @@ function NewTile({ label, onClick }: { label: string; onClick: () => void }) {
 }
 
 /** After choosing to plant a bratek: which colours it will bloom in. */
-export function VarietyPicker({ designs, onPick, onDesign, onEdit, onClose }: {
+export function VarietyPicker({ designs, hidden, onPick, onDesign, onEdit, onClose }: {
   designs: Designs;
+  /** Designs still a secret (mystery seeds), left out of the list. */
+  hidden?: Set<string>;
   onPick: (variety: string) => void;
   onDesign: () => void;
   onEdit: (id: string) => void;
@@ -100,7 +103,7 @@ export function VarietyPicker({ designs, onPick, onDesign, onEdit, onClose }: {
             <Preview species="pansy" variety={v} designs={designs} />
           </Tile>
         ))}
-        {designs.pansies.map((d) => (
+        {designs.pansies.filter((d) => !hidden?.has(designRef(d.id))).map((d) => (
           <Tile key={d.id} label={d.name || w.t('Mine', 'Mój')} onPick={() => onPick(designRef(d.id))} onEdit={() => onEdit(d.id)}>
             <Preview species="pansy" variety={designRef(d.id)} designs={designs} />
           </Tile>
@@ -112,9 +115,11 @@ export function VarietyPicker({ designs, onPick, onDesign, onEdit, onClose }: {
 }
 
 /** How a plant looks: its pot, and for a bratek its colours. */
-export function StyleSheet({ plant, designs, now, onPot, onVariety, onPaint, onEditPot, onDesignPansy, onEditPansy, onClose }: {
+export function StyleSheet({ plant, designs, hidden, now, onPot, onVariety, onPaint, onEditPot, onDesignPansy, onEditPansy, onClose }: {
   plant: Plant;
   designs: Designs;
+  /** Designs still a secret (mystery seeds), left out of the list. */
+  hidden?: Set<string>;
   now: number;
   onPot: (pot: PotRef) => void;
   onVariety: (variety: string) => void;
@@ -149,7 +154,7 @@ export function StyleSheet({ plant, designs, now, onPot, onVariety, onPaint, onE
         ))}
         <NewTile label={w.t('Paint one', 'Pomaluj')} onClick={onPaint} />
       </div>
-      {plant.species === 'pansy' && (
+      {plant.species === 'pansy' && !(plant.mystery && stage !== 'bloom') && (
         <>
           <h3 className="sheet-sub">{w.t('Flowers', 'Kwiaty')}</h3>
           <div className="picker scroll">
@@ -158,7 +163,7 @@ export function StyleSheet({ plant, designs, now, onPot, onVariety, onPaint, onE
                 <Preview species="pansy" pot={plant.pot} variety={v} designs={designs} />
               </Tile>
             ))}
-            {designs.pansies.map((d) => (
+            {designs.pansies.filter((d) => !hidden?.has(designRef(d.id))).map((d) => (
               <Tile key={d.id} label={d.name || w.t('Mine', 'Mój')} selected={variety === designRef(d.id)} onPick={() => onVariety(designRef(d.id))} onEdit={() => onEditPansy(d.id)}>
                 <Preview species="pansy" pot={plant.pot} variety={designRef(d.id)} designs={designs} />
               </Tile>
@@ -218,6 +223,7 @@ export function GardenNameSheet({ theme, name, onChange, onClose }: { theme: The
 
 /** A paper seed packet with her bratek painted on the front, and how many seeds are left in it. */
 function SeedPacketArt({ packet, designs }: { packet: SeedPacket; designs: Designs }) {
+  if (packet.mystery) return <MysterySeedsArt />;
   const c = pansyPalette(packet.variety, designs)[0]!;
   return (
     <svg viewBox="-24 -32 48 62" aria-hidden="true">
@@ -254,11 +260,13 @@ export function PlantPicker({ onPick, onDrawing, onPaint, seeds = [], designs, o
           <p className="meta seed-tin-title">{w.t('From your seed tin', 'Z Twojej puszki z nasionami')}</p>
           <div className="seed-tin">
             {seeds.map((packet) => {
-              const name = designs.pansies.find((d) => designRef(d.id) === packet.variety)?.name || w.flower('pansy');
+              const name = packet.mystery
+                ? w.t('Mystery seeds', 'Tajemnicze nasiona')
+                : designs.pansies.find((d) => designRef(d.id) === packet.variety)?.name || w.flower('pansy');
               return (
                 <button key={packet.id} data-sound="soil" onClick={() => onSow(packet.id)} aria-label={`${name}, ${packet.count}`}>
                   <SeedPacketArt packet={packet} designs={designs} />
-                  <span className="seed-name">{name}</span>
+                  <span className={`seed-name${packet.mystery ? " wrap" : ""}`}>{name}</span>
                   <span className="seed-count">× {packet.count}</span>
                 </button>
               );

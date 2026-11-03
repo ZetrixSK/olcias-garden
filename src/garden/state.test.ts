@@ -86,6 +86,7 @@ describe('garden state', () => {
       gardenName: null,
       tagAsked: false,
       curtainsClosed: false,
+      seenVersion: null,
     });
   });
 

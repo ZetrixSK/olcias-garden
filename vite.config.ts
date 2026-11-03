@@ -11,7 +11,8 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // a new version waits, and the page switches to it only while she isn't looking (see main.tsx)
+      registerType: 'prompt',
       includeAssets: ['icons/apple-touch-icon.png', 'icons/icon-192.png'],
       manifest: {
         name: "Olcia's Garden",

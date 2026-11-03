@@ -1,3 +1,5 @@
+import type { Package } from '../garden/packages';
+import { PACKAGE_ICON, PackageList } from './Packages';
 import { useEffect, useState } from 'react';
 import type { Words } from '../i18n';
 import { useWords } from '../i18n';
@@ -144,8 +146,13 @@ export function TagWelcome({ onClaim, onLater }: { onClaim: (tag: string) => Pro
  * Her post box: her own tag, bouquets waiting in the box on the floor, the tags she has sent to,
  * and the tags she doesn't want post from.
  */
-export function PostSheet({ tag, contacts, parcels, onClaim, onParcels, loadBlocked, onUnblock, onVisit, loadAccess, onSetAccess, onClose }: {
+export function PostSheet({ tag, contacts, parcels, packages = [], onOpenPackage, onCompose, onClaim, onParcels, loadBlocked, onUnblock, onVisit, loadAccess, onSetAccess, onClose }: {
   tag: string | null;
+  /** Packages that came: wrapped ones to open, opened ones to read again. */
+  packages?: Package[];
+  onOpenPackage?: (id: string) => void;
+  /** Packing a package to send. */
+  onCompose?: () => void;
   contacts: string[];
   parcels: number;
   onClaim: (tag: string) => Promise<PostError | null>;
@@ -178,6 +185,22 @@ export function PostSheet({ tag, contacts, parcels, onClaim, onParcels, loadBloc
               : t('Choose a tag so others can send you bouquets, and know who yours are from.', 'Wybierz tag, żeby inni mogli wysyłać Ci bukiety i wiedzieli, od kogo dostają Twoje.')}
           </p>
           <ClaimTag current={tag} onClaim={onClaim} />
+        </section>
+        <section className="studio-section">
+          <h3>{t('Packages', 'Paczki')}</h3>
+          {packages.length > 0 && onOpenPackage ? (
+            <PackageList packages={packages} onOpen={onOpenPackage} />
+          ) : (
+            <p className="hint">{t('Nothing has come yet.', 'Jeszcze nic nie przyszło.')}</p>
+          )}
+          {onCompose && (
+            <button className="wide with-icon send-package" disabled={!tag} onClick={onCompose}>
+              <svg viewBox="-14 -14 28 28" aria-hidden="true">
+                {PACKAGE_ICON}
+              </svg>
+              {t('Send a package', 'Wyślij paczkę')}
+            </button>
+          )}
         </section>
         <section className="studio-section">
           <h3>{t('Visit a garden', 'Odwiedź ogród')}</h3>
@@ -239,6 +262,12 @@ export type Notice = { title: string; text: string };
 
 /** What she's told when a bouquet arrives while she's looking. */
 export function arrivalNotice(a: Arrival, { t }: Words): Notice {
+  if (a.kind === 'package') {
+    return {
+      title: a.from ? t(`A package from #${a.from}!`, `Paczka od #${a.from}!`) : t('A package from someone!', 'Paczka od kogoś!'),
+      text: t("It's waiting in your post box, still wrapped.", 'Czeka w skrzynce pocztowej, jeszcze zapakowana.'),
+    };
+  }
   return {
     title: t(`A bouquet from #${a.from}!`, `Bukiet od #${a.from}!`),
     text: a.inBox ? t("It's waiting in a box on the floor.", 'Czeka w pudełku na podłodze.') : t("It's on your shelves.", 'Stoi na Twoich półkach.'),

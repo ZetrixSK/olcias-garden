@@ -23,8 +23,44 @@ try {
 }
 
 if (import.meta.env.PROD) {
-  // caches the app for offline use and quietly picks up new versions on the next open
-  void import('virtual:pwa-register').then(({ registerSW }) => registerSW({ immediate: true }));
+  // The app is kept for offline use. A new version is fetched quietly in the background and takes
+  // over only while the app is out of sight (she switched away, or locked the phone), so nothing
+  // she is doing is ever interrupted; when she comes back, it is simply the new version.
+  void import('virtual:pwa-register').then(({ registerSW }) => {
+    let ready = false;
+    let switching = false;
+    // once the new version has taken over (only ever because it was asked to, out of sight), the
+    // page loads it; the plugin itself only does this for some kinds of update
+    navigator.serviceWorker?.addEventListener('controllerchange', () => {
+      if (switching) window.location.reload();
+    });
+    const switchNow = () => {
+      if (!ready || switching) return;
+      switching = true;
+      void askToSwitch(true);
+    };
+    const askToSwitch = registerSW({
+      immediate: true,
+      onNeedRefresh() {
+        ready = true;
+        if (document.visibilityState === 'hidden') switchNow();
+      },
+      onRegisteredSW(_url, registration) {
+        let lastLook = Date.now();
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'hidden') {
+            switchNow();
+            return;
+          }
+          // coming back to it: a look for a new version, at most every half hour
+          if (registration && Date.now() - lastLook > 30 * 60_000) {
+            lastLook = Date.now();
+            void registration.update().catch(() => {});
+          }
+        });
+      },
+    });
+  });
 }
 
 createRoot(document.getElementById('root')!).render(

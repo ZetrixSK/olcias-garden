@@ -3,12 +3,13 @@ import { plantedAtForStage, stageAt } from './growth';
 import { imagesInUse, MAX_DRAWINGS, NO_DECOR, parseDecor, type Decor, type Drawing, type Photo, type Wallpaper } from './decor';
 import { memoryImages, NO_MEMORIES, parseMemories, type Memories } from './memories';
 import { noteWeather, parseTrait, parseWeatherSeen, rollTraits, type Trait, type WeatherSeen } from './traits';
+import { keepPackages, parsePackages, sameLook, type Package, type PackageItem } from './packages';
 import { MAX_NAME, MAX_NOTE, MAX_PRESSED, parsePressed, pressedToday, pressingOf, type Pressing } from './pressed';
 import { parseOwnRoom, type OwnRoom } from '../theme/ownRoom';
 import { parseLang, parseMe, type Lang, type Me } from '../i18n';
 import { parseCandle, parseCandleLit, type CandleLit, type CandleLook } from './candle';
 import { parseDiary, withEntry, withoutEntry, type Diary, type Mood } from './diary';
-import { designId, NO_DESIGNS, PANSY_PRESETS, parseDesigns, upsert, type Designs, type PansyDesign, type PotDesign, type PotRef } from './designs';
+import { designId, designRef, NO_DESIGNS, PANSY_PRESETS, parseDesigns, upsert, type Designs, type PansyDesign, type PotDesign, type PotRef } from './designs';
 import { lastNight, nightsBetween, runNights, settleMiddleDir, trimmed, type Vine } from './vines';
 import { parseCuttings, parseParcels, parsePlaced, pruneCuttings, type Bouquet, type Cutting, type PlacedBouquet } from './bouquets';
 import { POT_KINDS, SPECIES, SPECIES_IDS, type GardenPot, type SpeciesId, type Stage } from './species';
@@ -44,10 +45,19 @@ export type Plant = {
   name: string | null;
   /** Something a night left on it (enchanted, dewy, sun-kissed, frosted, willowy), for good. */
   trait: Trait | null;
+  /** Grown from mystery seeds: what it is stays a secret until it flowers. */
+  mystery?: true;
 };
 
 /** Seeds of one of her bratek designs, waiting in the seed tin. */
-export type SeedPacket = { id: string; variety: string; count: number; made: number };
+export type SeedPacket = {
+  id: string;
+  variety: string;
+  count: number;
+  made: number;
+  /** Mystery seeds from the post: a plain packet, no picture or name, until they flower. */
+  mystery?: true;
+};
 export const MAX_PACKETS = 40;
 export const MAX_SEEDS = 6;
 
@@ -90,6 +100,8 @@ export type Settings = {
   tagAsked: boolean;
   /** Whether the curtains are drawn across the window. */
   curtainsClosed: boolean;
+  /** The newest version she has seen in "What's new"; null until the garden first opens. */
+  seenVersion: string | null;
 };
 
 /** Long enough for a real name, short enough to fit on the sign. */
@@ -129,6 +141,8 @@ export type GardenState = {
   weatherSeen: WeatherSeen;
   /** Her seed tin: packets of seeds from her own designs. */
   seeds: SeedPacket[];
+  /** Packages that came in the post: the ones still wrapped, and opened ones with their letters. */
+  packages: Package[];
 };
 
 /** Her tag, the tags she has sent to, and how many bouquets came since she last opened the post box. */
@@ -161,6 +175,7 @@ export const DEFAULT_SETTINGS: Settings = {
   gardenName: null,
   tagAsked: false,
   curtainsClosed: false,
+  seenVersion: null,
 };
 
 export function newId(): string {
@@ -210,6 +225,7 @@ export function starterGarden(now: number): GardenState {
     memories: NO_MEMORIES,
     weatherSeen: {},
     seeds: [],
+    packages: [],
   };
 }
 
@@ -448,19 +464,86 @@ export function sawWeather(state: GardenState, now: number, w: { sky: 'clear' | 
   return weatherSeen === state.weatherSeen ? state : { ...state, weatherSeen };
 }
 
+/** A package has come in the post: it waits, wrapped, and the letterbox's flag goes up. */
+export function receivePackage(state: GardenState, pkg: Package): GardenState {
+  if (state.packages.some((p) => p.id === pkg.id)) return state;
+  return { ...state, packages: keepPackages([...state.packages, { ...pkg, opened: null }]), post: { ...state.post, unread: state.post.unread + 1 } };
+}
+
+/**
+ * She opens a package and takes what's inside: bouquets go on the shelves (or the box on the
+ * floor), seeds into her tin, with their design added to hers unless she has one just like it.
+ * The package is kept, opened, so its letter can be read again.
+ */
+export function openPackage(state: GardenState, id: string, now: number): GardenState {
+  const pkg = state.packages.find((p) => p.id === id);
+  if (!pkg || pkg.opened !== null) return state;
+  let g = state;
+  pkg.items.forEach((item, i) => {
+    if (item.kind === 'bouquet') {
+      g = receiveBouquet(g, item.bouquet);
+      return;
+    }
+    const same = g.designs.pansies.find((d) => sameLook(d, item.design));
+    let ref: string;
+    if (same) ref = designRef(same.id);
+    else {
+      const design = { ...item.design, id: `post-${pkg.id.slice(0, 8)}-${i}` };
+      g = savePansyDesign(g, design);
+      ref = designRef(design.id);
+    }
+    g = addSeeds(g, ref, item.count, now, `${pkg.id}:${i}`, item.mystery);
+  });
+  return { ...g, packages: g.packages.map((p) => (p.id === id ? { ...p, opened: now } : p)) };
+}
+
+/** What she put in a package she sent leaves her garden: bouquets from the shelves, seeds from the tin. */
+export function giveAway(state: GardenState, items: Array<{ bouquetId: string } | { packetId: string; count: number }>): GardenState {
+  let g = state;
+  for (const it of items) {
+    if ('bouquetId' in it) g = removeBouquet(g, it.bouquetId);
+    else
+      g = {
+        ...g,
+        seeds: g.seeds.flatMap((s) => (s.id !== it.packetId ? [s] : s.count > it.count ? [{ ...s, count: s.count - it.count }] : [])),
+      };
+  }
+  return g;
+}
+
+/**
+ * The things in a package, as they travel: copies of the bouquets, and the design for the seeds.
+ * Seeds go as a mystery when she asks, and mystery seeds she was sent stay one when passed on.
+ */
+export function packageItems(state: GardenState, picked: Array<{ bouquetId: string } | { packetId: string; count: number }>, mystery = false): PackageItem[] {
+  const out: PackageItem[] = [];
+  for (const it of picked) {
+    if ('bouquetId' in it) {
+      const b = state.bouquets.find((x) => x.id === it.bouquetId) ?? state.parcels.find((x) => x.id === it.bouquetId);
+      if (b) out.push({ kind: 'bouquet', bouquet: { id: b.id, stems: b.stems, vase: b.vase, ribbon: b.ribbon, note: b.note, from: b.from, at: b.at, seed: b.seed } });
+    } else {
+      const packet = state.seeds.find((s) => s.id === it.packetId);
+      const design = packet ? state.designs.pansies.find((d) => designRef(d.id) === packet.variety) : undefined;
+      if (packet && design) out.push({ kind: 'seeds', design, count: Math.min(packet.count, it.count), mystery: mystery || packet.mystery === true });
+    }
+  }
+  return out;
+}
+
 /** A packet of seeds of one of her designs, into the tin. */
-export function addSeeds(state: GardenState, variety: string, count: number, now: number, id = newId()): GardenState {
+export function addSeeds(state: GardenState, variety: string, count: number, now: number, id = newId(), mystery = false): GardenState {
   const n = Math.max(1, Math.min(MAX_SEEDS, Math.round(count)));
   if (state.seeds.length >= MAX_PACKETS) return state;
-  return { ...state, seeds: [...state.seeds, { id, variety, count: n, made: now }] };
+  return { ...state, seeds: [...state.seeds, { id, variety, count: n, made: now, ...(mystery ? { mystery: true as const } : {}) }] };
 }
 
 /** Sows one seed from a packet in an empty place; an empty packet is thrown away. */
 export function sowSeed(state: GardenState, packetId: string, slot: SlotId, now: number, id = newId()): GardenState {
   const packet = state.seeds.find((s) => s.id === packetId);
   if (!packet || packet.count < 1) return state;
-  const planted = addPlant(state, slot, 'pansy', now, id, packet.variety);
+  let planted = addPlant(state, slot, 'pansy', now, id, packet.variety);
   if (planted === state) return state;
+  if (packet.mystery) planted = { ...planted, plants: planted.plants.map((p) => (p.id === id ? { ...p, mystery: true as const } : p)) };
   const seeds = state.seeds.flatMap((s) => (s.id !== packetId ? [s] : s.count > 1 ? [{ ...s, count: s.count - 1 }] : []));
   return { ...planted, seeds };
 }
@@ -564,7 +647,19 @@ function parsePlant(v: unknown, designs: Designs): Plant | null {
     vine: parseVine(vine, species as SpeciesId),
     name: typeof name === 'string' && name.trim() ? name.trim().slice(0, MAX_NAME) : null,
     trait: parseTrait(v.trait),
+    ...(v.mystery === true ? { mystery: true as const } : {}),
   };
+}
+
+/**
+ * Designs that are still a secret: the ones in packets of mystery seeds, and the ones mystery seeds
+ * are growing into but haven't flowered as yet. They're left out of the lists of her designs.
+ */
+export function secretDesigns(state: GardenState, now: number): Set<string> {
+  const out = new Set<string>();
+  for (const s of state.seeds) if (s.mystery) out.add(s.variety);
+  for (const p of state.plants) if (p.mystery && p.variety && stageAt(p.species, p, now) !== 'bloom') out.add(p.variety);
+  return out;
 }
 
 function parseVine(v: unknown, species: SpeciesId): Vine | null {
@@ -609,6 +704,7 @@ export function parseSettings(v: unknown): Settings {
     gardenName: typeof s.gardenName === 'string' && s.gardenName.trim() ? s.gardenName.slice(0, MAX_GARDEN_NAME) : null,
     tagAsked: s.tagAsked === true,
     curtainsClosed: s.curtainsClosed === true,
+    seenVersion: typeof s.seenVersion === 'string' && /^\d+\.\d+\.\d+$/.test(s.seenVersion) ? s.seenVersion : null,
   };
 }
 
@@ -694,6 +790,7 @@ export function parseSave(input: unknown, now = Date.now()): GardenState | null 
     memories: parseMemories(raw.memories),
     weatherSeen: parseWeatherSeen(raw.weatherSeen),
     seeds: parseSeeds(raw.seeds, designs),
+    packages: parsePackages(raw.packages),
   };
 }
 
@@ -705,7 +802,7 @@ function parseSeeds(v: unknown, designs: Designs): SeedPacket[] {
     const count = typeof x.count === 'number' ? Math.round(x.count) : 0;
     // only seeds of a design she still has can grow into it
     if (count < 1 || parseVariety(x.variety, 'pansy', designs) !== x.variety) continue;
-    if (out.length < MAX_PACKETS) out.push({ id: x.id, variety: x.variety, count: Math.min(MAX_SEEDS, count), made: x.made });
+    if (out.length < MAX_PACKETS) out.push({ id: x.id, variety: x.variety, count: Math.min(MAX_SEEDS, count), made: x.made, ...(x.mystery === true ? { mystery: true as const } : {}) });
   }
   return out;
 }

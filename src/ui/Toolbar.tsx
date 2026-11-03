@@ -1,3 +1,5 @@
+import { LATEST } from '../changelog';
+import { NEWS_ICON } from './WhatsNew';
 import { useState } from 'react';
 import type { Settings, View } from '../garden/state';
 import { SKY_KINDS, type SkyKind, type Weather } from '../theme/palettes';
@@ -78,7 +80,7 @@ const LANG_ABOUT: Record<Lang, string> = {
   mixed: 'English, with Polish flower names',
 };
 
-export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onDiary, memory, onBook, onMemories, onBackup, onPicture, onDecorate, onBouquet, onPost, postTag, onClock, onStudio, onOwnRoom }: {
+export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onDiary, memory, onBook, onMemories, onNews, newsUnseen, onBackup, onPicture, onDecorate, onBouquet, onPost, postTag, onClock, onStudio, onOwnRoom }: {
   settings: Settings;
   weather: Weather;
   status: WeatherStatus;
@@ -93,6 +95,9 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
   onPicture: () => void;
   onBook: () => void;
   onMemories: () => void;
+  onNews: () => void;
+  /** A version she hasn't looked at in "What's new" yet. */
+  newsUnseen: boolean;
   onBouquet: () => void;
   onPost: () => void;
   /** Her tag in the post, if she has one. */
@@ -139,6 +144,7 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
       <button className="fab right" aria-label={menuName} aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
         <Icon>{weatherIcon(weather)}</Icon>
         {status === 'live' && <span className="live-dot" />}
+        {newsUnseen && <span className="news-dot" aria-hidden="true" />}
       </button>
       {menu && (
         <>
@@ -207,6 +213,18 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
             >
               <Icon>{CAMERA_ICON}</Icon>
               {t('Save a picture', 'Zapisz obrazek')}
+            </button>
+            <button
+              className="wide with-icon news-button"
+              onClick={() => {
+                setMenu(false);
+                onNews();
+              }}
+            >
+              <Icon>{NEWS_ICON}</Icon>
+              <span>{t("What's new", 'Co nowego')}</span>
+              <small>v{LATEST.replace(/\.0$/, '')}</small>
+              {newsUnseen && <span className="news-dot inline" aria-label={t('new', 'nowe')} />}
             </button>
             <p className="hint">{t('Design your own', 'Zaprojektuj coś swojego')}</p>
             <button

@@ -1,12 +1,14 @@
 import { useEffect, useRef, type MutableRefObject } from 'react';
 import { parseBouquet } from '../garden/bouquets';
-import { freeShelfSlots, receivePost, type GardenState } from '../garden/state';
+import { freeShelfSlots, receivePackage, receivePost, type GardenState } from '../garden/state';
+import { parsePackage } from '../garden/packages';
 import { inbox, isRobot, listenForMail, markDelivered, remoteConfigured, type Mail } from './client';
 
 /** The garden saves a moment after each change; post is only marked taken in once that has happened. */
 const SAVE_FIRST = 1200;
 
-export type Arrival = { from: string; inBox: boolean };
+/** What came: a bouquet (on the shelves or in the box on the floor) or a package; `from` is null when it came without a name. */
+export type Arrival = { kind: 'bouquet' | 'package'; from: string | null; inBox: boolean };
 
 /**
  * Takes in post sent to her tag: bouquets go on the shelves, or into the box on the floor if
@@ -42,16 +44,26 @@ export function useMail(
       try {
         while (!stopped && readyRef.current && gardenRef.current && queue.length > 0) {
           const m = queue.shift()!;
+          const at = Date.parse(m.created_at) || Date.now();
           const bouquet = m.kind === 'bouquet' && typeof m.payload === 'object' && m.payload !== null
-            ? parseBouquet({ ...(m.payload as object), id: m.id, from: m.from_tag, at: Date.parse(m.created_at) || Date.now() })
+            ? parseBouquet({ ...(m.payload as object), id: m.id, from: m.from_tag, at })
             : null;
+          // a package: what's in it and the letter are read as carefully as a bouquet; it waits, wrapped
+          const pkg = m.kind === 'package' && typeof m.payload === 'object' && m.payload !== null
+            ? parsePackage({ ...(m.payload as object), id: m.id, from: m.from_tag, at })
+            : null;
+          if (pkg && !gardenRef.current.packages.some((p) => p.id === m.id)) {
+            setGarden((x) => (x ? receivePackage(x, pkg) : x));
+            arriveRef.current({ kind: 'package', from: pkg.from, inBox: false });
+            await new Promise((r) => setTimeout(r, SAVE_FIRST));
+          }
           if (bouquet) {
             const g = gardenRef.current;
             const already = g.bouquets.some((b) => b.id === m.id) || g.parcels.some((b) => b.id === m.id);
             if (!already) {
               const inBox = freeShelfSlots(g).length === 0;
               setGarden((x) => (x ? receivePost(x, bouquet) : x));
-              arriveRef.current({ from: m.from_tag, inBox });
+              arriveRef.current({ kind: 'bouquet', from: m.from_tag, inBox });
               await new Promise((r) => setTimeout(r, SAVE_FIRST));
             }
           }

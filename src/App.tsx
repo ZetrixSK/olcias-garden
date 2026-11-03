@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   addDrawing,
   addSeeds,
+  giveAway,
+  secretDesigns,
+  openPackage,
+  packageItems,
   sawWeather,
   sowSeed,
   freeShelfSlots,
@@ -78,8 +82,12 @@ import { BackupSheet } from './ui/Backup';
 import { canAddToHomeScreen, Welcome } from './ui/InstallHint';
 import { BouquetCard, BouquetStudio, ParcelsSheet } from './ui/Bouquets';
 import { arrivalNotice, NoticeNote, PostSheet, TagWelcome, type Notice } from './ui/Post';
+import { PackageComposer, PackageOpen } from './ui/Packages';
+import { packagePayload } from './garden/packages';
 import { FirstCover } from './ui/FirstCover';
 import { TRAIT_WORDS } from './ui/traitWords';
+import { WhatsNew } from './ui/WhatsNew';
+import { LATEST } from './changelog';
 import { VisitView, visitorNotice, type Visiting } from './ui/Visit';
 import { ViewSwiper } from './ui/ViewSwiper';
 import { applyAction } from './remote/actions';
@@ -216,6 +224,9 @@ type Mode =
   | { kind: 'bouquet'; id: string }
   | { kind: 'parcels' }
   | { kind: 'post' }
+  /** packing a package to send, and opening (or rereading) one that came */
+  | { kind: 'compose' }
+  | { kind: 'package'; id: string }
   /** in someone else's garden, by their leave */
   | { kind: 'visit'; visit: Visiting }
   /** painting her own room; `draft` shows in the room until she saves or closes */
@@ -281,6 +292,7 @@ export function App() {
   const [bookOpen, setBookOpen] = useState(false);
   const [diaryOpen, setDiaryOpen] = useState(false);
   /** The album book: shut, open on its shelf (null), or open on one picture. */
+  const [newsOpen, setNewsOpen] = useState(false);
   const [memoriesOpen, setMemoriesOpen] = useState<{ at: string | null } | false>(false);
   const [easel, setEasel] = useState<Easel | null>(null);
   const [memoryBusy, setMemoryBusy] = useState<string | null>(null);
@@ -317,7 +329,8 @@ export function App() {
         return;
       }
       opened.current = { at: t, garden: g };
-      const caughtUp = catchUpNights(g, t);
+      const nightly = catchUpNights(g, t);
+      const caughtUp = nightly.settings.seenVersion === null ? updateSettings(nightly, { seenVersion: LATEST }) : nightly;
       setGarden(import.meta.env.DEV ? devOverrides(caughtUp) : caughtUp);
       // a plant that changed in the night is worth a word when she comes back
       const changed = caughtUp.plants.filter((p) => p.trait && !g.plants.find((was) => was.id === p.id)?.trait);
@@ -878,7 +891,7 @@ export function App() {
       >
         <ViewSwiper
           view={settings.view}
-          enabled={mode.kind === 'idle' && !lapse && !letterOpen && !diaryOpen && !bookOpen && !memoriesOpen && !easel && !welcoming && !askTag}
+          enabled={mode.kind === 'idle' && !lapse && !letterOpen && !diaryOpen && !bookOpen && !memoriesOpen && !newsOpen && !easel && !welcoming && !askTag}
           onChange={(view) => setSettings({ view })}
           room={
             <Scene
@@ -955,6 +968,11 @@ export function App() {
           onPicture={() => setMode({ kind: 'picture' })}
           onBook={openBook}
           onMemories={() => setMemoriesOpen({ at: null })}
+          onNews={() => {
+            setNewsOpen(true);
+            if (settings.seenVersion !== LATEST) setSettings({ seenVersion: LATEST });
+          }}
+          newsUnseen={settings.seenVersion !== null && settings.seenVersion !== LATEST}
           onDecorate={openDecorate}
           onBouquet={() => setMode({ kind: 'bouquetStudio' })}
           onPost={openPost}
@@ -1132,6 +1150,9 @@ export function App() {
             tag={garden.post.tag}
             contacts={garden.post.contacts}
             parcels={garden.parcels.length}
+            packages={garden.packages}
+            onOpenPackage={(id) => setMode({ kind: 'package', id })}
+            onCompose={() => setMode({ kind: 'compose' })}
             onClaim={claim}
             onParcels={() => setMode({ kind: 'parcels' })}
             loadBlocked={loadBlocked}
@@ -1142,6 +1163,41 @@ export function App() {
             onClose={() => setMode({ kind: 'idle' })}
           />
         )}
+        {mode.kind === 'compose' && (
+          <PackageComposer
+            garden={garden}
+            onClose={() => setMode({ kind: 'post' })}
+            onSend={async (to, letter, picked, mystery) => {
+              const g = gardenRef.current;
+              if (!g) return 'offline';
+              const error = await sendMail(to, 'package', packagePayload(letter, packageItems(g, picked, mystery)));
+              if (error) return error;
+              update((x) => rememberContact(giveAway(x, picked), to));
+              setNotice({
+                title: t(`On its way to #${to}`, `W drodze do #${to}`),
+                text: t('It will be there when they next open their garden.', 'Dotrze, kiedy następnym razem otworzy swój ogród.'),
+              });
+              setMode({ kind: 'idle' });
+              return null;
+            }}
+          />
+        )}
+        {mode.kind === 'package' &&
+          (() => {
+            const pkg = garden.packages.find((p) => p.id === mode.id);
+            if (!pkg) return null;
+            return (
+              <PackageOpen
+                key={pkg.id}
+                pkg={pkg}
+                onClose={() => setMode({ kind: 'post' })}
+                onTake={() => {
+                  update((g) => openPackage(g, pkg.id, Date.now()));
+                  setMode({ kind: 'idle' });
+                }}
+              />
+            );
+          })()}
         {notice && <NoticeNote notice={notice} onDone={closeNotice} />}
         {mode.kind === 'parcels' && (
           <ParcelsSheet
@@ -1227,6 +1283,7 @@ export function App() {
         {mode.kind === 'variety' && (
           <VarietyPicker
             designs={garden.designs}
+            hidden={secretDesigns(garden, now)}
             onPick={(v) => plantIn(mode.slot, 'pansy', v)}
             onDesign={() => setMode({ kind: 'pansyStudio', editing: null, forSlot: mode.slot, forPlant: null })}
             onEdit={(id) => setMode({ kind: 'pansyStudio', editing: id, forSlot: mode.slot, forPlant: null })}
@@ -1237,6 +1294,7 @@ export function App() {
           <StyleSheet
             plant={stylePlant}
             designs={garden.designs}
+            hidden={secretDesigns(garden, now)}
             now={now}
             onPot={(pot) => update((g) => setPot(g, stylePlant.id, pot))}
             onVariety={(v) => update((g) => setVariety(g, stylePlant.id, v))}
@@ -1366,6 +1424,7 @@ export function App() {
             onLater={() => setSettings({ tagAsked: true })}
           />
         )}
+        {newsOpen && <WhatsNew onClose={() => setNewsOpen(false)} />}
         {letterOpen && !lapse && (
           <Letter
             first={settings.letter === 'unread'}
