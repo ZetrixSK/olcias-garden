@@ -233,7 +233,7 @@ export function GardenPanel({ garden, weather, now, send }: { garden: GardenStat
       <Choice
         value={s.weatherMode === 'manual' ? `${s.manual.sky}${s.manual.night ? '-night' : ''}` : s.weatherMode}
         options={[
-          { id: 'clock', label: 'Follow the clock' },
+          { id: 'clock', label: 'Clear skies (by the clock)' },
           { id: 'live', label: 'Live weather' },
           { id: 'clear', label: 'Sunny' },
           { id: 'cloudy', label: 'Cloudy' },

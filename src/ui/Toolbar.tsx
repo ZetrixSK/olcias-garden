@@ -68,8 +68,8 @@ function Icon({ children }: { children: JSX.Element }) {
 const STATUS_TEXT: Record<WeatherStatus, [string, string]> = {
   live: ['Live weather', 'Prawdziwa pogoda'],
   offline: ['Live weather · offline for now', 'Prawdziwa pogoda · na razie bez internetu'],
-  clock: ['Following the clock', 'Według zegara'],
-  manual: ['Chosen by you', 'Wybrana przez Ciebie'],
+  clock: ['Clear skies', 'Zawsze bezchmurnie'],
+  manual: ['Weather set by hand', 'Pogoda ustawiona ręcznie'],
 };
 
 /** Each language, named in itself, and what it means. */
@@ -152,7 +152,7 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
           <div className="weather-menu" role="dialog" aria-label={menuName}>
             <p className="hint">{t(...STATUS_TEXT[status])}</p>
             <button
-              className="wide"
+              className="wide two-line"
               aria-pressed={settings.weatherMode === 'live'}
               onClick={() => {
                 onLiveWeather();
@@ -160,15 +160,18 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
               }}
               disabled={locating}
             >
-              {locating
-                ? t('Finding you…', 'Szukam Cię…')
-                : settings.location
-                  ? t('Live weather', 'Prawdziwa pogoda')
-                  : t('Live weather · uses location', 'Prawdziwa pogoda · użyje lokalizacji')}
+              {locating ? t('Finding you…', 'Szukam Cię…') : t('Live weather', 'Prawdziwa pogoda')}
+              <small>
+                {settings.location
+                  ? t('clouds and rain, as outside', 'chmury i deszcz jak za oknem')
+                  : t('as outside · uses your location', 'jak za oknem · użyje lokalizacji')}
+              </small>
             </button>
-            <button className="wide" aria-pressed={settings.weatherMode === 'clock'} onClick={() => onSettings({ weatherMode: 'clock' })}>
-              {t('Follow the clock', 'Według zegara')}
+            <button className="wide two-line" aria-pressed={settings.weatherMode === 'clock'} onClick={() => onSettings({ weatherMode: 'clock' })}>
+              {t('Clear skies', 'Zawsze bezchmurnie')}
+              <small>{t('no clouds or rain', 'bez chmur i deszczu')}</small>
             </button>
+            <p className="hint">{t('Or set it yourself, and it stays:', w.g('Albo ustaw ją sama, na stałe:', 'Albo ustaw ją sam, na stałe:'))}</p>
             <div className="row three">
               {SKY_KINDS.map((k) => (
                 <button key={k} aria-label={t(...SKY_NAME[k])} aria-pressed={manual && weather.sky === k} onClick={() => choose({ sky: k })}>

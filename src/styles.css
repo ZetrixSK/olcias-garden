@@ -635,6 +635,10 @@ body {
   flex-direction: column;
   gap: 6px;
 }
+/* in the scrolling menu, nothing gets squeezed to fit: it scrolls instead */
+.weather-menu > * {
+  flex-shrink: 0;
+}
 .weather-menu .hint {
   margin: 0 4px 2px;
   font-size: 14px;
