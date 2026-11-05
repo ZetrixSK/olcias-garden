@@ -1,3 +1,4 @@
+import { RibbonBow } from '../plants/Ribbon';
 import { useEffect, useState } from 'react';
 import { DAY_PRICE, MILTON, trinket, trinketPrice, type SeedItem } from '../garden/market';
 import type { GardenState } from '../garden/state';
@@ -55,9 +56,9 @@ export function SeedPacketCard({ item }: { item: SeedItem }) {
         {item.kind === 'pansy' && <PansyFlower x={0} y={0} s={0.56} c={designColors(item.design)} />}
         {item.kind === 'ribbon' && (
           <g transform="translate(0 -2) scale(1.3)">
-            <path className="ink-thin" fill={item.color} d="M0,0 C-4,-7 -13,-8 -13,-2 C-13,3 -6,3 0,0 Z M0,0 C4,-7 13,-8 13,-2 C13,3 6,3 0,0 Z" />
-            <path className="ink-thin" fill={item.color} d="M-1,1 C-3,6 -5,9 -7,11 L-4,11 L-3,13 C-1,10 0,6 0.4,1.4 Z M1,1 C3,6 5,9 7,11 L4,11 L3,13 C1,10 0,6 0,1.6 Z" />
-            <ellipse className="ink-thin" rx="2.2" ry="2.4" fill={item.color} />
+            <g transform="translate(0 -1) scale(1.35)">
+              <RibbonBow color={item.color} />
+            </g>
           </g>
         )}
         {item.kind === 'vase' && (

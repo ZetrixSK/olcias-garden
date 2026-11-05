@@ -23,8 +23,10 @@ import { Potted } from '../plants/Pots';
 import { FLOOR_SWATCHES, ROOM_SWATCH_NAMES, ROOM_SWATCHES, type OwnRoom, type RoomPart } from '../theme/ownRoom';
 import type { Theme } from '../theme/palettes';
 
-export function Swatches({ colors, value, onPick, none, names = SWATCH_NAMES }: {
+export function Swatches({ colors, value, onPick, none, names = SWATCH_NAMES, render }: {
   colors: readonly string[];
+  /** Draws a swatch instead of a flat colour, for ones with a pattern. */
+  render?: (c: string) => ReactNode;
   value: string | null;
   onPick: (c: string | null) => void;
   none?: boolean;
@@ -41,7 +43,9 @@ export function Swatches({ colors, value, onPick, none, names = SWATCH_NAMES }: 
         </button>
       )}
       {colors.map((c) => (
-        <button key={c} className="swatch" aria-label={names[c] ?? c} aria-pressed={value === c} style={{ background: c }} onClick={() => onPick(c)} />
+        <button key={c} className={render ? 'swatch drawn' : 'swatch'} aria-label={names[c] ?? c} aria-pressed={value === c} style={{ background: c }} onClick={() => onPick(c)}>
+          {render?.(c)}
+        </button>
       ))}
     </div>
   );

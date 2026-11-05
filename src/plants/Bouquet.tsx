@@ -1,3 +1,4 @@
+import { RibbonBow } from './Ribbon';
 import { designRef, NO_DESIGNS } from '../garden/designs';
 import { hash, rng } from '../garden/vines';
 import type { Bouquet, Stem, Vase } from '../garden/bouquets';
@@ -97,9 +98,7 @@ function VaseFront({ vase, ribbon }: { vase: Vase; ribbon: string | null }) {
       )}
       {ribbon && (
         <g transform={`translate(${vase === 'bottle' ? 0 : -1} ${m.y + (vase === 'bottle' ? 11 : vase === 'cauldron' ? 4 : 6)})`}>
-          <path className="ink-thin" fill={ribbon} d="M0,0 C-3,-5 -9,-6 -9,-2 C-9,1.6 -4,2 0,0 Z M0,0 C3,-5 9,-6 9,-2 C9,1.6 4,2 0,0 Z" />
-          <path className="ink-thin" fill={ribbon} d="M-1,1 C-2,5 -4,9 -6,11 L-3.6,10.6 L-2.6,12.6 C-0.8,9 0.2,5 0.4,1.4 Z M1,1 C2.4,4.6 4.4,8 6.6,10 L4.2,10 L3.8,12.2 C2,9 0.6,5 0,1.6 Z" />
-          <ellipse className="ink-thin" cx="0" cy="0" rx="1.8" ry="2" fill={ribbon} />
+          <RibbonBow color={ribbon} />
         </g>
       )}
     </g>

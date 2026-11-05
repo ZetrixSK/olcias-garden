@@ -1,3 +1,4 @@
+import { RibbonSwatch } from '../plants/Ribbon';
 import { useMemo, useState } from 'react';
 import { BASE_VASES, MAX_NOTE, MAX_STEMS, RIBBONS, stemOf, stemsLeft, type Bouquet, type Vase } from '../garden/bouquets';
 import { wishMet, type Request } from '../garden/visitors';
@@ -197,7 +198,7 @@ export function BouquetStudio({ garden, now, onKeep, onSend, onClaim, canSend, o
           </div>
         </Section>
         <Section title={t('Ribbon', 'Wstążka')}>
-          <Swatches colors={ribbons} value={ribbon} none names={ribbonNames} onPick={setRibbon} />
+          <Swatches colors={ribbons} value={ribbon} none names={ribbonNames} onPick={setRibbon} render={(c) => <RibbonSwatch color={c} />} />
         </Section>
         <Section title={t('A card', 'Karteczka')}>
           <input

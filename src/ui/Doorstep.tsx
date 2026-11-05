@@ -1,3 +1,4 @@
+import { RibbonBow } from '../plants/Ribbon';
 import { prefersStill } from '../motion';
 import { useEffect, useState } from 'react';
 import { FLYING, VisitorArt, type VisitorMood } from '../scene/VisitorArt';
@@ -253,9 +254,9 @@ export function GiftArt({ gift }: { gift: Gift }) {
   if (gift.kind === 'ribbon') {
     return (
       <svg viewBox="-16 -12 32 28" aria-hidden="true">
-        <path className="ink-thin" fill={gift.color} d="M0,0 C-4,-7 -13,-8 -13,-2 C-13,3 -6,3 0,0 Z M0,0 C4,-7 13,-8 13,-2 C13,3 6,3 0,0 Z" />
-        <path className="ink-thin" fill={gift.color} d="M-1,1 C-3,6 -5,11 -8,14 L-5,13.6 L-4,16 C-1,12 0,6 0.4,1.4 Z M1,1 C3,6 6,10 9,13 L6,13 L5.6,15.6 C3,12 1,6 0,1.6 Z" />
-        <ellipse className="ink-thin" rx="2.4" ry="2.6" fill={gift.color} />
+        <g transform="scale(1.45)">
+          <RibbonBow color={gift.color} />
+        </g>
       </svg>
     );
   }

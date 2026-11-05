@@ -1,3 +1,5 @@
+import { RibbonBow } from './plants/Ribbon';
+import { GIFT_RIBBONS } from './garden/visitors';
 import { TRINKETS } from './garden/market';
 import { CardBack, Milton, PanJezyk, PaniCma, Stall, TrinketArt } from './scene/MarketArt';
 import { VISITOR_IDS } from './garden/visitors';
@@ -153,6 +155,27 @@ export function MarketGallery() {
           <CardBack />
         </foreignObject>
       </g>
+    </svg>
+  );
+}
+
+/** Dev-only: every ribbon, close up and on a bouquet, opened with ?ribbons. */
+export function RibbonGallery() {
+  const all = [...RIBBONS, ...Object.values(GIFT_RIBBONS)];
+  return (
+    <svg viewBox="0 0 400 300" style={{ width: '100%', background: 'var(--wall)' }}>
+      {all.map((c, i) => (
+        <g key={c}>
+          <g transform={`translate(${34 + (i % 6) * 66} ${40 + Math.floor(i / 6) * 60}) scale(2.2)`}>
+            <RibbonBow color={c} />
+          </g>
+        </g>
+      ))}
+      {Object.values(GIFT_RIBBONS).map((c, i) => (
+        <g key={c} transform={`translate(${34 + i * 66} 280) scale(1.25)`}>
+          <BouquetArt bouquet={{ id: `r${i}`, stems: [{ species: 'rose', variety: null, design: null }, { species: 'daisy', variety: null, design: null }, { species: 'lavender', variety: null, design: null }], vase: 'jar', ribbon: c, note: '', seed: 3 }} showNote={false} />
+        </g>
+      ))}
     </svg>
   );
 }

@@ -4673,3 +4673,14 @@ html.still .flag-sway {
 html.still .balloon-bob {
   animation: none;
 }
+
+/* a ribbon swatch drawn with its pattern, filling the round button */
+.swatch.drawn {
+  padding: 0;
+  overflow: hidden;
+}
+.swatch.drawn svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
