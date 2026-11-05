@@ -77,7 +77,7 @@ describe('garden state', () => {
       tagAsked: false,
       curtainsClosed: false,
       seenVersion: null,
-      motion: 'phone',
+      motion: 'always',
       hud: 's',
     });
   });

@@ -197,7 +197,7 @@ export const DEFAULT_SETTINGS: Settings = {
   tagAsked: false,
   curtainsClosed: false,
   seenVersion: null,
-  motion: 'phone',
+  motion: 'always',
   hud: 'm',
 };
 
@@ -734,7 +734,8 @@ export function parseSettings(v: unknown): Settings {
     tagAsked: s.tagAsked === true,
     curtainsClosed: s.curtainsClosed === true,
     seenVersion: typeof s.seenVersion === 'string' && /^\d+\.\d+\.\d+$/.test(s.seenVersion) ? s.seenVersion : null,
-    motion: s.motion === 'always' ? 'always' : 'phone',
+    // the garden moves unless she has asked it to keep still like the phone
+    motion: s.motion === 'phone' ? 'phone' : 'always',
     // gardens from before the setting keep the size they had
     hud: s.hud === 'm' || s.hud === 'l' ? s.hud : 's',
   };
