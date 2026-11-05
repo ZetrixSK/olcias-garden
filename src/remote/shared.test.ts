@@ -1,11 +1,12 @@
+import { testGarden } from '../garden/testGarden';
 import { describe, expect, it } from 'vitest';
-import { parseSave, starterGarden, saveDiaryEntry } from '../garden/state';
+import { parseSave, saveDiaryEntry } from '../garden/state';
 import { deviceLabel, sharedGarden } from './shared';
 
 const NOW = new Date(2026, 9, 31, 12).getTime();
 
 function gardenWithNotes(shareNotes: boolean) {
-  const g = saveDiaryEntry(starterGarden(NOW), '2026-10-31', 'happy', 'a secret', NOW);
+  const g = saveDiaryEntry(testGarden(NOW), '2026-10-31', 'happy', 'a secret', NOW);
   return {
     ...g,
     settings: { ...g.settings, shareNotes, location: { lat: 52.40637, lon: 16.92517 } },
@@ -45,7 +46,7 @@ describe('sharedGarden', () => {
 
 describe('sharing setting', () => {
   it('is off for older saves', () => {
-    const old = JSON.parse(JSON.stringify(starterGarden(NOW)));
+    const old = JSON.parse(JSON.stringify(testGarden(NOW)));
     delete old.settings.shareNotes;
     expect(parseSave(old, NOW)!.settings.shareNotes).toBe(false);
   });

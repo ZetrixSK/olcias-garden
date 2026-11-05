@@ -13,7 +13,7 @@ export function seasonAt(t: number): Season {
 }
 
 /** Special days that change the room a little. */
-export type Occasion = 'halloween' | null;
+export type Occasion = 'halloween' | 'birthday' | null;
 
 /**
  * ?season=winter or ?occasion=halloween (or none) shows another time of year, so the seasons can
@@ -29,7 +29,7 @@ export const seasonShown = (t: number): Season =>
   preview('season', ['spring', 'summer', 'autumn', 'winter'] as const) ?? seasonAt(t);
 
 export function occasionShown(t: number): Occasion {
-  const v = preview('occasion', ['halloween', 'none'] as const);
+  const v = preview('occasion', ['halloween', 'birthday', 'none'] as const);
   return v === 'none' ? null : (v ?? occasionAt(t));
 }
 
@@ -39,6 +39,8 @@ export function occasionAt(t: number): Occasion {
   const m = d.getMonth();
   const day = d.getDate();
   if ((m === 9 && day >= 17) || (m === 10 && day <= 2)) return 'halloween';
+  // her birthday, on New Year's Day
+  if (m === 0 && day === 1) return 'birthday';
   return null;
 }
 

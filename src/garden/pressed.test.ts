@@ -1,6 +1,7 @@
+import { testGarden } from './testGarden';
 import { describe, expect, it } from 'vitest';
 import type { PansyDesign } from './designs';
-import { canPress, deleteDesign, parseSave, pressFlower, savePansyDesign, starterGarden, unpress, type GardenState, type Plant } from './state';
+import { canPress, deleteDesign, parseSave, pressFlower, savePansyDesign, unpress, type GardenState, type Plant } from './state';
 import { pressedName } from '../ui/PressedBook';
 import { moonLit, moonName, moonPath, moonPhase } from '../weather/moon';
 import { dogMood } from '../scene/dogMood';
@@ -12,7 +13,7 @@ const design: PansyDesign = { id: 'f1', name: 'Słoneczko', top: '#f3d36b', low:
 function plant(id: string, extra: Partial<Plant> = {}): Plant {
   return { id, species: 'pansy', slot: 'row3-a', pot: 'wide', variety: null, plantedAt: LONG_AGO, waterings: [], display: null, vine: null, name: null, trait: null, ...extra };
 }
-const garden = (plants: Plant[]): GardenState => ({ ...starterGarden(at(1, 12)), plants });
+const garden = (plants: Plant[]): GardenState => ({ ...testGarden(at(1, 12)), plants });
 
 describe('the pressed-flower book', () => {
   it('takes one flower a day from a plant in bloom', () => {

@@ -1,29 +1,19 @@
+import { testGarden } from './testGarden';
 import { describe, expect, it } from 'vitest';
-import {
-  addPlant,
-  cyclePot,
-  movePlant,
-  parseSave,
-  placeInWindow,
-  removePlant,
-  starterGarden,
-  takeDown,
-  waterPlant,
-  windowPlantAt,
-} from './state';
+import { addPlant, cyclePot, movePlant, parseSave, placeInWindow, removePlant, takeDown, waterPlant, windowPlantAt } from './state';
 
 const NOW = Date.UTC(2026, 9, 14);
 
 describe('garden state', () => {
   it('plants only into empty slots', () => {
-    const g = starterGarden(NOW);
+    const g = testGarden(NOW);
     expect(addPlant(g, g.plants[0]!.slot, 'rose', NOW)).toBe(g);
     const next = addPlant(g, 'row3-a', 'rose', NOW, 'new');
     expect(next.plants.find((p) => p.id === 'new')?.slot).toBe('row3-a');
   });
 
   it('moves into an empty slot and swaps with an occupied one', () => {
-    let g = addPlant(addPlant(starterGarden(NOW), 'row3-a', 'rose', NOW, 'a'), 'row3-b', 'tulip', NOW, 'b');
+    let g = addPlant(addPlant(testGarden(NOW), 'row3-a', 'rose', NOW, 'a'), 'row3-b', 'tulip', NOW, 'b');
     g = movePlant(g, 'a', 'row3-c');
     expect(g.plants.find((p) => p.id === 'a')?.slot).toBe('row3-c');
     g = movePlant(g, 'a', 'row3-b');
@@ -32,7 +22,7 @@ describe('garden state', () => {
   });
 
   it('records waterings, removes plants and cycles pots', () => {
-    let g = addPlant(starterGarden(NOW), 'row3-a', 'rose', NOW, 'a');
+    let g = addPlant(testGarden(NOW), 'row3-a', 'rose', NOW, 'a');
     g = waterPlant(g, 'a', NOW + 1);
     expect(g.plants.find((p) => p.id === 'a')?.waterings).toEqual([NOW + 1]);
     const before = g.plants.find((p) => p.id === 'a')!.pot;
@@ -41,7 +31,7 @@ describe('garden state', () => {
   });
 
   it('round-trips a save', () => {
-    const g = starterGarden(NOW);
+    const g = testGarden(NOW);
     expect(parseSave(JSON.parse(JSON.stringify(g)))).toEqual(g);
   });
 
@@ -131,7 +121,7 @@ describe('garden state', () => {
 });
 
 describe('the window display', () => {
-  const garden = () => addPlant(addPlant({ ...starterGarden(NOW), plants: [] }, 'row3-a', 'rose', NOW, 'a'), 'row3-b', 'tulip', NOW, 'b');
+  const garden = () => addPlant(addPlant({ ...testGarden(NOW), plants: [] }, 'row3-a', 'rose', NOW, 'a'), 'row3-b', 'tulip', NOW, 'b');
 
   it('pins a shelf plant into the window without moving it off its shelf', () => {
     const g = placeInWindow(garden(), 'a', 'sill-1');

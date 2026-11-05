@@ -24,6 +24,7 @@ import { leanFor, runnerStart, VINE_PHASE, VineRunner, Vines, type PlacedVine, t
 import { useGrowingVines } from './useGrowingVines';
 import { FloorParcels } from '../ui/Bouquets';
 import { Letterbox } from './Letterbox';
+import { Balloon, BirthdayBanner } from './Birthday';
 import { VisitorArt } from './VisitorArt';
 import { Garland, Milton, SpeechBubble } from './MarketArt';
 import type { VisitorId } from '../garden/visitors';
@@ -192,7 +193,8 @@ const Backdrop = memo(function Backdrop({ theme, sky, night, twilight, season, o
 });
 
 /** Curtains, pictures, sign, floor and the dogs. */
-const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hideCurtains, phase, mood, occasion, onBook, photoUrl, onFrame, parcels, onParcels, mailNews, onPost, name, onSign, curtainsClosed, onCurtains, onCurtainsOpen, milton, miltonSays, onMilton }: {
+const RoomFront = memo(function RoomFront({ birthdayWords, theme, dy, wallMid, pictureScale, hideCurtains, phase, mood, occasion, onBook, photoUrl, onFrame, parcels, onParcels, mailNews, onPost, name, onSign, curtainsClosed, onCurtains, onCurtainsOpen, milton, miltonSays, onMilton }: {
+  birthdayWords: string;
   /** Milton, in the dogs' bed, if he has come; what he's saying, if she just tapped him. */
   milton: boolean;
   miltonSays: string | null;
@@ -231,6 +233,15 @@ const RoomFront = memo(function RoomFront({ theme, dy, wallMid, pictureScale, hi
       </g>
       {/* the curtains hang in front of the pictures on the wall; only the cloth above them is tapped */}
       {!hideCurtains && <CurtainStage theme={theme} closed={curtainsClosed} onToggle={onCurtains} onOpen={onCurtainsOpen} />}
+      {/* her birthday: a banner hung from the curtain rod, and balloons tied to the curtains */}
+      {occasion === 'birthday' && (
+        <>
+          <BirthdayBanner words={birthdayWords} from={[92, 58]} to={[308, 58]} sag={28} />
+          <Balloon x={36} y={420} color="#f3a6bf" />
+          <Balloon x={52} y={426} color="#b9a3e3" delay={1.4} />
+          <Balloon x={362} y={424} color="#f2d16b" delay={0.7} />
+        </>
+      )}
       {/* the witchy room's bat, asleep on the curtain rod by day; it visits the cozy room for Halloween */}
       {(theme === 'witchy' || occasion === 'halloween') && <HangingBat x={298} y={36} s={1.55} awake={mood === 'asleep'} />}
       <g transform={`translate(0 ${dy})`}>
@@ -309,7 +320,9 @@ const SillBoard = memo(Sill);
 const Trinket = memo(ShelfTrinket);
 const Candle = memo(SillCandle);
 
-export function Scene({ theme, weather, viewH, vines, still = false, moments = [], onParcels, onPost, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, onSign, onCurtains, rainbow = false, candle = null, candleOn, onCandle, flyer = null, miltonSays = null, onMilton, ...rest }: {
+export function Scene({ theme, weather, viewH, vines, still = false, moments = [], onParcels, onPost, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, onSign, onCurtains, rainbow = false, candle = null, candleOn, onCandle, flyer = null, miltonSays = null, onMilton, birthdayWords = 'Sto lat', ...rest }: {
+  /** What her birthday banner says. */
+  birthdayWords?: string;
   /** What Milton is saying, for a moment after she taps him. */
   miltonSays?: string | null;
   onMilton?: () => void;
@@ -424,6 +437,7 @@ export function Scene({ theme, weather, viewH, vines, still = false, moments = [
         curtainsClosed={curtainsClosed}
         onCurtains={onCurtains}
         onCurtainsOpen={onCurtainsOpen}
+        birthdayWords={birthdayWords}
         milton={rest.garden.market.milton}
         miltonSays={miltonSays}
         onMilton={onMilton}

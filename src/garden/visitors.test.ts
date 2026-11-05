@@ -1,3 +1,4 @@
+import { testGarden } from './testGarden';
 import { describe, expect, it } from 'vitest';
 import {
   arrive,
@@ -18,7 +19,7 @@ import {
   type Visitors,
 } from './visitors';
 import { parseBouquet, type Bouquet, type Stem } from './bouquets';
-import { giveToVisitor, knock, parseSave, starterGarden } from './state';
+import { giveToVisitor, knock, parseSave } from './state';
 
 const NOW = new Date(2026, 10, 3, 12).getTime();
 const HOUR = 3_600_000;
@@ -168,7 +169,7 @@ describe('thanks and gifts', () => {
   });
 
   it('in the garden: the stems are cut, and a bratek gift goes into her tin', () => {
-    let g = starterGarden(NOW);
+    let g = testGarden(NOW);
     const friend = { visits: 3, hearts: 3, gifts: 1, fav: false, first: NOW, bouquets: [] };
     g = { ...g, visitors: { ...waiting('jadzia'), friends: { jadzia: friend } } };
     g = { ...g, visitors: { ...g.visitors, request: { ...g.visitors.request!, wishes: [{ kind: 'colour', colour: 'pink', min: 1 }] } } };
@@ -190,7 +191,7 @@ describe('thanks and gifts', () => {
 
 describe('saving', () => {
   it('a garden from before visitors keeps every flower she had planted', () => {
-    const g = starterGarden(NOW);
+    const g = testGarden(NOW);
     const raw = JSON.parse(JSON.stringify({ ...g, plants: [...g.plants, { ...g.plants[0]!, id: 'x', slot: 'row3-a', species: 'batflower' }] }));
     delete raw.visitors;
     const back = parseSave(raw, NOW)!;
@@ -200,7 +201,7 @@ describe('saving', () => {
   });
 
   it('reads back what it wrote, and nothing it did not', () => {
-    let g = knock(starterGarden(NOW), NOW + HOUR, { sky: 'clear', night: false }, false, always(0.4));
+    let g = knock(testGarden(NOW), NOW + HOUR, { sky: 'clear', night: false }, false, always(0.4));
     expect(g.visitors.request).not.toBeNull();
     g = parseSave(JSON.parse(JSON.stringify(g)), NOW + HOUR)!;
     expect(g.visitors.request).not.toBeNull();

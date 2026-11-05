@@ -1,6 +1,7 @@
+import { testGarden } from './testGarden';
 import { describe, expect, it } from 'vitest';
 import { parseDesigns, potShape, type PansyDesign, type PotDesign } from './designs';
-import { addPlant, deleteDesign, parseSave, savePansyDesign, savePotDesign, setPot, setVariety, starterGarden, type GardenState } from './state';
+import { addPlant, deleteDesign, parseSave, savePansyDesign, savePotDesign, setPot, setVariety, type GardenState } from './state';
 import { pansyPalette, plantLook } from '../plants/looks';
 
 const NOW = Date.UTC(2026, 9, 17);
@@ -8,7 +9,7 @@ const pot: PotDesign = { id: 'p1', shape: 'round', body: '#f2c4cf', pattern: 'he
 const pansy: PansyDesign = { id: 'f1', name: 'Słoneczko', top: '#f3d36b', low: '#6b3fa0', face: 'whiskers', faceColor: '#241326', edge: null };
 
 function designed() {
-  let g: GardenState = { ...starterGarden(NOW), plants: [] };
+  let g: GardenState = { ...testGarden(NOW), plants: [] };
   g = savePotDesign(savePansyDesign(g, pansy), pot);
   g = addPlant(g, 'row3-a', 'pansy', NOW, 'a', 'd:f1');
   return setPot(g, 'a', 'd:p1');

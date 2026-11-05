@@ -1,5 +1,6 @@
+import { testGarden } from '../garden/testGarden';
 import { describe, expect, it } from 'vitest';
-import { parseSave, starterGarden, type GardenState } from '../garden/state';
+import { parseSave, type GardenState } from '../garden/state';
 import { VINE_STEP } from '../garden/vines';
 import { stageAt } from '../garden/growth';
 import { STAGES } from '../garden/species';
@@ -10,7 +11,7 @@ const applyAction = (g: GardenState, a: RemoteAction) => apply(g, a, NOW);
 
 const NOW = new Date(2026, 9, 31, 12).getTime();
 
-const garden = () => starterGarden(NOW);
+const garden = () => testGarden(NOW);
 const onSill = (g: GardenState, spot: string) => g.plants.find((p) => p.display === spot)!;
 const overgrow = (plant: string, id = 'a1', extra: Record<string, unknown> = {}) => ({ id, kind: 'overgrow', payload: { plant, ...extra } });
 

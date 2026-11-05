@@ -1,7 +1,8 @@
+import { testGarden } from './testGarden';
 import { describe, expect, it } from 'vitest';
 import { calledFor, noteWeather, parseTrait, rollTraits, SAW, TRAIT_SPEED, type Trait } from './traits';
 import { growthHours, plantedAtForStage, stageAt } from './growth';
-import { addSeeds, catchUpNights, parseSave, savePansyDesign, sowSeed, starterGarden, type Plant } from './state';
+import { addSeeds, catchUpNights, parseSave, savePansyDesign, sowSeed, type Plant } from './state';
 import { nightsBetween } from './vines';
 import { designRef } from './designs';
 import { dayKey } from './diary';
@@ -94,7 +95,7 @@ describe('a trait that hurries growth', () => {
 describe('the garden', () => {
   it('rolls each night only once, and keeps traits through a save', () => {
     const now = new Date(2026, 5, 20, 12).getTime();
-    let g = starterGarden(now - 30 * DAY);
+    let g = testGarden(now - 30 * DAY);
     g = { ...g, weatherSeen: {} };
     for (let d = 1; d <= 30; d++) g.weatherSeen[dayKey(new Date(now - d * DAY))] = SAW.rain | SAW.grey;
     const once = catchUpNights(g, now);
@@ -106,7 +107,7 @@ describe('the garden', () => {
   });
 
   it('opens an older save with no traits, no weather noted and an empty seed tin', () => {
-    const g = starterGarden(Date.now());
+    const g = testGarden(Date.now());
     const older = JSON.parse(JSON.stringify(g));
     delete older.weatherSeen;
     delete older.seeds;
@@ -121,7 +122,7 @@ describe('the garden', () => {
 describe('the seed tin', () => {
   const now = new Date(2026, 5, 1, 12).getTime();
   const design = { id: 'moon', name: 'Moonlight', top: '#241326', low: '#b9a3e3', face: 'clear' as const, faceColor: '#241326', edge: null };
-  const withDesign = () => savePansyDesign(starterGarden(now), design);
+  const withDesign = () => savePansyDesign(testGarden(now), design);
 
   it('holds packets of her designs, one seed sown at a time, the empty packet thrown away', () => {
     let g = addSeeds(withDesign(), designRef('moon'), 2, now, 'k1');
@@ -155,7 +156,7 @@ describe('the seed tin', () => {
 describe('a trait from the admin page', () => {
   it('can be given and taken away', () => {
     const now = new Date(2026, 5, 1, 12).getTime();
-    const g = starterGarden(now);
+    const g = testGarden(now);
     const id = g.plants.find((p) => p.plantedAt <= plantedAtForStage(p.species, 'seedling', now))!.id;
     const given = applyAction(g, { id: 'a1', kind: 'trait', payload: { plant: id, kind: 'enchanted' } }, now);
     expect(given.outcome.status).toBe('applied');

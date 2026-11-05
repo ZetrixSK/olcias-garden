@@ -1,6 +1,7 @@
+import { testGarden } from './testGarden';
 import { describe, expect, it } from 'vitest';
 import { dateOfKey, dayKey, monthGrid, parseDiary } from './diary';
-import { deleteDiaryEntry, parseSave, saveDiaryEntry, starterGarden } from './state';
+import { deleteDiaryEntry, parseSave, saveDiaryEntry } from './state';
 
 const NOW = new Date(2026, 9, 18, 21, 30).getTime();
 
@@ -11,7 +12,7 @@ describe('her diary', () => {
   });
 
   it('keeps one page a day, with its mood and words, through a save', () => {
-    let g = saveDiaryEntry(starterGarden(NOW), '2026-10-18', 'happy', 'Planted a pumpkin. Bajzel tried to eat the seeds.', NOW);
+    let g = saveDiaryEntry(testGarden(NOW), '2026-10-18', 'happy', 'Planted a pumpkin. Bajzel tried to eat the seeds.', NOW);
     g = saveDiaryEntry(g, '2026-10-17', 'sleepy', '', NOW);
     g = saveDiaryEntry(g, '2026-10-18', 'love', 'Changed my mind about today.', NOW + 1000);
     expect(Object.keys(g.diary).sort()).toEqual(['2026-10-17', '2026-10-18']);
@@ -21,7 +22,7 @@ describe('her diary', () => {
   });
 
   it('takes a page out when it is deleted, or saved with nothing on it', () => {
-    let g = saveDiaryEntry(starterGarden(NOW), '2026-10-18', 'sad', 'hm', NOW);
+    let g = saveDiaryEntry(testGarden(NOW), '2026-10-18', 'sad', 'hm', NOW);
     expect(saveDiaryEntry(g, '2026-10-18', null, '   ', NOW).diary).toEqual({});
     g = deleteDiaryEntry(g, '2026-10-18');
     expect(g.diary).toEqual({});

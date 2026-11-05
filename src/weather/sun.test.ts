@@ -1,8 +1,9 @@
+import { testGarden } from '../garden/testGarden';
 import { describe, expect, it } from 'vitest';
 import { skyPhase, sunTimes } from './sun';
 import { auroraTonight, fogThisMorning, outsideNow, visitorsToday } from './moments';
 import { clockWeather } from './weather';
-import { parseSave, starterGarden, addPlant, type GardenState } from '../garden/state';
+import { parseSave, addPlant, type GardenState } from '../garden/state';
 import { SPECIES_IDS } from '../garden/species';
 import { pansyPalette } from '../plants/looks';
 
@@ -57,7 +58,7 @@ describe('rare moments and visitors', () => {
 
 describe('the new flowers', () => {
   it('can all be planted and survive a save', () => {
-    let g: GardenState = { ...starterGarden(Date.UTC(2026, 9, 18)), plants: [] };
+    let g: GardenState = { ...testGarden(Date.UTC(2026, 9, 18)), plants: [] };
     const slots = ['row2-a', 'row2-b', 'row2-c', 'row2-d', 'row3-a', 'row3-b', 'row3-c', 'row3-d', 'hang-l', 'hang-r', 'sill-l', 'sill-r'] as const;
     SPECIES_IDS.forEach((sp, i) => (g = addPlant(g, slots[i]!, sp, Date.UTC(2026, 9, 18), `p${i}`)));
     expect(g.plants.map((p) => p.species)).toEqual(SPECIES_IDS);

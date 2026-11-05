@@ -1,9 +1,10 @@
+import { testGarden } from './garden/testGarden';
 import { describe, expect, it } from 'vitest';
 import { parseLang, plural, words } from './i18n';
 import { elapsedText } from './ui/Clock';
 import { whenText } from './ui/Sheets';
 import { visitorNotice } from './ui/Visit';
-import { starterGarden } from './garden/state';
+
 
 const H = 3_600_000;
 const NOW = new Date(2026, 9, 17, 10, 0).getTime();
@@ -71,7 +72,7 @@ describe('speaking to her, or to him', () => {
   });
 
   it('says what a visitor did as they are: from their phone, or else the other one of the two', () => {
-    const before = starterGarden(NOW);
+    const before = testGarden(NOW);
     const plant = before.plants[0]!.id;
     const notice = (who: unknown, me: 'she' | 'he') => visitorNotice({ from: 'kuba', kind: 'water', payload: { plant, who }, before }, words('pl', me))!.title;
     expect(notice('he', 'she')).toBe('#kuba wpadł z konewką');

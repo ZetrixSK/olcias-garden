@@ -49,6 +49,8 @@ export type Plant = {
   trait: Trait | null;
   /** Grown from mystery seeds: what it is stays a secret until it flowers. */
   mystery?: true;
+  /** One of the first few she planted: it grows faster (see growth). */
+  quick?: true;
 };
 
 /** Seeds of one of her bratek designs, waiting in the seed tin. */
@@ -153,7 +155,16 @@ export type GardenState = {
   visitors: Visitors;
   /** Her petals to spend, the market stalls, and the trinkets she has collected. */
   market: Market;
+  /** Her first days: how many she has planted (the first few grow faster), and the little notes. */
+  start: Start;
 };
+
+/** The first few plantings that grow faster. */
+export const QUICK_PLANTS = 3;
+/** The notes that show her round, in order; `tip` is the next one, `off` if she said no thanks. */
+export type Start = { planted: number; tip: number; off: boolean };
+export const TIPS = ['swipe', 'plant', 'water', 'bouquet', 'market', 'night'] as const;
+export type Tip = (typeof TIPS)[number];
 
 /** Her tag, the tags she has sent to, and how many bouquets came since she last opened the post box. */
 export type Post = { tag: string | null; contacts: string[]; unread: number };
@@ -211,17 +222,12 @@ export function starterGarden(now: number): GardenState {
     name: null,
     trait: null,
   });
+  // a tulip just about to open: it flowers within a few hours of her arriving
+  const tulip = { ...p('tulip', 'hang-l', 'bud', 'sill-1'), plantedAt: now - (SPECIES.tulip.hours[2] - 3) * 3_600_000 };
   return {
     version: SAVE_VERSION,
-    plants: [
-      p('pansy', 'sill-l', 'bloom', 'sill-2'),
-      p('tulip', 'sill-r', 'bud', 'sill-1'),
-      p('daisy', 'hang-l', 'bloom', 'shelf-3'),
-      p('pansy', 'hang-r', 'bud', 'shelf-2'),
-      p('lavender', 'row2-a', 'bloom'),
-      p('rose', 'row2-c', 'bud', 'sill-3'),
-      p('pansy', 'row2-d', 'seed', 'shelf-1'),
-    ],
+    // three flowers in the window to welcome her; the shelves below are left for her to fill
+    plants: [p('pansy', 'sill-l', 'bloom', 'sill-2'), p('rose', 'sill-r', 'bloom', 'sill-3'), tulip],
     settings: { ...DEFAULT_SETTINGS },
     vinesCheckedAt: lastNight(now),
     lastSeen: now,
@@ -236,10 +242,12 @@ export function starterGarden(now: number): GardenState {
     post: { tag: null, contacts: [], unread: 0 },
     memories: NO_MEMORIES,
     weatherSeen: {},
-    seeds: [],
+    // and a packet of seeds of her bratek, to plant the first ones herself
+    seeds: [{ id: 'first-seeds', variety: 'olcia', count: 3, made: now }],
     packages: [],
     visitors: noVisitors(now),
     market: noMarket(),
+    start: { planted: 0, tip: 0, off: false },
   };
 }
 
@@ -668,6 +676,7 @@ function parsePlant(v: unknown, designs: Designs): Plant | null {
     name: typeof name === 'string' && name.trim() ? name.trim().slice(0, MAX_NAME) : null,
     trait: parseTrait(v.trait),
     ...(v.mystery === true ? { mystery: true as const } : {}),
+    ...(v.quick === true ? { quick: true as const } : {}),
   };
 }
 
@@ -816,6 +825,7 @@ export function parseSave(input: unknown, now = Date.now()): GardenState | null 
     seeds: parseSeeds(raw.seeds, designs),
     packages: parsePackages(raw.packages),
     visitors: parseVisitors(raw.visitors, plants.map((p) => p.species), now, parseBouquet),
+    start: parseStart(raw.start),
     market: parseMarket(raw.market, (slot) => shelfFree(slot) && !decor.drawings.some((d) => d.slot === slot) && !bouquets.some((b) => b.slot === slot)),
   };
 }
@@ -937,3 +947,37 @@ export function moveFigure(state: GardenState, id: string, to: SlotId): GardenSt
   const swapped = relocate(state, to, moving.slot as SlotId);
   return { ...state, ...swapped, market: { ...swapped.market, figures: swapped.market.figures.map((f) => (f.id === id ? { ...f, slot: to } : f)) } };
 }
+
+// ---- her first days ---------------------------------------------------------------------------
+
+/** A garden from before there was a start is well past it: no fast growing, no notes. */
+function parseStart(v: unknown): Start {
+  if (!isObj(v)) return { planted: QUICK_PLANTS, tip: TIPS.length, off: false };
+  const n = (x: unknown, hi: number) => (typeof x === 'number' && Number.isFinite(x) ? Math.max(0, Math.min(hi, Math.floor(x))) : hi);
+  return { planted: n(v.planted, 1000), tip: n(v.tip, TIPS.length), off: v.off === true };
+}
+
+/** She planted something: one of her first few grows faster. */
+export function plantedByHer(state: GardenState, id: string): GardenState {
+  if (!state.plants.some((p) => p.id === id)) return state;
+  const quick = state.start.planted < QUICK_PLANTS;
+  return {
+    ...state,
+    plants: quick ? state.plants.map((p) => (p.id === id ? { ...p, quick: true as const } : p)) : state.plants,
+    start: { ...state.start, planted: state.start.planted + 1 },
+  };
+}
+
+/** How many more of her plantings will grow faster. */
+export const quickLeft = (state: GardenState) => Math.max(0, QUICK_PLANTS - state.start.planted);
+
+/** The note to show now, if any. */
+export const currentTip = (state: GardenState): Tip | null => (state.start.off ? null : (TIPS[state.start.tip] ?? null));
+
+/** That note is done (she did it, or put it away); the next one comes when it's time. */
+export function tipDone(state: GardenState, tip: Tip): GardenState {
+  return currentTip(state) === tip ? { ...state, start: { ...state.start, tip: state.start.tip + 1 } } : state;
+}
+
+/** No more notes. */
+export const tipsOff = (state: GardenState): GardenState => ({ ...state, start: { ...state.start, off: true } });

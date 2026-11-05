@@ -8,7 +8,7 @@ import type { PansyColors } from '../plants/Pansy';
 import type { PotDesign } from '../garden/designs';
 import { PlantArt } from '../plants/PlantArt';
 import { MoonflowerGlow } from '../plants/Night';
-import { TraitGlow, TraitTouches } from '../plants/Traits';
+import { TraitGlow, TraitPot, TraitTouches } from '../plants/Traits';
 import { POT_HEIGHT, Potted, RIM } from '../plants/Pots';
 import { useWords } from '../i18n';
 
@@ -95,6 +95,7 @@ const PlanterArt = memo(function PlanterArt({ plant, stage, wet, shape, potDesig
         </g>
         {runner}
       </Potted>
+      {plant.trait && <TraitPot kind={plant.trait.kind} rim={RIM[shape][0]} depth={POT_HEIGHT[shape]} id={plant.id} />}
       {ribbon && <Ribbon x={RIM[shape][0] * 0.62} />}
       {selected && <ellipse cx="0" cy={POT_HEIGHT[shape] + 4} rx="40" ry="6" fill="none" className="ink selected-ring" strokeDasharray="4 5" />}
       {watering && <WateringCan />}

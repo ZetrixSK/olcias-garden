@@ -1,3 +1,4 @@
+import { testGarden } from './testGarden';
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
 import {
@@ -21,7 +22,7 @@ import {
   type Memory,
 } from './memories';
 import { makeBackup, readBackup } from './backup';
-import { gardenImages, parseSave, starterGarden, withMemories } from './state';
+import { gardenImages, parseSave, withMemories } from './state';
 import { sharedGarden } from '../remote/shared';
 
 const NOW = new Date(2026, 10, 1, 18, 0).getTime();
@@ -117,10 +118,10 @@ describe('memories', () => {
 });
 
 describe('the garden with memories', () => {
-  const g = withMemories(starterGarden(NOW), (m) => addMemories(saveAlbum(m, album('a1')), [memory('x', NOW, { albums: ['a1'], caption: 'our walk' })]));
+  const g = withMemories(testGarden(NOW), (m) => addMemories(saveAlbum(m, album('a1')), [memory('x', NOW, { albums: ['a1'], caption: 'our walk' })]));
 
   it('opens older saves with an empty album, and keeps the album through a save', () => {
-    const { memories: _, ...older } = starterGarden(NOW);
+    const { memories: _, ...older } = testGarden(NOW);
     expect(parseSave(older, NOW)!.memories).toEqual(NO_MEMORIES);
     expect(parseSave(JSON.parse(JSON.stringify(g)), NOW)!.memories).toEqual(g.memories);
   });

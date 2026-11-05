@@ -1,9 +1,7 @@
+import { testGarden } from './testGarden';
 import { describe, expect, it } from 'vitest';
 import { parseBouquet, stemOf, stemsLeft, STEMS_PER_PLANT, type Bouquet } from './bouquets';
-import {
-  addDrawing, addPlant, bouquetAt, cutStems, freeShelfSlots, moveBouquet, movePlant, parseSave, postSeen, receiveBouquet, receivePost, rememberContact, removeBouquet, setTag,
-  SLOT_IDS, starterGarden, unpackParcel, type GardenState,
-} from './state';
+import { addDrawing, addPlant, bouquetAt, cutStems, freeShelfSlots, moveBouquet, movePlant, parseSave, postSeen, receiveBouquet, receivePost, rememberContact, removeBouquet, setTag, SLOT_IDS, unpackParcel, type GardenState } from './state';
 
 const NOW = new Date(2026, 9, 31, 12).getTime();
 
@@ -13,14 +11,14 @@ const bouquet = (id: string, over: Partial<Bouquet> = {}): Bouquet => ({
 
 /** Every shelf place filled with plants, so nothing more fits. */
 function fullShelves(): GardenState {
-  let g = starterGarden(NOW);
+  let g = testGarden(NOW);
   for (const slot of SLOT_IDS) g = addPlant(g, slot, 'daisy', NOW, `fill-${slot}`);
   return g;
 }
 
 describe('bouquets on the shelves', () => {
   it('stand in the first free place, never in a hanging pot', () => {
-    const g = receiveBouquet(starterGarden(NOW), bouquet('b1'));
+    const g = receiveBouquet(testGarden(NOW), bouquet('b1'));
     expect(g.bouquets).toHaveLength(1);
     const slot = g.bouquets[0]!.slot;
     expect(slot.startsWith('hang')).toBe(false);
@@ -39,19 +37,19 @@ describe('bouquets on the shelves', () => {
   });
 
   it('only ever arrive once', () => {
-    const once = receiveBouquet(starterGarden(NOW), bouquet('b1'));
+    const once = receiveBouquet(testGarden(NOW), bouquet('b1'));
     expect(receiveBouquet(once, bouquet('b1'))).toBe(once);
   });
 
   it('take up their place: nothing else is planted or hung there', () => {
-    const g = receiveBouquet(starterGarden(NOW), bouquet('b1'));
+    const g = receiveBouquet(testGarden(NOW), bouquet('b1'));
     const slot = g.bouquets[0]!.slot as (typeof SLOT_IDS)[number];
     expect(addPlant(g, slot, 'rose', NOW)).toBe(g);
     expect(addDrawing(g, { id: 'd', slot, img: 'x', w: 10, h: 10 })).toBe(g);
   });
 
   it('move and swap along the shelves, but never into a hanging pot', () => {
-    let g = receiveBouquet(starterGarden(NOW), bouquet('b1'));
+    let g = receiveBouquet(testGarden(NOW), bouquet('b1'));
     const from = g.bouquets[0]!.slot;
     const lavender = g.plants.find((p) => p.species === 'lavender')!;
     g = moveBouquet(g, 'b1', lavender.slot);
@@ -64,18 +62,18 @@ describe('bouquets on the shelves', () => {
   });
 
   it('can be put away', () => {
-    const g = removeBouquet(receiveBouquet(starterGarden(NOW), bouquet('b1')), 'b1');
+    const g = removeBouquet(receiveBouquet(testGarden(NOW), bouquet('b1')), 'b1');
     expect(g.bouquets).toHaveLength(0);
   });
 
   it('are kept with the save, and a damaged one is dropped', () => {
-    const g = receiveBouquet(receiveBouquet(starterGarden(NOW), bouquet('b1')), bouquet('b2', { from: 'josh' }));
+    const g = receiveBouquet(receiveBouquet(testGarden(NOW), bouquet('b1')), bouquet('b2', { from: 'josh' }));
     const raw = JSON.parse(JSON.stringify(g));
     raw.bouquets.push({ id: 'broken', stems: [], slot: 'row3-d' });
     const back = parseSave(raw, NOW)!;
     expect(back.bouquets.map((b) => b.id)).toEqual(['b1', 'b2']);
     expect(back.bouquets[1]!.from).toBe('josh');
-    const old = JSON.parse(JSON.stringify(starterGarden(NOW)));
+    const old = JSON.parse(JSON.stringify(testGarden(NOW)));
     delete old.bouquets;
     expect(parseSave(old, NOW)!.bouquets).toEqual([]);
   });
@@ -83,7 +81,7 @@ describe('bouquets on the shelves', () => {
 
 describe('cutting stems', () => {
   it('only from plants in bloom, a few a day each', () => {
-    let g = starterGarden(NOW);
+    let g = testGarden(NOW);
     const bloom = g.plants.find((p) => p.display === 'sill-2')!;
     const bud = g.plants.find((p) => p.display === 'sill-1')!;
     expect(stemsLeft(bud, g.cuttings, NOW)).toBe(0);
@@ -117,7 +115,7 @@ describe('parseBouquet', () => {
 
 describe('her post box', () => {
   it('remembers who she sent to, most recent first, a few at most', () => {
-    let g = starterGarden(NOW);
+    let g = testGarden(NOW);
     for (const t of ['josh', '#Mama', 'josh', 'bad tag!']) g = rememberContact(g, t);
     expect(g.post.contacts).toEqual(['josh', 'mama']);
     for (let i = 0; i < 12; i++) g = rememberContact(g, `friend_${i}`);
@@ -126,7 +124,7 @@ describe('her post box', () => {
   });
 
   it('keeps her tag with the save, and drops one that is not a tag', () => {
-    const g = setTag(starterGarden(NOW), 'olcia');
+    const g = setTag(testGarden(NOW), 'olcia');
     expect(parseSave(JSON.parse(JSON.stringify(g)), NOW)!.post.tag).toBe('olcia');
     const raw = JSON.parse(JSON.stringify(g));
     raw.post = { tag: 'NO WAY', contacts: ['ok_tag', 7, 'x'], unread: -3 };
@@ -136,13 +134,13 @@ describe('her post box', () => {
 
 describe('the letterbox flag', () => {
   it('goes up when a bouquet comes in the post, and down once she has looked', () => {
-    let g = receivePost(starterGarden(NOW), bouquet('m1', { from: 'josh' }));
+    let g = receivePost(testGarden(NOW), bouquet('m1', { from: 'josh' }));
     g = receivePost(g, bouquet('m2', { from: 'mama' }));
     expect(g.post.unread).toBe(2);
     // the same post twice counts once
     expect(receivePost(g, bouquet('m1', { from: 'josh' })).post.unread).toBe(2);
     expect(postSeen(g).post.unread).toBe(0);
     // her own bouquets don't raise it
-    expect(receiveBouquet(starterGarden(NOW), bouquet('own')).post.unread).toBe(0);
+    expect(receiveBouquet(testGarden(NOW), bouquet('own')).post.unread).toBe(0);
   });
 });

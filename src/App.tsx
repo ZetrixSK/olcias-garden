@@ -3,6 +3,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   addDrawing,
   addSeeds,
+  currentTip,
+  plantedByHer,
+  quickLeft,
+  tipDone,
+  tipsOff,
   buyFromNightStall,
   buyFromStall,
   figureAt,
@@ -102,6 +107,8 @@ import { FirstCover } from './ui/FirstCover';
 import { TRAIT_WORDS } from './ui/traitWords';
 import { WhatsNew } from './ui/WhatsNew';
 import { Doorstep } from './ui/Doorstep';
+import { TipNote } from './ui/Tips';
+import { stemsLeft } from './garden/bouquets';
 import { MarketStall } from './ui/Market';
 import { FigureCard, TrinketBox } from './ui/TrinketBox';
 import { miltonSays } from './ui/marketWords';
@@ -536,6 +543,16 @@ export function App() {
     if (knockingId) ambienceIfMade()?.effect('knock');
   }, [knockingId]);
 
+  // the notes for her first days: making a bouquet, or going to the market, means she has found it
+  const studioOpen = mode.kind === 'bouquetStudio';
+  useEffect(() => {
+    if (studioOpen) update((g) => tipDone(g, 'bouquet'));
+  }, [studioOpen, update]);
+  useEffect(() => {
+    if (!marketOpen) return;
+    update((g) => tipDone(tipDone(g, 'market'), weather.night ? 'night' : 'market'));
+  }, [marketOpen, update]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // when rain stops by day, a rainbow stays over the lake for a while
   const lastSky = useRef(weather.sky);
   const [rainbowUntil, setRainbowUntil] = useState(0);
@@ -678,7 +695,10 @@ export function App() {
   const { t } = words(settings.lang, settings.me);
 
   const setSettings = (patch: Partial<Settings>) => {
-    update((g) => updateSettings(g, patch));
+    update((g) => {
+      const next = updateSettings(g, patch);
+      return patch.view === 'shelves' ? tipDone(next, 'swipe') : next;
+    });
     if (patch.view) setMode({ kind: 'idle' });
   };
 
@@ -957,7 +977,8 @@ export function App() {
   const plantIn = (slot: SlotId, species: SpeciesId, variety: string | null = null) => {
     const t = Date.now();
     setNow(t);
-    update((g) => addPlant(g, slot, species, t, newId(), variety));
+    const id = newId();
+    update((g) => tipDone(plantedByHer(addPlant(g, slot, species, t, id, variety), id), 'plant'));
     setMode({ kind: 'idle' });
   };
 
@@ -971,7 +992,7 @@ export function App() {
   const water = (id: string) => {
     const t = Date.now();
     setNow(t);
-    update((g) => waterPlant(g, id, t));
+    update((g) => tipDone(waterPlant(g, id, t), 'water'));
     showWatering(id);
   };
 
@@ -1007,6 +1028,22 @@ export function App() {
       closeAll();
       fn(...a);
     };
+  // a note shows only while she's looking at the garden itself, and only once it makes sense
+  const tip = currentTip(garden);
+  const quiet = mode.kind === 'idle' && !lapse && !letterOpen && !diaryOpen && !bookOpen && !memoriesOpen && !newsOpen && !easel && !welcoming && !askTag && !firstCover && !doorOpen && !thanks && !visitorsOpen && !marketOpen && !boxOpen && !notice;
+  const tipReady =
+    tip === 'swipe'
+      ? settings.view === 'room'
+      : tip === 'plant'
+        ? settings.view === 'shelves'
+        : tip === 'bouquet'
+          ? garden.plants.some((p) => stemsLeft(p, garden.cuttings, now) > 0)
+          : tip === 'market'
+            ? Object.keys(garden.visitors.friends).length > 0
+            : tip === 'night'
+              ? nightKey !== null
+              : tip !== null;
+  const showTip = tip && quiet && tipReady ? tip : null;
   const openMarket = () => {
     const t = Date.now();
     const key = nightMarketKey(t, weather.night, garden.market);
@@ -1065,6 +1102,7 @@ export function App() {
               moments={moments}
               flyer={waiting && FLYING.includes(waiting.visitor) ? waiting.visitor : null}
               miltonSays={figureFx?.id === MILTON ? (figureFx.line ?? null) : null}
+              birthdayWords={t('HAPPY B-DAY', 'STO LAT')}
               onMilton={() => tapFigure(MILTON)}
               candle={candle}
               candleOn={candleOn}
@@ -1168,11 +1206,13 @@ export function App() {
             seeds={garden.seeds}
             designs={garden.designs}
             unlocked={garden.visitors.unlocked}
+            quick={quickLeft(garden)}
             met={Object.keys(garden.visitors.friends) as VisitorId[]}
             onSow={(packetId) => {
               const t = Date.now();
               setNow(t);
-              update((g) => sowSeed(g, packetId, mode.slot, t));
+              const id = newId();
+              update((g) => tipDone(plantedByHer(sowSeed(g, packetId, mode.slot, t, id), id), 'plant'));
               setMode({ kind: 'idle' });
             }}
             busy={adding === 'drawing'}
@@ -1676,6 +1716,15 @@ export function App() {
               setMode({ kind: 'move', id });
             }}
             onClose={() => setBoxOpen(false)}
+          />
+        )}
+        {showTip && (
+          <TipNote
+            key={showTip}
+            tip={showTip}
+            first={garden.start.tip === 0}
+            onDone={() => update((g) => tipDone(g, showTip))}
+            onOff={() => update(tipsOff)}
           />
         )}
         {newsOpen && <WhatsNew onClose={() => setNewsOpen(false)} />}

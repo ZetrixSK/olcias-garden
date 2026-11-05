@@ -1,6 +1,7 @@
+import { testGarden } from './testGarden';
 import { describe, expect, it } from 'vitest';
 import { keepPackages, MAX_ITEMS, MAX_PACKAGES, packagePayload, parsePackage, type Package } from './packages';
-import { addSeeds, giveAway, openPackage, packageItems, parseSave, receiveBouquet, receivePackage, savePansyDesign, secretDesigns, sowSeed, SLOT_IDS, starterGarden } from './state';
+import { addSeeds, giveAway, openPackage, packageItems, parseSave, receiveBouquet, receivePackage, savePansyDesign, secretDesigns, sowSeed, SLOT_IDS } from './state';
 import { plantedAtForStage } from './growth';
 import { designRef } from './designs';
 
@@ -49,7 +50,7 @@ describe('receiving and opening a package', () => {
   const pkg = arrived({ letter: 'hi', items: [{ kind: 'bouquet', bouquet }, { kind: 'seeds', design: moon, count: 3 }] })!;
 
   it('waits wrapped, once, with the letterbox flag up', () => {
-    let g = receivePackage(starterGarden(NOW), pkg);
+    let g = receivePackage(testGarden(NOW), pkg);
     expect(g.packages).toHaveLength(1);
     expect(g.post.unread).toBe(1);
     expect(receivePackage(g, pkg)).toBe(g);
@@ -58,7 +59,7 @@ describe('receiving and opening a package', () => {
   });
 
   it('when opened, puts the bouquet on a shelf and the seeds in her tin, with their design', () => {
-    const g = openPackage(receivePackage(starterGarden(NOW), pkg), 'mail-1', NOW + 1000);
+    const g = openPackage(receivePackage(testGarden(NOW), pkg), 'mail-1', NOW + 1000);
     expect(g.bouquets.some((b) => b.id === 'mail-1:0')).toBe(true);
     expect(g.designs.pansies.some((d) => d.name === 'Moonlight')).toBe(true);
     expect(g.seeds).toHaveLength(1);
@@ -71,14 +72,14 @@ describe('receiving and opening a package', () => {
   });
 
   it('reuses her own design when the seeds look just like it', () => {
-    const mine = savePansyDesign(starterGarden(NOW), { ...moon, id: 'mine', name: 'Mine' });
+    const mine = savePansyDesign(testGarden(NOW), { ...moon, id: 'mine', name: 'Mine' });
     const g = openPackage(receivePackage(mine, pkg), 'mail-1', NOW);
     expect(g.designs.pansies).toHaveLength(1);
     expect(g.seeds[0]!.variety).toBe(designRef('mine'));
   });
 
   it('puts the bouquet in the box on the floor when the shelves are full', () => {
-    let g = starterGarden(NOW);
+    let g = testGarden(NOW);
     for (let i = 0; i < 20; i++) g = receiveBouquet(g, { id: `b${i}`, stems: [{ species: 'rose', variety: null, design: null }], vase: 'jar', ribbon: null, note: '', from: null, at: NOW, seed: i });
     const before = g.parcels.length;
     g = openPackage(receivePackage(g, pkg), 'mail-1', NOW);
@@ -88,7 +89,7 @@ describe('receiving and opening a package', () => {
 
 describe('sending a package', () => {
   it('takes what was sent out of her garden: the bouquet, and the seeds from the packet', () => {
-    let g = savePansyDesign(starterGarden(NOW), moon);
+    let g = savePansyDesign(testGarden(NOW), moon);
     g = addSeeds(g, designRef('moon'), 4, NOW, 'k1');
     g = receiveBouquet(g, { id: 'mine', stems: [{ species: 'rose', variety: null, design: null }], vase: 'jar', ribbon: null, note: '', from: null, at: NOW, seed: 1 });
     const picked = [{ bouquetId: 'mine' }, { packetId: 'k1', count: 3 }];
@@ -105,7 +106,7 @@ describe('sending a package', () => {
 describe('mystery seeds', () => {
   it('stay a plain packet in her tin, and a mystery when she passes them on', () => {
     const pkg = arrived({ items: [{ kind: 'seeds', design: moon, count: 2, mystery: true }] })!;
-    let g = openPackage(receivePackage(starterGarden(NOW), pkg), 'mail-1', NOW);
+    let g = openPackage(receivePackage(testGarden(NOW), pkg), 'mail-1', NOW);
     expect(g.seeds[0]!.mystery).toBe(true);
     g = parseSave(JSON.parse(JSON.stringify(g)), NOW)!;
     expect(g.seeds[0]!.mystery).toBe(true);
@@ -114,7 +115,7 @@ describe('mystery seeds', () => {
 
   it('keep their design out of her lists until the flower they grow into blooms', () => {
     const pkg = arrived({ items: [{ kind: 'seeds', design: moon, count: 1, mystery: true }] })!;
-    let g = openPackage(receivePackage(starterGarden(NOW), pkg), 'mail-1', NOW);
+    let g = openPackage(receivePackage(testGarden(NOW), pkg), 'mail-1', NOW);
     const ref = g.seeds[0]!.variety;
     expect(secretDesigns(g, NOW).has(ref)).toBe(true);
     const slot = SLOT_IDS.find((sl) => !g.plants.some((p) => p.slot === sl))!;
@@ -130,7 +131,7 @@ describe('mystery seeds', () => {
   });
 
   it('are sent as a mystery only when she asks', () => {
-    let g = savePansyDesign(starterGarden(NOW), moon);
+    let g = savePansyDesign(testGarden(NOW), moon);
     g = addSeeds(g, designRef('moon'), 4, NOW, 'k1');
     expect(g.seeds[0]).not.toHaveProperty('mystery');
     expect(packageItems(g, [{ packetId: 'k1', count: 1 }])[0]).toMatchObject({ mystery: false });

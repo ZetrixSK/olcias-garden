@@ -1,5 +1,6 @@
+import { testGarden } from '../garden/testGarden';
 import { describe as group, expect, it } from 'vitest';
-import { starterGarden } from '../garden/state';
+
 import { activeMoments, ago, describe, isOnline, plantName, withPending, type ActionRow } from './logic';
 import { applyAction } from '../remote/actions';
 
@@ -41,7 +42,7 @@ group('activeMoments', () => {
 
 group('describe', () => {
   it('puts an action into words, naming her plants as she does', () => {
-    const g = starterGarden(NOW);
+    const g = testGarden(NOW);
     const pansy = g.plants.find((p) => p.display === 'sill-2')!;
     const named = { ...g, plants: g.plants.map((p) => (p === pansy ? { ...p, name: 'Luna' } : p)) };
     expect(plantName(named, pansy.id)).toBe('Luna (pansy)');
@@ -58,7 +59,7 @@ group('withPending', () => {
   const at = (s: number) => new Date(NOW + s * 1000).toISOString();
 
   it('shows what was sent before her phone has caught up, in the order sent', () => {
-    const g = starterGarden(NOW);
+    const g = testGarden(NOW);
     const list = [
       row({ id: 'b', kind: 'settings', payload: { patch: { lang: 'pl' } }, status: 'pending', created_at: at(2) }),
       row({ id: 'a', kind: 'settings', payload: { patch: { lang: 'en' } }, status: 'pending', created_at: at(1) }),
@@ -67,7 +68,7 @@ group('withPending', () => {
   });
 
   it('leaves out what her upload already includes, what was skipped, and moments', () => {
-    const g = starterGarden(NOW);
+    const g = testGarden(NOW);
     const pansy = g.plants.find((p) => p.display === 'sill-2')!;
     const grow = row({ id: 'g1', kind: 'overgrow', payload: { plant: pansy.id }, status: 'applied' });
     const uploaded = applyAction(g, grow, NOW, world).garden;

@@ -1,5 +1,6 @@
+import { testGarden } from './testGarden';
 import { describe, expect, it } from 'vitest';
-import { catchUpNights, parseSave, placeInWindow, starterGarden, trimVine, type GardenState, type Plant, type WindowSpot } from './state';
+import { catchUpNights, parseSave, placeInWindow, trimVine, type GardenState, type Plant, type WindowSpot } from './state';
 import { lastNight, nightsBetween, qualifies, ROSE_CREEP, runNights, VINE_STEP } from './vines';
 import type { SpeciesId } from './species';
 
@@ -98,7 +99,7 @@ describe('growing vines night by night', () => {
 });
 
 describe('vines in the garden state', () => {
-  const withPlants = (plants: Plant[]): GardenState => ({ ...starterGarden(at(10, 12)), plants, vinesCheckedAt: at(10, 3) });
+  const withPlants = (plants: Plant[]): GardenState => ({ ...testGarden(at(10, 12)), plants, vinesCheckedAt: at(10, 3) });
 
   it('catches up on missed nights, and returns the same garden when none are due', () => {
     const g = withPlants([plant('a', 'pansy', 'sill-1', { waterings: daily(1, 40) })]);

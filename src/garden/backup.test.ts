@@ -1,15 +1,16 @@
+import { testGarden } from './testGarden';
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
 import { backupName, backupSummary, makeBackup, readBackup } from './backup';
 import { onThisDay } from './diary';
-import { addPlant, saveDiaryEntry, setPhoto, starterGarden } from './state';
+import { addPlant, saveDiaryEntry, setPhoto } from './state';
 import { getImage, loadGarden, restoreGarden, saveGarden } from './storage';
 
 const NOW = new Date(2026, 9, 19, 20, 0).getTime();
 const PIXELS = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 255, 128, 7]);
 
 function herGarden() {
-  let g = setPhoto(starterGarden(NOW), { img: 'photo-1', w: 300, h: 400 });
+  let g = setPhoto(testGarden(NOW), { img: 'photo-1', w: 300, h: 400 });
   g = saveDiaryEntry(g, '2026-10-19', 'love', 'Piorun stole a sock.', NOW);
   return addPlant(g, 'row3-d', 'daisy', NOW, 'sun');
 }
@@ -72,7 +73,7 @@ describe('backups', () => {
 
 describe('on this day', () => {
   it('finds pages from the same day in earlier years, newest first', () => {
-    let g = starterGarden(NOW);
+    let g = testGarden(NOW);
     g = saveDiaryEntry(g, '2024-10-19', 'calm', 'two years ago', NOW);
     g = saveDiaryEntry(g, '2025-10-19', 'happy', 'a year ago', NOW);
     g = saveDiaryEntry(g, '2025-10-18', 'sad', 'not today', NOW);

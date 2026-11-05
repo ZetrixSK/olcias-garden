@@ -1,6 +1,7 @@
+import { testGarden } from './testGarden';
 import { describe, expect, it } from 'vitest';
 import { stageAt } from './growth';
-import { catchUpNights, starterGarden, type GardenState, type Plant } from './state';
+import { catchUpNights, type GardenState, type Plant } from './state';
 import { awayDemo, buildTimelapse, gardenAt, parseAway, somethingGrew } from './timelapse';
 
 const at = (day: number, hour: number) => new Date(2026, 9, day, hour).getTime();
@@ -10,7 +11,7 @@ function garden(): GardenState {
   const p = (id: string, display: Plant['display']): Plant => ({
     id, species: 'pansy', slot: 'row3-a', pot: 'wide', variety: null, plantedAt: at(1, 9), waterings, display, vine: null, name: null, trait: null,
   });
-  return { ...starterGarden(at(10, 12)), plants: [p('a', 'sill-1'), p('b', 'sill-3')], vinesCheckedAt: at(10, 3), lastSeen: at(10, 20) };
+  return { ...testGarden(at(10, 12)), plants: [p('a', 'sill-1'), p('b', 'sill-3')], vinesCheckedAt: at(10, 3), lastSeen: at(10, 20) };
 }
 
 describe('the replay of what happened while she was away', () => {
@@ -70,7 +71,7 @@ describe('the ?away preview', () => {
   });
 
   it('starts from the garden as it is and ends as it will be after that long', () => {
-    const g = starterGarden(T);
+    const g = testGarden(T);
     const demo = awayDemo(g, 48 * H, T, false);
     const tl = buildTimelapse(demo, T - 48 * H, T);
     const at = (plants: Plant[], t: number) => plants.map((p) => stageAt(p.species, p, t));
@@ -81,7 +82,7 @@ describe('the ?away preview', () => {
 
 
   it('grows vines over the time away only when the plants are watered', () => {
-    const g = starterGarden(T);
+    const g = testGarden(T);
     const vines = (water: boolean) => catchUpNights(awayDemo(g, 14 * 24 * H, T, water), T).plants.filter((p) => p.vine).length;
     expect(vines(true)).toBeGreaterThan(0);
     expect(vines(false)).toBe(0);

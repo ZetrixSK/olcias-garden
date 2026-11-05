@@ -4569,3 +4569,107 @@ html.still .lantern-fab svg {
 html.still .gift-fab svg {
   animation: none;
 }
+
+/* the notes for her first days: a scrap of paper taped at the bottom of the screen */
+.tip-note {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+  width: min(320px, calc(100vw - 40px));
+  padding: 14px 34px 8px 16px;
+  transform: translateX(-50%) rotate(-1.2deg);
+  background: #fffaf0;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 25px, rgba(138, 53, 80, 0.12) 25px 26px);
+  background-position: 0 12px;
+  border: 1.5px solid #3d2633;
+  border-radius: 4px 8px 6px 10px;
+  box-shadow: 0 4px 0 rgba(61, 38, 51, 0.22);
+  font-family: 'Kalam', system-ui, sans-serif;
+  color: #3d2633;
+  animation: tip-in 0.45s cubic-bezier(0.2, 0.8, 0.3, 1.2);
+  z-index: 5;
+}
+@keyframes tip-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(16px) rotate(2deg); }
+  to { opacity: 1; transform: translateX(-50%) rotate(-1.2deg); }
+}
+.tip-tape {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  width: 54px;
+  height: 16px;
+  transform: translateX(-50%) rotate(3deg);
+  background: rgba(240, 167, 191, 0.7);
+  border-left: 1px dashed rgba(61, 38, 51, 0.25);
+  border-right: 1px dashed rgba(61, 38, 51, 0.25);
+}
+.tip-note p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 26px;
+}
+.tip-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2px;
+}
+.tip-sign {
+  font-style: italic;
+  font-size: 15px;
+}
+.tip-off {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px dashed rgba(61, 38, 51, 0.5);
+  border-radius: 12px;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: inherit;
+}
+.tip-close {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 22px;
+  color: inherit;
+}
+.quick-hint {
+  margin: 2px 4px 6px;
+}
+html.still .tip-note {
+  animation: none;
+}
+/* in the dark room, what's still to find shows as a pale outline instead of a black one */
+.ui-dark .visitor-tabs button.unknown svg,
+.ui-dark .trinket-tile.unknown svg {
+  filter: brightness(0) invert(1);
+  opacity: 0.2;
+}
+
+.flag-sway {
+  transform-origin: 0 0;
+  animation: charm-sway 4.4s ease-in-out infinite;
+}
+html.still .flag-sway {
+  animation: none;
+}
+
+.balloon-bob {
+  animation: balloon-bob 4s ease-in-out infinite;
+  transform-origin: 0 0;
+}
+@keyframes balloon-bob {
+  0%, 100% { transform: rotate(-4deg) translateY(0); }
+  50% { transform: rotate(4deg) translateY(-3px); }
+}
+html.still .balloon-bob {
+  animation: none;
+}

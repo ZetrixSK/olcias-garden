@@ -1,20 +1,10 @@
+import { testGarden } from './testGarden';
 import { describe, expect, it } from 'vitest';
 import { imagesInUse } from './decor';
-import {
-  addDrawing,
-  addPlant,
-  moveDrawing,
-  movePlant,
-  parseSave,
-  removeDrawing,
-  setPhoto,
-  setWallpaper,
-  starterGarden,
-  type GardenState,
-} from './state';
+import { addDrawing, addPlant, moveDrawing, movePlant, parseSave, removeDrawing, setPhoto, setWallpaper, type GardenState } from './state';
 
 const NOW = Date.UTC(2026, 9, 18);
-const empty = (): GardenState => ({ ...starterGarden(NOW), plants: [] });
+const empty = (): GardenState => ({ ...testGarden(NOW), plants: [] });
 const drawing = (id: string, slot: string) => ({ id, slot, img: `img-${id}`, w: 600, h: 800 });
 
 describe('her drawings on the shelves', () => {

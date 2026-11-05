@@ -1,3 +1,4 @@
+import { testGarden } from './testGarden';
 import { describe, expect, it } from 'vitest';
 import {
   buySeed,
@@ -17,7 +18,7 @@ import {
   type Market,
 } from './market';
 import { noVisitors } from './visitors';
-import { buyFromNightStall, buyFromStall, freeShelfSlots, giveToVisitor, moveFigure, parseSave, starterGarden, visitDayStall } from './state';
+import { buyFromNightStall, buyFromStall, freeShelfSlots, giveToVisitor, moveFigure, parseSave, visitDayStall } from './state';
 import { designRef } from './designs';
 
 const at = (y: number, mo: number, d: number, h: number) => new Date(y, mo, d, h).getTime();
@@ -66,7 +67,7 @@ describe('the day stall', () => {
   });
 
   it('in the garden: a flower is unlocked, a bratek goes in her tin with its design', () => {
-    let g = starterGarden(FRI(9));
+    let g = testGarden(FRI(9));
     g = { ...g, market: { ...g.market, petals: 200 }, visitors: { ...g.visitors, unlocked: ['pansy', 'tulip', 'rose', 'daisy', 'lavender'] } };
     g = visitDayStall(g, FRI(9));
     const species = { id: 'species:batflower', kind: 'species' as const, species: 'batflower' as const, rarity: 'rare' as const };
@@ -115,7 +116,7 @@ describe('the night stall', () => {
   });
 
   it('in the garden: a figure stands on a free shelf, and moves like anything else there', () => {
-    let g = starterGarden(FRI(21));
+    let g = testGarden(FRI(21));
     g = { ...g, market: { ...g.market, petals: 50, night: { key: '2026-11-06', cards: ['snail'], turned: [true], bought: [] } } };
     const free = freeShelfSlots(g)[0]!;
     g = buyFromNightStall(g, 'snail')!;
@@ -130,7 +131,7 @@ describe('the night stall', () => {
 
 describe('petals', () => {
   it('she starts with a few, and earns what visitors give', () => {
-    let g = starterGarden(FRI(12));
+    let g = testGarden(FRI(12));
     expect(g.market.petals).toBe(START_PETALS);
     g = { ...g, visitors: { ...g.visitors, request: { id: 'r', visitor: 'jadzia', wishes: [{ kind: 'colour', colour: 'pink', min: 1 }], at: FRI(12), text: 0, seen: true } } };
     const r = giveToVisitor(g, { id: 'b', stems: [{ species: 'rose', variety: null, design: null }], vase: 'jar', ribbon: null, note: '', from: null, at: FRI(12), seed: 1 }, [], false, FRI(12))!;

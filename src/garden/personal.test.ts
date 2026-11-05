@@ -1,6 +1,7 @@
+import { testGarden } from './testGarden';
 import { describe, expect, it } from 'vitest';
 import { nextStage, waterWouldHelp } from './growth';
-import { parseSave, pressFlower, setPlantName, setPressNote, starterGarden, updateSettings, waterPlant, type GardenState, type Plant } from './state';
+import { parseSave, pressFlower, setPlantName, setPressNote, updateSettings, waterPlant, type GardenState, type Plant } from './state';
 import { growthText, whenText } from '../ui/Sheets';
 import { pressedName } from '../ui/PressedBook';
 import { isDarkRoom, ownRoomVars, parseOwnRoom, startingRoom } from '../theme/ownRoom';
@@ -13,7 +14,7 @@ const NOW = new Date(2026, 9, 17, 10, 0).getTime();
 function pansy(extra: Partial<Plant> = {}): Plant {
   return { id: 'a', species: 'pansy', slot: 'row3-a', pot: 'wide', variety: null, plantedAt: NOW, waterings: [], display: null, vine: null, name: null, trait: null, ...extra };
 }
-const garden = (plants: Plant[]): GardenState => ({ ...starterGarden(NOW), plants });
+const garden = (plants: Plant[]): GardenState => ({ ...testGarden(NOW), plants });
 
 describe('when it will grow, in words', () => {
   it('reads like a person would say it', () => {

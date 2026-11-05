@@ -9,11 +9,14 @@ export const WATER_COOLDOWN_HOURS = 6;
 /** Soil looks dark and damp for this long after watering. */
 export const WET_HOURS = 8;
 
-type Growing = { plantedAt: number; waterings: number[]; trait?: Trait | null };
+type Growing = { plantedAt: number; waterings: number[]; trait?: Trait | null; quick?: boolean };
+
+/** Her first few plantings grow this many times faster, so the shelves fill up in a day or so. */
+export const QUICK = 4;
 
 /** Growth so far, in hours. Purely from timestamps, so it keeps going while the app is closed. */
 export function growthHours(plant: Growing, now: number): number {
-  const elapsed = Math.max(0, now - plant.plantedAt) / HOUR;
+  const elapsed = (Math.max(0, now - plant.plantedAt) / HOUR) * (plant.quick ? QUICK : 1);
   let bonus = 0;
   let lastCounted = -Infinity;
   for (const t of [...plant.waterings].sort((a, b) => a - b)) {
@@ -48,7 +51,7 @@ export function nextStage(species: SpeciesId, plant: Growing, now: number): { st
   if (!stage) return null;
   const [seedling, bud, bloom] = SPECIES[species].hours;
   const at = { seedling, bud, bloom, seed: 0 }[stage];
-  const speed = plant.trait && plant.trait.at <= now ? TRAIT_SPEED[plant.trait.kind] : 1;
+  const speed = (plant.trait && plant.trait.at <= now ? TRAIT_SPEED[plant.trait.kind] : 1) + (plant.quick ? QUICK - 1 : 0);
   return { stage, inMs: Math.max(0, ((at - growthHours(plant, now)) * HOUR) / speed) };
 }
 

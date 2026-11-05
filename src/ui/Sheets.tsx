@@ -237,7 +237,9 @@ function SeedPacketArt({ packet, designs }: { packet: SeedPacket; designs: Desig
   );
 }
 
-export function PlantPicker({ onPick, onDrawing, onPaint, seeds = [], designs, onSow, busy, error, onClose, unlocked, met = [] }: {
+export function PlantPicker({ onPick, onDrawing, onPaint, seeds = [], designs, onSow, busy, error, onClose, unlocked, met = [], quick = 0 }: {
+  /** How many more of her plantings will grow faster. */
+  quick?: number;
   onPick: (s: SpeciesId) => void;
   /** The flowers she can plant; the others show as outlines, with whose seeds they are. */
   unlocked?: readonly SpeciesId[];
@@ -264,6 +266,14 @@ export function PlantPicker({ onPick, onDrawing, onPaint, seeds = [], designs, o
         <h2>{w.t('What shall we plant?', 'Co posadzimy?')}</h2>
         <button className="close" aria-label={w.t('Close', 'Zamknij')} onClick={onClose}>×</button>
       </div>
+      {quick > 0 && (
+        <p className="hint quick-hint">
+          {w.t(
+            `Your first three plants grow faster: ${quick} still to go.`,
+            `Trzy pierwsze posadzone kwiaty rosną szybciej. ${quick === 3 ? 'Jeszcze wszystkie trzy.' : `Zostało: ${quick}.`}`,
+          )}
+        </p>
+      )}
       {seeds.length > 0 && designs && onSow && (
         <>
           <p className="meta seed-tin-title">{w.t('From your seed tin', 'Z Twojej puszki z nasionami')}</p>
