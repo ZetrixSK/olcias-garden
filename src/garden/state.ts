@@ -242,8 +242,7 @@ export function starterGarden(now: number): GardenState {
     post: { tag: null, contacts: [], unread: 0 },
     memories: NO_MEMORIES,
     weatherSeen: {},
-    // and a packet of seeds of her bratek, to plant the first ones herself
-    seeds: [{ id: 'first-seeds', variety: 'olcia', count: 3, made: now }],
+    seeds: [],
     packages: [],
     visitors: noVisitors(now),
     market: noMarket(),

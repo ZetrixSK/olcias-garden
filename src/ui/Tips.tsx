@@ -4,8 +4,8 @@ import { useWords } from '../i18n';
 const WORDS: Record<Tip, [string, string]> = {
   swipe: ['Swipe sideways: your shelves are there.', 'Przesuń palcem w bok: tam są Twoje półki.'],
   plant: [
-    'Tap an empty place to plant something. There are bratek seeds in your tin, and the first three you plant grow faster.',
-    'Dotknij pustego miejsca, żeby coś posadzić. W puszce masz nasiona bratków, a trzy pierwsze kwiaty urosną szybciej.',
+    'Tap an empty place to plant something. The first three you plant grow faster.',
+    'Dotknij pustego miejsca, żeby coś posadzić. Trzy pierwsze kwiaty urosną szybciej.',
   ],
   water: ['Tap a plant to water it: watered flowers grow faster. Nothing bad happens if you forget.', 'Dotknij kwiatka, żeby go podlać: podlane rosną szybciej. Nic się nie stanie, jak zapomnisz.'],
   bouquet: ['Flowers in bloom make bouquets. It’s in the menu, top right.', 'Z kwitnących kwiatów ułożysz bukiet. Jest w menu, w prawym górnym rogu.'],

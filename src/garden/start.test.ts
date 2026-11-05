@@ -6,7 +6,7 @@ const NOW = new Date(2026, 10, 5, 18).getTime();
 const HOUR = 3_600_000;
 
 describe('her first day', () => {
-  it('opens with three flowers in the window, empty shelves and a packet of seeds', () => {
+  it('opens with three flowers in the window, empty shelves and an empty seed tin', () => {
     const g = starterGarden(NOW);
     expect(g.plants.map((p) => p.species).sort()).toEqual(['pansy', 'rose', 'tulip']);
     expect(g.plants.every((p) => p.display !== null)).toBe(true);
@@ -16,8 +16,7 @@ describe('her first day', () => {
     const tulip = g.plants.find((p) => p.species === 'tulip')!;
     expect(stageAt('tulip', tulip, NOW)).toBe('bud');
     expect(stageAt('tulip', tulip, NOW + 4 * HOUR)).toBe('bloom');
-    expect(g.seeds).toEqual([{ id: 'first-seeds', variety: 'olcia', count: 3, made: NOW }]);
-    expect(parseSave(JSON.parse(JSON.stringify(g)), NOW)!.seeds).toHaveLength(1);
+    expect(g.seeds).toEqual([]);
   });
 
   it('her first three plantings grow four times as fast, and then it is as usual', () => {
@@ -36,7 +35,8 @@ describe('her first day', () => {
   });
 
   it('sowing from the seed tin counts too', () => {
-    const g = plantedByHer(sowSeed(starterGarden(NOW), 'first-seeds', 'row2-a', NOW, 's1'), 's1');
+    const tin = { ...starterGarden(NOW), seeds: [{ id: 'first-seeds', variety: 'olcia', count: 3, made: NOW }] };
+    const g = plantedByHer(sowSeed(tin, 'first-seeds', 'row2-a', NOW, 's1'), 's1');
     expect(g.plants.find((p) => p.id === 's1')).toMatchObject({ species: 'pansy', variety: 'olcia', quick: true });
     expect(g.seeds[0]!.count).toBe(2);
   });
