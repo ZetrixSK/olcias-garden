@@ -1,7 +1,7 @@
 import { Milton, TrinketArt } from './MarketArt';
 import { MILTON } from '../garden/market';
 import { SLOT_IDS, type GardenState, type SlotId } from '../garden/state';
-import { POT_HEIGHT } from '../plants/Pots';
+import { POT_HEIGHT, RIM } from '../plants/Pots';
 import { plantLook } from '../plants/looks';
 import { candleLit as isCandleLit, roomTint, type Theme, type Weather } from '../theme/palettes';
 import { CandleLight, candleFlame, SHELF_SPARKLES, SillCandle, WallSparkles, WarmLightDefs } from './Decor';
@@ -82,14 +82,15 @@ function ShelfWindow() {
 }
 
 /** A macramé hanger: three cords gathered at a ring, hanging from the ceiling. */
-function Hanger({ x, rimY }: { x: number; rimY: number }) {
+function Hanger({ x, rimY, half = 22 }: { x: number; rimY: number; half?: number }) {
   // the ring sits above the tallest plants, so the cords fall behind the leaves
   const ring = rimY - 132;
   return (
     <g fill="none" strokeLinecap="round">
       <path d={`M${x},-300 L${x},${ring}`} style={sv('ink')} strokeWidth="3.4" />
       <path d={`M${x},-300 L${x},${ring}`} style={sv('rope')} strokeWidth="2" />
-      {[-22, 0, 22].map((dx) => (
+      {/* the cords meet the pot at its rim, however wide it is */}
+      {[-half, 0, half].map((dx) => (
         <g key={dx}>
           <path d={`M${x},${ring} Q${x + dx * 0.6},${(ring + rimY) / 2} ${x + dx},${rimY + 4}`} style={sv('ink')} strokeWidth="2.6" />
           <path d={`M${x},${ring} Q${x + dx * 0.6},${(ring + rimY) / 2} ${x + dx},${rimY + 4}`} style={sv('rope')} strokeWidth="1.4" />
@@ -205,7 +206,7 @@ export function ShelfView({ theme, weather, viewH, garden, now, selectedId, movi
         const rimY = pos.y - potH;
         return (
           <g key={slot}>
-            {pos.hang && <Hanger x={pos.x} rimY={plant ? rimY : pos.y - 26} />}
+            {pos.hang && <Hanger x={pos.x} rimY={plant ? rimY : pos.y - 26} half={plant ? RIM[plantLook(plant, garden.designs).shape][0] * PLANT_SCALE - 1.5 : 22} />}
             <g transform={`translate(${pos.x} ${plant ? rimY : pos.y}) scale(${plant ? PLANT_SCALE : 1})`}>
               {drawing ? (
                 <ShelfDrawing
