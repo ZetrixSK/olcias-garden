@@ -20,16 +20,29 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...CORS, 'Content-Type': 'application/json' },
+  });
 
 /** Where the headlines come from: Szczecin first, then Poland. Several sources, so one refusing never leaves the column empty. */
 const FEEDS: Array<{ place: string; url: string }> = [
-  { place: 'szczecin', url: 'https://szczecin.wyborcza.pl/pub/rss/szczecin.xml' },
-  { place: 'szczecin', url: 'https://news.google.com/rss/search?q=Szczecin&hl=pl&gl=PL&ceid=PL:pl' },
+  {
+    place: 'szczecin',
+    url: 'https://szczecin.wyborcza.pl/pub/rss/szczecin.xml',
+  },
+  {
+    place: 'szczecin',
+    url: 'https://news.google.com/rss/search?q=Szczecin&hl=pl&gl=PL&ceid=PL:pl',
+  },
   { place: 'polska', url: 'https://www.rmf24.pl/feed' },
   { place: 'polska', url: 'https://www.polsatnews.pl/rss/wszystkie.xml' },
   { place: 'polska', url: 'https://tvn24.pl/najnowsze.xml' },
-  { place: 'polska', url: 'https://news.google.com/rss/search?q=ciekawostki+OR+kultura+OR+nauka+OR+przyroda&hl=pl&gl=PL&ceid=PL:pl' },
+  {
+    place: 'polska',
+    url: 'https://news.google.com/rss/search?q=ciekawostki+OR+kultura+OR+nauka+OR+przyroda&hl=pl&gl=PL&ceid=PL:pl',
+  },
 ];
 
 /** Used only if Google's list of models can't be read. */
@@ -42,7 +55,10 @@ const FALLBACK_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash'];
  */
 async function currentModels(key: string): Promise<string[]> {
   try {
-    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': key }, signal: AbortSignal.timeout(10_000) });
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', {
+      headers: { 'x-goog-api-key': key },
+      signal: AbortSignal.timeout(10_000),
+    });
     if (!res.ok) return FALLBACK_MODELS;
     const data = await res.json();
     const names: string[] = (data?.models ?? [])
@@ -52,14 +68,25 @@ async function currentModels(key: string): Promise<string[]> {
     const version = (n: string) => Number((n.match(/(\d+(?:\.\d+)?)/) ?? ['0'])[0]);
     const worse = (n: string) => (/lite/.test(n) ? 2 : 0) + (/exp|preview/.test(n) ? 1 : 0);
     const ranked = names.sort((a, b) => worse(a) - worse(b) || version(b) - version(a) || a.length - b.length);
-    return ranked.length ? ranked.slice(0, 4) : FALLBACK_MODELS;
+    if (!ranked.length) return FALLBACK_MODELS;
+    // the newest few, then an older one and a light one: when the new models are swamped, these usually still answer
+    const full = ranked.filter((n) => !/lite/.test(n));
+    const lite = ranked.filter((n) => /lite/.test(n));
+    const older = full.find((n) => n === 'gemini-2.5-flash' || n === 'gemini-flash-latest');
+    return [...new Set([...full.slice(0, 3), ...(older ? [older] : []), ...lite.slice(0, 1)])];
   } catch {
     return FALLBACK_MODELS;
   }
 }
 
 /** The day in Poland, as YYYY-MM-DD. */
-const warsawDay = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+const warsawDay = () =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Warsaw',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
 
 function decode(s: string): string {
   return s
@@ -78,7 +105,13 @@ function decode(s: string): string {
 /** The headlines of one feed, without the source's name tacked on the end. */
 async function headlines(url: string, report: string[]): Promise<string[]> {
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; garden-newspaper/1.0)', Accept: 'application/rss+xml, application/xml, text/xml' }, signal: AbortSignal.timeout(10_000) });
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; garden-newspaper/1.0)',
+        Accept: 'application/rss+xml, application/xml, text/xml',
+      },
+      signal: AbortSignal.timeout(10_000),
+    });
     if (!res.ok) {
       report.push(`${new URL(url).host}: HTTP ${res.status}`);
       return [];
@@ -122,8 +155,16 @@ const SCHEMA = {
         type: 'OBJECT',
         properties: {
           place: { type: 'STRING', enum: ['szczecin', 'polska', 'swiat'] },
-          title: { type: 'OBJECT', properties: { pl: { type: 'STRING' }, en: { type: 'STRING' } }, required: ['pl', 'en'] },
-          body: { type: 'OBJECT', properties: { pl: { type: 'STRING' }, en: { type: 'STRING' } }, required: ['pl', 'en'] },
+          title: {
+            type: 'OBJECT',
+            properties: { pl: { type: 'STRING' }, en: { type: 'STRING' } },
+            required: ['pl', 'en'],
+          },
+          body: {
+            type: 'OBJECT',
+            properties: { pl: { type: 'STRING' }, en: { type: 'STRING' } },
+            required: ['pl', 'en'],
+          },
         },
         required: ['place', 'title', 'body'],
       },
@@ -136,40 +177,77 @@ async function askGemini(key: string, lines: string): Promise<{ raw: string; mod
   const preferred = Deno.env.get('GEMINI_MODEL');
   const found = await currentModels(key);
   const models = preferred ? [preferred, ...found.filter((m) => m !== preferred)] : found;
-  let last = 'no model answered';
-  for (const model of models) {
-    try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-        signal: AbortSignal.timeout(45_000),
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM }] },
-          contents: [{ role: 'user', parts: [{ text: `Dzisiejsze nagłówki:\n${lines}` }] }],
-          generationConfig: { responseMimeType: 'application/json', responseSchema: SCHEMA, temperature: 0.9 },
-        }),
-      });
-      if (!res.ok) {
-        // keep every model's answer, so the admin page shows why each one failed
-        last = `${last === 'no model answered' ? '' : `${last} | `}${model}: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`;
-        continue;
-      }
-      const data = await res.json();
-      const raw = data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? '';
-      if (!raw) {
-        last = `${model}: empty answer`;
-        continue;
-      }
-      return { raw, model };
-    } catch (e) {
-      last = `${model}: ${e instanceof Error ? e.message : String(e)}`;
+  // Busy models ("high demand", 503/429, or too slow) get a second go after a short wait. Everything
+  // stays inside ~2 minutes, so the function always finishes and saves why it failed.
+  const deadline = Date.now() + 115_000;
+  const fails: string[] = [];
+  let queue = models;
+  for (let pass = 0; pass < 2 && queue.length; pass++) {
+    if (pass > 0) await new Promise((r) => setTimeout(r, 8_000));
+    const busy: string[] = [];
+    for (const model of queue) {
+      const left = deadline - Date.now();
+      if (left < 5_000) break;
+      const got = await tryModel(key, model, lines, Math.min(30_000, left));
+      if ('raw' in got) return got;
+      fails.push(`${pass ? 'again ' : ''}${model}: ${got.why}`);
+      if (got.busy) busy.push(model);
     }
+    queue = busy;
   }
-  return { error: last };
+  return { error: fails.join(' | ') || 'no model answered' };
+}
+
+/** One request to one model. `busy` means it's worth asking again in a moment. */
+async function tryModel(key: string, model: string, lines: string, ms: number): Promise<{ raw: string; model: string } | { why: string; busy: boolean }> {
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+      signal: AbortSignal.timeout(ms),
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM }] },
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: `Dzisiejsze nagłówki:\n${lines}` }],
+          },
+        ],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: SCHEMA,
+          temperature: 0.9,
+        },
+      }),
+    });
+    if (!res.ok) {
+      // keep the start of Google's answer, so the test page shows why it failed
+      const text = (await res.text()).replace(/\s+/g, ' ');
+      const msg = (text.match(/"message":\s*"([^"]{0,160})/) ?? [])[1] ?? text.slice(0, 160);
+      return {
+        why: `HTTP ${res.status} ${msg}`,
+        busy: res.status === 503 || res.status === 429 || res.status === 500,
+      };
+    }
+    const data = await res.json();
+    const raw = data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? '';
+    if (!raw) return { why: 'empty answer', busy: false };
+    return { raw, model };
+  } catch (e) {
+    const why = e instanceof Error ? e.message : String(e);
+    return { why, busy: /timed out|abort/i.test(why) };
+  }
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  // allow whatever headers the browser asks about: the Supabase library adds new ones (x-retry-count…) over time
+  if (req.method === 'OPTIONS')
+    return new Response('ok', {
+      headers: {
+        ...CORS,
+        'Access-Control-Allow-Headers': req.headers.get('Access-Control-Request-Headers') ?? CORS['Access-Control-Allow-Headers'],
+      },
+    });
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
 
   const url = Deno.env.get('SUPABASE_URL')!;
@@ -188,7 +266,10 @@ Deno.serve(async (req) => {
   let isAdmin = false;
   const auth = req.headers.get('Authorization');
   if (auth && body.force) {
-    const asCaller = createClient(url, anon, { global: { headers: { Authorization: auth } }, auth: { persistSession: false } });
+    const asCaller = createClient(url, anon, {
+      global: { headers: { Authorization: auth } },
+      auth: { persistSession: false },
+    });
     const { data } = await asCaller.rpc('am_i_admin');
     isAdmin = data === true;
   }

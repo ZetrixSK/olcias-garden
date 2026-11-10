@@ -321,7 +321,7 @@ function GeminiRunner({ session }: { session: Session }) {
       </p>
       <div className="papertest-actions">
         <button onClick={() => void run(true)} disabled={busy}>
-          {busy ? 'Writing… (up to a minute)' : 'Write and post today’s column'}
+          {busy ? 'Writing… (up to two minutes)' : 'Write and post today’s column'}
         </button>
         <button onClick={() => void run(false)} disabled={busy}>
           Write only (don’t post)

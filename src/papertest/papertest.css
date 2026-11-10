@@ -1,6 +1,12 @@
 /* the papers' test pages */
 .papertest-root {
-  min-height: 100vh;
+  /* the garden's styles pin the page still (html, body: overflow hidden), so the test pages scroll in here */
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  user-select: text;
   background: #e9dfcc;
   color: #231a1f;
   font-family: system-ui, sans-serif;
