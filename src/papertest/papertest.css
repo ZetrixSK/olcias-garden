@@ -1,0 +1,93 @@
+/* the papers' test pages */
+.papertest-root {
+  min-height: 100vh;
+  background: #e9dfcc;
+  color: #231a1f;
+  font-family: system-ui, sans-serif;
+}
+.papertest-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+  background: #231a1f;
+}
+.papertest-bar > * {
+  min-height: 36px;
+  font: 13px system-ui, sans-serif;
+}
+.papertest-bar label {
+  color: #f4ecdc;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.papertest-paper .papers {
+  top: var(--test-bar, 104px);
+}
+.papertest-schedule {
+  padding: 120px 12px 40px;
+  font-size: 13px;
+}
+.papertest-schedule table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.papertest-schedule td,
+.papertest-schedule th {
+  border-bottom: 1px solid #c9b8a6;
+  padding: 4px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+.papertest-schedule .warn {
+  background: #f6c8c8;
+}
+.papertest-signin,
+.papertest-gemini {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px 16px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.papertest-signin input,
+.papertest-gemini button,
+.papertest-signin button {
+  min-height: 44px;
+  font: inherit;
+  padding: 0 12px;
+}
+.papertest-gemini pre {
+  white-space: pre-wrap;
+  font-size: 12px;
+  background: #fff;
+  padding: 8px;
+}
+.papertest-item {
+  background: #f4ecdc;
+  border: 1px solid #231a1f;
+  padding: 8px 10px;
+}
+.papertest-item p {
+  margin: 4px 0 0;
+}
+.papertest-item .en {
+  color: #6b5a60;
+  font-size: 13px;
+}
+.papertest-root .error {
+  color: #a3262a;
+}
+.papertest-root .ok {
+  color: #2f6b3a;
+}
+.papertest-msg {
+  padding: 40px 16px;
+}

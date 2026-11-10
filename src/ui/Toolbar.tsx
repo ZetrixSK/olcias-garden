@@ -94,6 +94,14 @@ const BOX_ICON = (
   </g>
 );
 
+/** A folded newspaper: a title and two columns. */
+const PAPER_ICON = (
+  <g>
+    <path d="M-10,-8 L10,-8 L10,9 L-10,9 Z" />
+    <path d="M-7,-4.5 L7,-4.5 M-7,-1 L-1,-1 M-7,2 L-1,2 M-7,5 L-1,5 M2,-1 L7,-1 M2,2 L7,2 M2,5 L7,5" />
+  </g>
+);
+
 /** A round-topped front door with a knocker. */
 const DOOR_ICON = (
   <g>
@@ -123,7 +131,7 @@ const LANG_ABOUT: Record<Lang, string> = {
   mixed: 'English, with Polish flower names',
 };
 
-export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onDiary, memory, onBook, onMemories, onNews, newsUnseen, onBackup, onPicture, onDecorate, onBouquet, onPost, postTag, onClock, onStudio, onOwnRoom, door, onDoor, onVisitors, onMarket, onBox, nightMarket, giftWaiting, onGift }: {
+export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, locating, onLetter, onDiary, memory, onBook, onMemories, onNews, newsUnseen, onBackup, onPicture, onDecorate, onBouquet, onPost, postTag, onClock, onStudio, onOwnRoom, door, onDoor, onVisitors, onMarket, onBox, onPapers, nightMarket, giftWaiting, onGift }: {
   /** Someone at the door: knocking (she hasn't opened yet) or waiting with their note; null if nobody. */
   door: 'knocking' | 'waiting' | null;
   onDoor: () => void;
@@ -132,6 +140,8 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
   /** The market (Pan Jeżyk by day, Pani Ćma on weekend nights) and her box of trinkets. */
   onMarket: () => void;
   onBox: () => void;
+  /** Opens the morning papers. */
+  onPapers: () => void;
   /** The night market is open and still has cards she hasn't turned over. */
   nightMarket: boolean;
   /** A package still wrapped, waiting to be opened; tapping the gift opens it. */
@@ -324,6 +334,16 @@ export function Toolbar({ settings, weather, status, onSettings, onLiveWeather, 
             >
               <Icon>{BOX_ICON}</Icon>
               {t('Trinket box', 'Szkatułka')}
+            </button>
+            <button
+              className="wide with-icon"
+              onClick={() => {
+                setMenu(false);
+                onPapers();
+              }}
+            >
+              <Icon>{PAPER_ICON}</Icon>
+              {t('Morning papers', 'Gazety')}
             </button>
             <button
               className="wide with-icon"

@@ -2,10 +2,18 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+/** Whether a chunk holds the papers' test pages' own code (which never goes on her phone). */
+const isTestPage = (ids: readonly string[]) => ids.some((m) => m.split('\\').join('/').includes('/src/papertest/'));
+
 export default defineConfig({
   build: {
     rollupOptions: {
-      input: { main: 'index.html', admin: 'admin.html' },
+      input: { main: 'index.html', admin: 'admin.html', 'test-prewritten': 'test-prewritten.html', 'test-gemini': 'test-gemini.html' },
+      output: {
+        // the papers' test pages' own script gets a name her offline cache skips
+        entryFileNames: (chunk) => (isTestPage(chunk.moduleIds) ? 'assets/test-[hash].js' : 'assets/[name]-[hash].js'),
+        chunkFileNames: (chunk) => (isTestPage(chunk.moduleIds) ? 'assets/test-[hash].js' : 'assets/[name]-[hash].js'),
+      },
     },
   },
   plugins: [
@@ -35,9 +43,9 @@ export default defineConfig({
         // everything the garden needs is bundled, so it opens fully offline after the first visit
         globPatterns: ['**/*.{js,css,html,woff2,png,svg}'],
         navigateFallback: '/index.html',
-        // the gardener's page is never part of her app: not cached on her phone, never answered with the garden
-        navigateFallbackDenylist: [/^\/admin/],
-        globIgnores: ['admin.html', 'assets/admin-*'],
+        // the gardener's page (and the papers' test pages) are never part of her app: not cached on her phone, never answered with the garden
+        navigateFallbackDenylist: [/^\/admin/, /^\/test-/],
+        globIgnores: ['admin.html', 'assets/admin-*', 'test-*.html', 'assets/test-*'],
         cleanupOutdatedCaches: true,
       },
     }),

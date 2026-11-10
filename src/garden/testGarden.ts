@@ -1,6 +1,7 @@
 import { plantedAtForStage } from './growth';
 import { SPECIES, type SpeciesId, type Stage } from './species';
 import { newId, starterGarden, type GardenState, type Plant, type SlotId, type WindowSpot } from './state';
+import { NO_PAPER } from '../paper/log';
 
 /**
  * For tests only: a garden well into its life, with plants on the shelves and in the window at
@@ -33,5 +34,6 @@ export function testGarden(now: number): GardenState {
     ],
     seeds: [],
     start: { planted: 3, tip: 6, off: false },
+    paper: NO_PAPER,
   };
 }

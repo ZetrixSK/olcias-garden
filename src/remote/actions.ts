@@ -11,6 +11,7 @@ import {
 } from '../garden/state';
 import { isVineSpecies, isVineSpot, settleMiddleDir, VINE_STEP } from '../garden/vines';
 import { MOMENTS, momentBlocked, type Moment } from '../weather/moments';
+import { MAX_NOTE_TEXT, withNote } from '../paper/log';
 import type { SkyKind } from '../theme/palettes';
 import type { Season } from '../theme/seasons';
 
@@ -288,6 +289,21 @@ function moment(g: GardenState, p: Payload, now: number, world: World | null): R
   return done(g, { kind: 'moment', moment: m, until: now + minutes * 60_000 });
 }
 
+/**
+ * His note for her morning papers on a day (`day`, YYYY-MM-DD; today's if not given): it shows,
+ * taped in, on that day's Kurier. A new note for the same day replaces it; empty text takes it away.
+ */
+function paperNote(g: GardenState, p: Payload, now: number): Result {
+  if (typeof p.text !== 'string') return skip('No note was given.');
+  if (p.text.trim().length > MAX_NOTE_TEXT) return skip(`A note can be at most ${MAX_NOTE_TEXT} characters.`);
+  const d = new Date(now - 5 * 3_600_000);
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const day = p.day === undefined ? today : typeof p.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(p.day) ? p.day : null;
+  if (!day) return skip('The day should look like 2026-11-24.');
+  if (day < today && p.text.trim()) return skip('That day’s papers have already gone out.');
+  return done({ ...g, paper: withNote(g.paper, { id: newId(), day, text: p.text }) });
+}
+
 const KINDS: Record<string, (g: GardenState, p: Payload, now: number, world: World | null) => Result> = {
   moment,
   settings,
@@ -309,6 +325,7 @@ const KINDS: Record<string, (g: GardenState, p: Payload, now: number, world: Wor
   unlock,
   petals,
   nightmarket: nightMarket,
+  papernote: paperNote,
 };
 
 /** What was already done with this action here, if anything. */

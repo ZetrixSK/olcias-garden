@@ -158,6 +158,8 @@ export function describe(a: Pick<ActionRow, 'kind' | 'payload'>, g: GardenState 
       return `Give her ${String(p.n)} petals`;
     case 'nightmarket':
       return `Open the night market for ${typeof p.hours === 'number' ? p.hours : 3} h`;
+    case 'papernote':
+      return typeof p.text === 'string' && p.text.trim() ? `A note in her paper (${String(p.day ?? 'today')}): ${p.text.slice(0, 60)}` : `Take the note out of her paper (${String(p.day ?? 'today')})`;
     default:
       return a.kind;
   }

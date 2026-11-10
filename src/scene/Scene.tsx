@@ -24,6 +24,7 @@ import { leanFor, runnerStart, VINE_PHASE, VineRunner, Vines, type PlacedVine, t
 import { useGrowingVines } from './useGrowingVines';
 import { FloorParcels } from '../ui/Bouquets';
 import { Letterbox } from './Letterbox';
+import { FloorPapers } from '../paper/FloorPapers';
 import { Balloon, BirthdayBanner } from './Birthday';
 import { VisitorArt } from './VisitorArt';
 import { Garland, Milton, SpeechBubble } from './MarketArt';
@@ -193,7 +194,10 @@ const Backdrop = memo(function Backdrop({ theme, sky, night, twilight, season, o
 });
 
 /** Curtains, pictures, sign, floor and the dogs. */
-const RoomFront = memo(function RoomFront({ birthdayWords, theme, dy, wallMid, pictureScale, hideCurtains, phase, mood, occasion, onBook, photoUrl, onFrame, parcels, onParcels, mailNews, onPost, name, onSign, curtainsClosed, onCurtains, onCurtainsOpen, milton, miltonSays, onMilton }: {
+const RoomFront = memo(function RoomFront({ papersFresh, onPapers, birthdayWords, theme, dy, wallMid, pictureScale, hideCurtains, phase, mood, occasion, onBook, photoUrl, onFrame, parcels, onParcels, mailNews, onPost, name, onSign, curtainsClosed, onCurtains, onCurtainsOpen, milton, miltonSays, onMilton }: {
+  /** The morning papers on the floor: whether today's are still unread; without onPapers, no papers. */
+  papersFresh: boolean;
+  onPapers?: () => void;
   birthdayWords: string;
   /** Milton, in the dogs' bed, if he has come; what he's saying, if she just tapped him. */
   milton: boolean;
@@ -273,6 +277,12 @@ const RoomFront = memo(function RoomFront({ birthdayWords, theme, dy, wallMid, p
         ) : (
           <Ball />
         )}
+        {/* the morning papers, on the floor in front of the bed */}
+        {onPapers && (
+          <g transform={`translate(${occasion === 'halloween' ? 124 : 100} 850) scale(1.3)`}>
+            <FloorPapers fresh={papersFresh} onOpen={onPapers} />
+          </g>
+        )}
         {/* bouquets that came with no room on the shelves wait in a box, in front of the dog bed */}
         <FloorParcels count={parcels} onOpen={onParcels ?? (() => {})} />
       </g>
@@ -320,7 +330,7 @@ const SillBoard = memo(Sill);
 const Trinket = memo(ShelfTrinket);
 const Candle = memo(SillCandle);
 
-export function Scene({ theme, weather, viewH, vines, still = false, moments = [], onParcels, onPost, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, onSign, onCurtains, rainbow = false, candle = null, candleOn, onCandle, flyer = null, miltonSays = null, onMilton, birthdayWords = 'Sto lat', ...rest }: {
+export function Scene({ theme, weather, viewH, vines, still = false, moments = [], onParcels, onPost, papersFresh = false, onPapers, snip = null, hideCurtains = false, onBook, paper = null, photoUrl = null, onFrame, onSign, onCurtains, rainbow = false, candle = null, candleOn, onCandle, flyer = null, miltonSays = null, onMilton, birthdayWords = 'Sto lat', ...rest }: {
   /** What her birthday banner says. */
   birthdayWords?: string;
   /** What Milton is saying, for a moment after she taps him. */
@@ -340,6 +350,9 @@ export function Scene({ theme, weather, viewH, vines, still = false, moments = [
   onParcels?: () => void;
   /** Tapping the letterbox on the wall; without it, no letterbox. */
   onPost?: () => void;
+  /** Whether today's papers are still unread, and tapping them; without onPapers, no papers on the floor. */
+  papersFresh?: boolean;
+  onPapers?: () => void;
   snip?: Snip | null;
   /** Dev only: shows the bare window, to judge the vines without the curtains over them. */
   hideCurtains?: boolean;
@@ -438,6 +451,8 @@ export function Scene({ theme, weather, viewH, vines, still = false, moments = [
         onCurtains={onCurtains}
         onCurtainsOpen={onCurtainsOpen}
         birthdayWords={birthdayWords}
+        papersFresh={papersFresh}
+        onPapers={onPapers}
         milton={rest.garden.market.milton}
         miltonSays={miltonSays}
         onMilton={onMilton}

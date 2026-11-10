@@ -15,6 +15,7 @@ import { parseBouquet, parseCuttings, parseParcels, parsePlaced, pruneCuttings, 
 import { POT_KINDS, SPECIES, SPECIES_IDS, type GardenPot, type SpeciesId, type Stage } from './species';
 import { buySeed, buyTrinket, earnPetals, noMarket, openDayStall, openNightStall, parseMarket, placeFigure, type Market, type SeedItem } from './market';
 import { arrive, birthdayGifts, giveBouquet, momentAt, noVisitors, notNow, parseVisitors, seeRequest, type Gift, type Thanks, type Visitors } from './visitors';
+import { logEvent, NO_PAPER, parsePaper, type PaperEvent, type PaperState } from '../paper/log';
 
 export const SLOT_IDS = [
   'hang-l', 'sill-l', 'sill-r', 'hang-r',
@@ -157,6 +158,8 @@ export type GardenState = {
   market: Market;
   /** Her first days: how many she has planted (the first few grow faster), and the little notes. */
   start: Start;
+  /** The morning papers: what happened for them to report, his notes for them, the last day she read them. */
+  paper: PaperState;
 };
 
 /** The first few plantings that grow faster. */
@@ -247,6 +250,7 @@ export function starterGarden(now: number): GardenState {
     visitors: noVisitors(now),
     market: noMarket(),
     start: { planted: 0, tip: 0, off: false },
+    paper: NO_PAPER,
   };
 }
 
@@ -373,7 +377,7 @@ export function moveBouquet(state: GardenState, id: string, to: SlotId): GardenS
 /** A bouquet comes in the post: on the shelves or in the box, and the letterbox's flag goes up. */
 export function receivePost(state: GardenState, bouquet: Bouquet): GardenState {
   const next = receiveBouquet(state, bouquet);
-  return next === state ? state : { ...next, post: { ...next.post, unread: next.post.unread + 1 } };
+  return next === state ? state : noted({ ...next, post: { ...next.post, unread: next.post.unread + 1 } }, { at: Date.now(), kind: 'post', from: bouquet.from ?? null });
 }
 
 /** She has looked in the post box: the flag comes down. */
@@ -494,7 +498,10 @@ export function sawWeather(state: GardenState, now: number, w: { sky: 'clear' | 
 /** A package has come in the post: it waits, wrapped, and the letterbox's flag goes up. */
 export function receivePackage(state: GardenState, pkg: Package): GardenState {
   if (state.packages.some((p) => p.id === pkg.id)) return state;
-  return { ...state, packages: keepPackages([...state.packages, { ...pkg, opened: null }]), post: { ...state.post, unread: state.post.unread + 1 } };
+  return noted(
+    { ...state, packages: keepPackages([...state.packages, { ...pkg, opened: null }]), post: { ...state.post, unread: state.post.unread + 1 } },
+    { at: Date.now(), kind: 'package', from: pkg.from ?? null },
+  );
 }
 
 /**
@@ -826,6 +833,7 @@ export function parseSave(input: unknown, now = Date.now()): GardenState | null 
     packages: parsePackages(raw.packages),
     visitors: parseVisitors(raw.visitors, plants.map((p) => p.species), now, parseBouquet),
     start: parseStart(raw.start),
+    paper: parsePaper(raw.paper),
     market: parseMarket(raw.market, (slot) => shelfFree(slot) && !decor.drawings.some((d) => d.slot === slot) && !bouquets.some((b) => b.slot === slot)),
   };
 }
@@ -859,7 +867,9 @@ export function openDoor(state: GardenState): GardenState {
 
 /** "Not now": they go, kindly, and someone comes another time. */
 export function sendAway(state: GardenState, now: number, rand: () => number = Math.random): GardenState {
-  return { ...state, visitors: notNow(state.visitors, now, rand) };
+  const who = state.visitors.request?.visitor;
+  const next = { ...state, visitors: notNow(state.visitors, now, rand) };
+  return who ? noted(next, { at: now, kind: 'away', who }) : next;
 }
 
 /** A visitor's bratek comes as seeds: the design is kept, and a packet goes in her tin. */
@@ -878,6 +888,7 @@ export function giveToVisitor(state: GardenState, bouquet: Bouquet, cutFrom: str
   if (!given) return null;
   let garden: GardenState = { ...cutStems(state, cutFrom, now), visitors: given.visitors, market: earnPetals(state.market, given.thanks.petals) };
   if (given.thanks.gift) garden = seedsFrom(garden, given.thanks.gift, now);
+  garden = noted(garden, { at: now, kind: 'visit', who: given.thanks.visitor, petals: given.thanks.petals });
   return { garden, thanks: given.thanks };
 }
 
@@ -924,13 +935,21 @@ export function buyFromStall(state: GardenState, id: string, now: number): { gar
     const kept = g.designs.pansies.some((d) => d.id === item.design.id) ? g : savePansyDesign(g, item.design);
     g = addSeeds(kept, designRef(item.design.id), 3, now);
   }
-  return { garden: g, item };
+  const what: PaperEvent =
+    item.kind === 'species'
+      ? { at: now, kind: 'buy', what: 'species', ref: item.species, name: null }
+      : item.kind === 'pansy'
+        ? { at: now, kind: 'buy', what: 'pansy', ref: item.design.id, name: item.design.name }
+        : item.kind === 'ribbon'
+          ? { at: now, kind: 'buy', what: 'ribbon', ref: item.color, name: null }
+          : { at: now, kind: 'buy', what: 'vase', ref: item.vase, name: null };
+  return { garden: noted(g, what), item };
 }
 
 /** Buys a trinket from Pani Ćma (Milton comes free); a figure stands on the first free shelf. */
-export function buyFromNightStall(state: GardenState, id: string): GardenState | null {
+export function buyFromNightStall(state: GardenState, id: string, now = Date.now()): GardenState | null {
   const market = buyTrinket(state.market, id, freeShelfSlots(state)[0] ?? null);
-  return market ? { ...state, market } : null;
+  return market ? noted({ ...state, market }, { at: now, kind: 'trinket', ref: id }) : null;
 }
 
 /** Stands a figure in a free place on the shelves, or puts it away in her box. */
@@ -981,3 +1000,15 @@ export function tipDone(state: GardenState, tip: Tip): GardenState {
 
 /** No more notes. */
 export const tipsOff = (state: GardenState): GardenState => ({ ...state, start: { ...state.start, off: true } });
+
+// ---- the morning papers ------------------------------------------------------------------------
+
+/** Notes something for "Yesterday in your garden" in tomorrow's papers. */
+export function noted(state: GardenState, e: PaperEvent): GardenState {
+  return { ...state, paper: logEvent(state.paper, e) };
+}
+
+/** She opened today's papers. */
+export function papersRead(state: GardenState, day: string): GardenState {
+  return state.paper.read === day ? state : { ...state, paper: { ...state.paper, read: day } };
+}

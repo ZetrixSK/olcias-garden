@@ -9,6 +9,7 @@ import { activeMoments, ago, isOnline, withPending, type ActionRow, type GardenR
 import { BookPanel, GardenPanel, History, NewPlantPanel, PlantPanel, VisitorsPanel, type Send } from './Panels';
 import { World } from './World';
 import { DesignPanel } from './DesignPanel';
+import { PapersPanel } from './PapersPanel';
 
 function useClock(): number {
   const [now, setNow] = useState(Date.now);
@@ -220,6 +221,7 @@ function Dashboard({ source }: { source: Source }) {
             <BookPanel garden={garden} send={send} />
             <VisitorsPanel garden={garden} send={send} />
             <DesignPanel garden={garden} send={send} />
+            <PapersPanel garden={garden} send={send} />
           </div>
         </div>
       )}

@@ -1,5 +1,5 @@
 import { prefersStill, setMotion } from './motion';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   addDrawing,
   addSeeds,
@@ -33,6 +33,7 @@ import {
   parseSave,
   bouquetAt,
   postSeen,
+  papersRead,
   rememberContact,
   setTag,
   cutStems,
@@ -91,6 +92,11 @@ import { stageAt } from './garden/growth';
 import type { SpeciesId } from './garden/species';
 import { grainDataUrl } from './grain';
 import { Scene } from './scene/Scene';
+import { dayKeyOf, paperDate } from './paper/log';
+import { showerTonight } from './paper/calendar';
+
+/** The morning papers load only when first opened, so the garden itself opens as fast as before. */
+const PaperView = lazy(() => import('./paper/PaperView'));
 import { ShelfView } from './scene/ShelfView';
 import type { Snip, VineSpec } from './scene/Vines';
 import { ease, lapseDuration, LapseClock } from './ui/Clock';
@@ -114,7 +120,7 @@ import { FigureCard, TrinketBox } from './ui/TrinketBox';
 import { miltonSays } from './ui/marketWords';
 import { MILTON, nightMarketKey, toggleCharm, turnCard } from './garden/market';
 import { VisitorBook } from './ui/VisitorBook';
-import { goodbyeLine, say, VISITOR_NAME } from './ui/visitorWords';
+import { goodbyeLine, quote, say, VISITOR_NAME } from './ui/visitorWords';
 import { ambienceIfMade } from './sound/ambience';
 import { FLYING } from './scene/VisitorArt';
 import { makeRequest, VISITOR_IDS, type Thanks, type VisitorId } from './garden/visitors';
@@ -350,6 +356,8 @@ export function App() {
   /** The market, her trinket box, and a figure she just tapped (Milton talking, the music box playing…). */
   const [marketOpen, setMarketOpen] = useState(false);
   const [boxOpen, setBoxOpen] = useState(false);
+  /** The morning papers, open on the screen. */
+  const [papersOpen, setPapersOpen] = useState(false);
   const [figureFx, setFigureFx] = useState<{ id: string; kind: 'talk' | 'play' | 'shake' | 'light' | 'wiggle'; line?: string } | null>(null);
   const figureTimer = useRef(0);
   const [memoriesOpen, setMemoriesOpen] = useState<{ at: string | null } | false>(false);
@@ -502,6 +510,8 @@ export function App() {
     (glowPreview === 'dawn' || glowPreview === 'dusk') && realWeather.sky !== 'rain'
       ? { ...realWeather, night: false, twilight: glowPreview }
       : realWeather;
+  /** The sky as the papers describe it: kept the same object while it doesn't change, so they aren't rebuilt every minute. */
+  const paperWeather = useMemo(() => ({ sky: weather.sky, night: weather.night }), [weather.sky, weather.night]);
 
   // the garden remembers the weather it saw each day, so the night can answer to it (see traits)
   const dayOfMonth = new Date(now).getDate();
@@ -564,7 +574,12 @@ export function App() {
 
   // moments sent from the admin page (a rainbow, a visitor at the lake...) and when each one ends
   const [sent, setSent] = useState<Partial<Record<Moment, number>>>({});
-  const moments = useMemo(() => MOMENTS.filter((m) => (sent[m] ?? 0) > now), [sent, now]);
+  // on a meteor shower's best night the sky fills with shooting stars, as the papers promised
+  const shower = showerTonight(now) !== null;
+  const moments = useMemo(() => {
+    const on = MOMENTS.filter((m) => (sent[m] ?? 0) > now);
+    return shower && !on.includes('shooting-stars') ? [...on, 'shooting-stars' as const] : on;
+  }, [sent, now, shower]);
   // post sent to her tag: bouquets come in once the garden is open and no replay is playing
   const [notice, setNotice] = useState<Notice | null>(null);
   const closeNotice = useCallback(() => setNotice(null), []);
@@ -1005,6 +1020,8 @@ export function App() {
   const vines: VineSpec[] = devVineList.length ? devVineList : vineSpecs(garden, shown.plants);
 
   const cardPlant = mode.kind === 'card' ? garden.plants.find((p) => p.id === mode.id) : undefined;
+  /** Whose papers are out now (they come at five in the morning). */
+  const papersDay = dayKeyOf(paperDate(now));
   /** This weekend's night market, while it's open. */
   const nightKey = nightMarketKey(now, weather.night, garden.market);
   const nightLeft = nightKey !== null && !(garden.market.night?.key === nightKey && garden.market.night.cards.every((id) => garden.market.night!.bought.includes(id)));
@@ -1018,6 +1035,7 @@ export function App() {
     setVisitorsOpen(false);
     setBoxOpen(false);
     setMarketOpen(false);
+    setPapersOpen(false);
     setDoorOpen(false);
     setThanks(null);
     setMode({ kind: 'idle' });
@@ -1030,7 +1048,7 @@ export function App() {
     };
   // a note shows only while she's looking at the garden itself, and only once it makes sense
   const tip = currentTip(garden);
-  const quiet = mode.kind === 'idle' && !lapse && !letterOpen && !diaryOpen && !bookOpen && !memoriesOpen && !newsOpen && !easel && !welcoming && !askTag && !firstCover && !doorOpen && !thanks && !visitorsOpen && !marketOpen && !boxOpen && !notice;
+  const quiet = mode.kind === 'idle' && !lapse && !letterOpen && !diaryOpen && !bookOpen && !memoriesOpen && !newsOpen && !easel && !welcoming && !askTag && !firstCover && !doorOpen && !thanks && !visitorsOpen && !marketOpen && !boxOpen && !papersOpen && !notice;
   const tipReady =
     tip === 'swipe'
       ? settings.view === 'room'
@@ -1077,7 +1095,7 @@ export function App() {
       >
         <ViewSwiper
           view={settings.view}
-          enabled={mode.kind === 'idle' && !lapse && !letterOpen && !diaryOpen && !bookOpen && !memoriesOpen && !newsOpen && !easel && !welcoming && !askTag && !doorOpen && !thanks && !visitorsOpen && !marketOpen && !boxOpen}
+          enabled={mode.kind === 'idle' && !lapse && !letterOpen && !diaryOpen && !bookOpen && !memoriesOpen && !newsOpen && !easel && !welcoming && !askTag && !doorOpen && !thanks && !visitorsOpen && !marketOpen && !boxOpen && !papersOpen}
           onChange={(view) => setSettings({ view })}
           room={
             <Scene
@@ -1098,6 +1116,8 @@ export function App() {
                 setMode({ kind: 'parcels' });
               }}
               onPost={sharing ? openPost : undefined}
+              papersFresh={garden.paper.read !== papersDay}
+              onPapers={only(() => setPapersOpen(true))}
               rainbow={rainbow}
               moments={moments}
               flyer={waiting && FLYING.includes(waiting.visitor) ? waiting.visitor : null}
@@ -1171,6 +1191,7 @@ export function App() {
           onVisitors={only(() => setVisitorsOpen(true))}
           onMarket={only(openMarket)}
           onBox={only(() => setBoxOpen(true))}
+          onPapers={only(() => setPapersOpen(true))}
           nightMarket={nightLeft}
           giftWaiting={garden.packages.some((p) => p.opened === null)}
           onGift={only(() => {
@@ -1659,7 +1680,7 @@ export function App() {
               setDoorOpen(false);
               if (who) {
                 const w = words(settings.lang, settings.me);
-                setNotice({ title: say(w, VISITOR_NAME[who]), text: `„${goodbyeLine(w, who, Math.floor(Math.random() * 6))}”` });
+                setNotice({ title: say(w, VISITOR_NAME[who]), text: quote(w, goodbyeLine(w, who, Math.floor(Math.random() * 6))) });
               }
             }}
             onClose={() => {
@@ -1669,6 +1690,19 @@ export function App() {
           />
         )}
         {visitorsOpen && <VisitorBook visitors={garden.visitors} onClose={() => setVisitorsOpen(false)} />}
+        {papersOpen && (
+          <Suspense fallback={null}>
+            <PaperView
+              garden={garden}
+              now={now}
+              lang={settings.lang}
+              me={settings.me}
+              weather={paperWeather}
+              onClose={() => setPapersOpen(false)}
+              onRead={(day) => update((g) => papersRead(g, day))}
+            />
+          </Suspense>
+        )}
         {marketOpen && (
           <MarketStall
             garden={garden}

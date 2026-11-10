@@ -363,3 +363,25 @@ body {
   width: 220px;
   height: 190px;
 }
+
+/* her morning papers: his note for a day */
+.admin .paper-note-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.admin .paper-note-form label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.admin .paper-note-form textarea {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1.5px solid var(--a-ink);
+  border-radius: 12px;
+  background: #fff;
+  color: inherit;
+  resize: vertical;
+}
