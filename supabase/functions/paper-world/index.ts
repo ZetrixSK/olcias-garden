@@ -5,8 +5,8 @@
 // uses (world.ts, a copy of src/paper/world.ts), and keeps it in public.paper_world. Nothing about
 // any garden or anyone's phone is ever sent anywhere.
 //
-// Anyone may call it, but it only ever writes a day once (with two retries if writing failed), so
-// at most three calls to Gemini a day. Writing again on demand needs the admin's sign-in.
+// Anyone may call it, but it only ever writes a day once (retrying until it works, up to MAX_TRIES
+// times), so Gemini is asked a bounded number of times a day. Writing again on demand needs the admin's sign-in.
 //
 // Needs the secret GEMINI_API_KEY (Google AI Studio). GEMINI_MODEL may name a model to use first;
 // otherwise it uses the newest "flash" model Google offers that day.
@@ -46,6 +46,9 @@ const FEEDS: Array<{ place: string; url: string }> = [
 ];
 
 /** Used only if Google's list of models can't be read. */
+/** Tries a day without the admin: the dawn job's every-10-minutes from 03:00 to 06:50 UTC. */
+const MAX_TRIES = 24;
+
 const FALLBACK_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash'];
 
 /**
@@ -323,7 +326,9 @@ Deno.serve(async (req) => {
 
   const day = warsawDay();
   const { data: existing } = await db.from('paper_world').select('*').eq('day', day).maybeSingle();
-  if (existing && !isAdmin && (existing.items !== null || existing.attempts >= 3)) {
+  // the dawn job calls every 10 minutes until a column is written; a written day is never redone,
+  // and a day that keeps failing stops after MAX_TRIES, so Gemini is asked a bounded number of times
+  if (existing && !isAdmin && (existing.items !== null || existing.attempts >= MAX_TRIES)) {
     return json({ day, done: true, ok: existing.items !== null });
   }
 
