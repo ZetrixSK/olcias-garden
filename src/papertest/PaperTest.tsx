@@ -4,10 +4,14 @@ import PaperView from '../paper/PaperView';
 import { testGarden } from '../garden/testGarden';
 import { starterGarden, type GardenState } from '../garden/state';
 import { logEvent, withNote, dayKeyOf, type PaperState } from '../paper/log';
-import { EPISODE_COUNT, leadsFor, buildIssue, dayIndex } from '../paper/issue';
+import { EPISODE_COUNT, leadsFor, buildIssue } from '../paper/issue';
 import { checkWorld, type WorldItem } from '../paper/world';
 import { admin, useSession, useWorldRows } from './staff';
-import type { Lang, Me } from '../i18n';
+import type { Me } from '../i18n';
+import { PaperArt } from '../paper/PaperArt';
+import { PHOTOS, SHOTS } from '../paper/bank/shots';
+
+type Lang = 'pl' | 'en';
 
 const SAMPLE_WORLD: WorldItem[] = [
   {
@@ -31,7 +35,7 @@ const SAMPLE_WORLD: WorldItem[] = [
 type GardenKind = 'busy' | 'new' | 'quiet';
 
 /** A garden for the test page, with something happening "yesterday" in the busy one. */
-function gardenFor(kind: GardenKind, day: Date, note: string): GardenState {
+function gardenFor(kind: GardenKind, day: Date, note: string, since: string): GardenState {
   const at = (h: number) => new Date(day.getFullYear(), day.getMonth(), day.getDate() - 1, h).getTime();
   const base = kind === 'new' ? starterGarden(at(10)) : testGarden(at(10) - 3 * 86_400_000);
   let paper: PaperState = base.paper;
@@ -42,6 +46,7 @@ function gardenFor(kind: GardenKind, day: Date, note: string): GardenState {
     paper = logEvent(paper, { at: at(19), kind: 'post', from: 'daniel' });
   }
   if (note.trim()) paper = withNote(paper, { id: 'test', day: dayKeyOf(day), text: note });
+  paper = { ...paper, since };
   const plants = kind === 'busy' ? base.plants.map((p, i) => (i < 2 ? { ...p, waterings: [...p.waterings, at(11), at(18)] } : p)) : base.plants;
   return { ...base, plants, paper };
 }
@@ -49,6 +54,7 @@ function gardenFor(kind: GardenKind, day: Date, note: string): GardenState {
 /** /test-prewritten: any day's papers, any weather, any garden, and a look at the schedule. */
 export function TestPrewritten() {
   const [date, setDate] = useState(() => dayKeyOf(new Date()));
+  const since = '2026-11-10';
   const [lang, setLang] = useState<Lang>('pl');
   const [me, setMe] = useState<Me>('she');
   const [sky, setSky] = useState<'clear' | 'cloudy' | 'rain'>('cloudy');
@@ -56,11 +62,11 @@ export function TestPrewritten() {
   const [kind, setKind] = useState<GardenKind>('busy');
   const [world, setWorld] = useState<'standin' | 'sample'>('standin');
   const [note, setNote] = useState('');
-  const [show, setShow] = useState<'paper' | 'schedule'>('paper');
+  const [show, setShow] = useState<'paper' | 'schedule' | 'pictures'>('paper');
   const [y, m, d] = date.split('-').map(Number) as [number, number, number];
   const day = new Date(y, m - 1, d, 12);
   const now = new Date(y, m - 1, d, 9).getTime();
-  const garden = useMemo(() => gardenFor(kind, day, note), [kind, date, note]); // eslint-disable-line react-hooks/exhaustive-deps
+  const garden = useMemo(() => gardenFor(kind, day, note, since), [kind, date, note, since]); // eslint-disable-line react-hooks/exhaustive-deps
   const weather = useMemo(() => ({ sky, night }), [sky, night]);
   const shift = (n: number) => setDate(dayKeyOf(new Date(y, m - 1, d + n, 12)));
   return (
@@ -72,7 +78,6 @@ export function TestPrewritten() {
         <select value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
           <option value="pl">Polski</option>
           <option value="en">English</option>
-          <option value="mixed">Mixed</option>
         </select>
         <select value={me} onChange={(e) => setMe(e.target.value as Me)}>
           <option value="she">to her</option>
@@ -96,24 +101,48 @@ export function TestPrewritten() {
           <option value="sample">world: sample</option>
         </select>
         <input placeholder="his note (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
-        <button onClick={() => setShow((s) => (s === 'paper' ? 'schedule' : 'paper'))}>{show === 'paper' ? 'Schedule' : 'Paper'}</button>
+        <button onClick={() => setShow('paper')}>Paper</button>
+        <button onClick={() => setShow('schedule')}>Schedule</button>
+        <button onClick={() => setShow('pictures')}>Pictures</button>
       </div>
       {show === 'paper' ? (
         <div className="papertest-paper">
           <PaperView key={date} garden={garden} now={now} lang={lang} me={me} weather={weather} onClose={() => {}} world={world === 'sample' ? SAMPLE_WORLD : null} />
         </div>
-      ) : (
+      ) : show === 'schedule' ? (
         <Schedule from={day} garden={garden} lang={lang} />
+      ) : (
+        <Pictures />
       )}
     </div>
   );
 }
 
 /** Sixty days from the chosen one: which story leads each paper, the serial's part, and repeats too close together. */
+/** Every picture the papers can print, to look them over at once. */
+function Pictures() {
+  return (
+    <div className="papertest-pictures">
+      {Object.entries(SHOTS).map(([k, shot]) => (
+        <figure key={k}>
+          <PaperArt shot={shot} label={k} tone={k.startsWith('hb:') || k.startsWith('b:') || k.startsWith('ib:') ? 'black' : 'sepia'} />
+          <figcaption>{k}</figcaption>
+        </figure>
+      ))}
+      {PHOTOS.map((p, i) => (
+        <figure key={`p${i}`}>
+          <PaperArt shot={p.shot} label={p.caption.pl} tone="black" />
+          <figcaption>photo {i}: {p.caption.pl}</figcaption>
+        </figure>
+      ))}
+    </div>
+  );
+}
+
 function Schedule({ from, garden, lang }: { from: Date; garden: GardenState; lang: Lang }) {
   const days = Array.from({ length: 60 }, (_, i) => new Date(from.getFullYear(), from.getMonth(), from.getDate() + i, 12));
   const rows = days.map((day) => {
-    const leads = leadsFor(day);
+    const leads = leadsFor(day, new Date(`${garden.paper.since}T12:00:00`));
     const issue = buildIssue({ day, now: day.getTime(), garden, lang, me: 'she', weather: { sky: 'clear', night: false }, world: null });
     return { day, kurier: leads.kurier, bee: leads.bee.shared ? '= same story' : issue.bee.lead.title, shared: leads.bee.shared, serial: `${issue.kurier.serial.name} ${issue.kurier.serial.part}/${issue.kurier.serial.of}`, gossip: issue.kurier.gossip.title };
   });
@@ -122,7 +151,7 @@ function Schedule({ from, garden, lang }: { from: Date; garden: GardenState; lan
   return (
     <div className="papertest-schedule">
       <p>
-        Day index {dayIndex(from)}. Serial episodes in the cycle: {EPISODE_COUNT}. Shared front pages in these 60 days: {shared} ({((shared / 60) * 7).toFixed(1)} a week).
+        First paper {garden.paper.since}. Serial episodes in the cycle: {EPISODE_COUNT}. Shared front pages in these 60 days: {shared} ({((shared / 60) * 7).toFixed(1)} a week).
       </p>
       <table>
         <thead>
@@ -201,7 +230,7 @@ function GeminiRunner({ session }: { session: Session }) {
   const [preview, setPreview] = useState(false);
   const { rows, reload } = useWorldRows();
   const items = result ? checkWorld(result.items) : null;
-  const garden = useMemo(() => gardenFor('busy', new Date(), ''), []);
+  const garden = useMemo(() => gardenFor('busy', new Date(), '', dayKeyOf(new Date(Date.now() - 10 * 86_400_000))), []);
   const run = async () => {
     if (!admin) return;
     setBusy(true);

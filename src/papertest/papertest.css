@@ -28,7 +28,7 @@
   gap: 4px;
 }
 .papertest-paper .papers {
-  top: var(--test-bar, 104px);
+  top: var(--test-bar, 150px);
 }
 .papertest-schedule {
   padding: 120px 12px 40px;
@@ -90,4 +90,15 @@
 }
 .papertest-msg {
   padding: 40px 16px;
+}
+
+.papertest-pictures {
+  padding: 120px 12px 40px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+.papertest-pictures figure {
+  margin: 0;
+  font-size: 12px;
 }

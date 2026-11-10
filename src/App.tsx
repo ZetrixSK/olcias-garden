@@ -1695,7 +1695,6 @@ export function App() {
             <PaperView
               garden={garden}
               now={now}
-              lang={settings.lang}
               me={settings.me}
               weather={paperWeather}
               onClose={() => setPapersOpen(false)}

@@ -10,6 +10,9 @@ import { designName } from '../ui/designNames';
 import { holidaysOn, moonWords, nameDays, nextBigDay, nextMoon, nextShower, type L } from './calendar';
 import { dayKeyOf, noteFor, yesterdayWindow, type PaperEvent } from './log';
 import type { ArtKey, BeeLead, Headline, Piece, Vox, When } from './types';
+import type { Actor, Shot } from './PaperArt';
+import { PHOTOS, SHOTS } from './bank/shots';
+import { FIRST_GARDEN_LINE, INTRO } from './bank/intro';
 import type { WorldItem, WorldPlace } from './world';
 import { HEADLINES } from './bank/headlines';
 import { SERIALS } from './bank/serials';
@@ -23,12 +26,21 @@ import { ADS, GOSSIP, HOROSCOPES, LETTERS, RUMOURS, STANDINS, VOX, WEATHER_LINES
  * and his note. Nothing here is random.
  */
 
-/** The Kurier's first issue: number 1 came out on this day (a while before her first paper, so it reads as an old town paper). */
-const FOUNDED = new Date(2026, 9, 1, 12);
+function atNoon(y: number, m: number, d: number) {
+  return new Date(y, m, d, 12);
+}
+
 const DAY = 86_400_000;
 
-/** Whole days from the founding to this paper's day (negative before it). */
-export const dayIndex = (day: Date) => Math.round((new Date(day.getFullYear(), day.getMonth(), day.getDate(), 12).getTime() - FOUNDED.getTime()) / DAY);
+/** Whole days from the reader's first paper to this one. */
+export const dayIndex = (day: Date, since: Date) =>
+  Math.round((atNoon(day.getFullYear(), day.getMonth(), day.getDate()).getTime() - atNoon(since.getFullYear(), since.getMonth(), since.getDate()).getTime()) / DAY);
+
+/** The day the papers began: issue number one, the founding of the Kurier and of Brzęczyk. Nothing before it. */
+export const PAPERS_BEGAN = new Date(2026, 10, 10, 12);
+
+/** The first paper, the same for every reader. (The garden is kept for when a reader might one day start elsewhere.) */
+export const sinceOf = (_g: GardenState, _day: Date): Date => PAPERS_BEGAN;
 
 function hash(s: string): number {
   let h = 2166136261;
@@ -116,7 +128,7 @@ export const gendered = (s: string, me: Me) => s.replace(/\{([^{}|]*)\|([^{}|]*)
 
 // ---- the issue ------------------------------------------------------------------------------
 
-export type Story = { kicker: string | null; title: string; sub: string | null; body: string[]; art: ArtKey | null; caption: string | null };
+export type Story = { kicker: string | null; title: string; sub: string | null; body: string[]; shot: Shot | null; caption: string | null };
 
 export type Issue = {
   key: string;
@@ -130,7 +142,7 @@ export type Issue = {
     lead: Story;
     world: { fresh: boolean; items: Array<{ place: string | null; title: string; body: string }> };
     garden: string[];
-    serial: { name: string; part: number; of: number; title: string; recap: string | null; body: string[]; art: ArtKey | null };
+    serial: { name: string; part: number; of: number; title: string; recap: string | null; body: string[]; shot: Shot | null };
     retort: string | null;
     gossip: { title: string; body: string };
     vox: { q: string; a: Array<{ who: string; say: string }> };
@@ -148,6 +160,7 @@ export type Issue = {
     jab: string;
     buzz: Array<{ title: string; body: string }>;
     flower: { species: SpeciesId; name: string; text: string; barrels: number } | null;
+    photo: { shot: Shot; caption: string };
     horoscope: string;
   };
 };
@@ -166,72 +179,93 @@ export type IssueInput = {
   world: WorldItem[] | null;
 };
 
-
 /** Brzęczyk leads with the Kurier's story on most days when it has its own take, but never on Tuesdays and Thursdays. */
 const sharedDay = (day: Date, lead: Headline) => !!lead.bee && day.getDay() !== 2 && day.getDay() !== 4;
 
-/** The paper's day for a day index. */
-const dateOf = (d: number) => new Date(FOUNDED.getFullYear(), FOUNDED.getMonth(), FOUNDED.getDate() + d, 12);
-
-/** How far back the run of front pages is worked out from; before it, nothing is remembered. */
-const FIRST_DAY = -400;
 /** A front page never comes back within this many days. */
 const FRESH_DAYS = 7;
 
+/** One reader's run of papers, from the first one they had; remembered as it's worked out. */
+type Run = { since: Date; kurier: Map<number, Headline>; bee: Map<number, { lead: BeeLead; shared: boolean; id: string; key: string }> };
+const RUNS = new Map<string, Run>();
+
+function runFrom(since: Date): Run {
+  const key = dayKeyOf(since);
+  let r = RUNS.get(key);
+  if (!r) {
+    r = { since: atNoon(since.getFullYear(), since.getMonth(), since.getDate()), kurier: new Map(), bee: new Map() };
+    RUNS.set(key, r);
+  }
+  return r;
+}
+
+const dateIn = (r: Run, d: number) => atNoon(r.since.getFullYear(), r.since.getMonth(), r.since.getDate() + d);
+
 /**
- * Works out a run of days in order, remembering each: a day's choice may look back at the days
- * before it. Every phone works out the same run, so a day's papers are the same everywhere.
+ * Works out a run of days in order from the first paper, remembering each: a day's choice may look
+ * back at the days before it. A reader's papers are the same however often they're opened.
  */
 function memoRun<T>(memo: Map<number, T>, d: number, choose: (k: number) => T): T {
-  const target = Math.max(FIRST_DAY, d);
+  const target = Math.max(0, d);
   let k = target;
-  while (k > FIRST_DAY && !memo.has(k - 1)) k--;
+  while (k > 0 && !memo.has(k - 1)) k--;
   for (; k <= target; k++) if (!memo.has(k)) memo.set(k, choose(k));
   return memo.get(target)!;
 }
 
-const kurierMemo = new Map<number, Headline>();
-const beeMemo = new Map<number, { lead: BeeLead; shared: boolean; id: string }>();
-
-/** The Kurier's front page: its turn in the shuffled run, skipping anything printed in the last week. */
-function kurierLead(d: number): Headline {
-  return memoRun(kurierMemo, d, (k) => {
-    const list = suited(HEADLINES, ctxFor(dateOf(k), 'clear'));
-    const recent = new Set(Array.from({ length: FRESH_DAYS }, (_, j) => kurierMemo.get(k - 1 - j)?.id));
+/** The Kurier's front page: first the founding days, then each story in its turn, never one printed in the last week. */
+function kurierLead(r: Run, d: number): Headline {
+  return memoRun(r.kurier, d, (k) => {
+    if (k < INTRO.length) return INTRO[k]!;
+    const list = suited(HEADLINES, ctxFor(dateIn(r, k), 'clear'));
+    const recent = new Set(Array.from({ length: FRESH_DAYS }, (_, j) => r.kurier.get(k - 1 - j)?.id));
+    const n = k - INTRO.length;
     for (let t = 0; t < list.length; t++) {
-      const h = cycled(list, k + t, 'lead')!;
+      const h = cycled(list, n + t, 'lead')!;
       if (!recent.has(h.id)) return h;
     }
-    return cycled(list, k, 'lead') ?? HEADLINES[0]!;
+    return cycled(list, n, 'lead') ?? HEADLINES[0]!;
   });
 }
 
-/** Brzęczyk's front page for a day, and whether it's the same story as the Kurier's. */
-function beeLead(d: number): { lead: BeeLead; shared: boolean } {
-  return memoRun(beeMemo, d, (k) => {
-    const day = dateOf(k);
-    const kl = kurierLead(k);
-    if (sharedDay(day, kl)) return { lead: kl.bee!, shared: true, id: kl.id };
+/** Brzęczyk's front page for a day, whether it's the same story as the Kurier's, and its picture's key. */
+function beeLead(r: Run, d: number): { lead: BeeLead; shared: boolean; key: string } {
+  return memoRun(r.bee, d, (k) => {
+    const kl = kurierLead(r, k);
+    if (k < INTRO.length) return { lead: kl.bee!, shared: true, id: kl.id, key: `ib:${k}` };
+    const day = dateIn(r, k);
+    if (sharedDay(day, kl)) return { lead: kl.bee!, shared: true, id: kl.id, key: `hb:${kl.id}` };
     const list = suited(BEE_STORIES, ctxFor(day, 'clear'));
-    const recent = new Set(Array.from({ length: 10 }, (_, j) => beeMemo.get(k - 1 - j)?.id));
+    const recent = new Set(Array.from({ length: 10 }, (_, j) => r.bee.get(k - 1 - j)?.id));
     for (let t = 0; t < list.length; t++) {
       const b = cycled(list, k + t, 'bee')!;
-      if (!recent.has(b.id)) return { lead: b, shared: false, id: b.id };
+      if (!recent.has(b.id)) return { lead: b, shared: false, id: b.id, key: `b:${b.id}` };
     }
     const b = cycled(list, k, 'bee') ?? BEE_STORIES[0]!;
-    return { lead: b, shared: false, id: b.id };
+    return { lead: b, shared: false, id: b.id, key: `b:${b.id}` };
   });
 }
 
 const ctxFor = (day: Date, sky: Ctx['sky']): Ctx => ({ month: day.getMonth(), season: seasonOf(day.getMonth()), sky });
 
-function storyOf(h: { kicker?: L; title: L; sub?: L; body: L[]; art: ArtKey; caption: L }, lang: PaperLang, me: Me): Story {
+const PLANT_ART: readonly string[] = ['tulip', 'rose', 'pansy', 'daisy', 'lavender', 'pumpkin', 'snowdrop', 'moonflower'];
+
+/** The picture for a story: its own scene, or (for one without) its main character on their own. */
+function shotFor(key: string, art: ArtKey | undefined): Shot | null {
+  const own = SHOTS[key];
+  if (own) return own;
+  if (!art) return null;
+  const a = (PLANT_ART.includes(art) ? `plant:${art}` : art) as Actor;
+  return { set: 'meadow', cast: [{ a, x: 120 }] };
+}
+
+function storyOf(h: { kicker?: L; title: L; sub?: L; body: L[]; art: ArtKey; caption: L }, key: string, lang: PaperLang, me: Me): Story {
   return {
     kicker: h.kicker ? say(h.kicker, lang, me) : null,
     title: say(h.title, lang, me),
     sub: h.sub ? say(h.sub, lang, me) : null,
     body: h.body.map((p) => say(p, lang, me)),
-    art: h.art,
+    shot: shotFor(key, h.art),
     caption: say(h.caption, lang, me),
   };
 }
@@ -255,7 +289,6 @@ function shortDate(d: Date, lang: PaperLang): string {
   return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
-const atNoon = (y: number, m: number, d: number) => new Date(y, m, d, 12);
 
 // ---- yesterday in her garden ---------------------------------------------------------------
 
@@ -475,13 +508,16 @@ export function buildIssue(input: IssueInput): Issue {
   const { day, garden, me, weather } = input;
   const lang = paperLang(input.lang);
   const s = (x: L) => say(x, lang, me);
-  const d = dayIndex(day);
+  const run = runFrom(sinceOf(garden, day));
+  // nothing before the first paper: an earlier day reads as the first
+  const d = Math.max(0, dayIndex(day, run.since));
   const c = ctxFor(day, weather.sky);
   const key = dayKeyOf(day);
 
-  const lead = kurierLead(d);
-  const bee = beeLead(d);
-  const yBee = beeLead(d - 1);
+  const lead = kurierLead(run, d);
+  const leadKey = d < INTRO.length ? `i:${d}` : `h:${lead.id}`;
+  const bee = beeLead(run, d);
+  const yBee = d > 0 ? beeLead(run, d - 1) : null;
 
   const ep = EPISODES[((d % EPISODES.length) + EPISODES.length) % EPISODES.length]!;
   const prev = ep.part > 1 ? EPISODES[(((d - 1) % EPISODES.length) + EPISODES.length) % EPISODES.length] : undefined;
@@ -509,20 +545,21 @@ export function buildIssue(input: IssueInput): Issue {
     ...Array.from({ length: 3 }, (_, i) => cycled(buzzList, d * 3 + i, 'buzz')!).map((b) => ({ title: s(b.title), body: s(b.body) })),
   ].slice(0, 4);
 
-  const retortFrom = yBee.lead.retort;
+  const retortFrom = yBee?.lead.retort;
+  const photo = cycled(PHOTOS, d, 'photo')!;
 
   return {
     key,
     day,
     lang,
-    number: Math.max(1, d + 1),
-    year: Math.max(1, Math.floor(d / 365) + 1),
+    number: d + 1,
+    year: Math.floor(d / 365) + 1,
     kurier: {
       date,
       weather: { sky: weather.sky, night: weather.night, line: `${skyWord(weather.sky, weather.night, lang)}. ${s(weatherFlavour)}`, sun: `${lang === 'pl' ? 'Wschód' : 'Sunrise'} ${hm(sun.rise)} · ${lang === 'pl' ? 'zachód' : 'sunset'} ${hm(sun.set)} · ${moon}` },
-      lead: storyOf(lead, lang, me),
+      lead: storyOf(lead, leadKey, lang, me),
       world,
-      garden: gardenLines(garden, day, lang, me),
+      garden: d === 0 ? [s(FIRST_GARDEN_LINE)] : gardenLines(garden, day, lang, me),
       serial: {
         name: s(ep.serial.name),
         part: ep.part,
@@ -530,7 +567,7 @@ export function buildIssue(input: IssueInput): Issue {
         title: s(ep.episode.title),
         recap: prev && prev.serial.id === ep.serial.id ? s(prev.episode.recap) : null,
         body: ep.episode.body.map(s),
-        art: ep.episode.art ?? null,
+        shot: shotFor(`s:${ep.serial.id}:${ep.part}`, ep.episode.art),
       },
       retort: retortFrom ? s(retortFrom) : null,
       gossip: (() => {
@@ -548,7 +585,8 @@ export function buildIssue(input: IssueInput): Issue {
     bee: {
       date: `${capital(day.toLocaleDateString(lang === 'pl' ? 'pl-PL' : 'en-GB', { weekday: 'long' }))}, ${day.getDate()}.${String(day.getMonth() + 1).padStart(2, '0')}.${day.getFullYear()}`,
       shared: bee.shared,
-      lead: storyOf({ ...bee.lead, kicker: bee.shared ? { pl: 'SZOK! TYLKO U NAS!', en: 'SHOCK! ONLY HERE!' } : { pl: 'Z OSTATNIEJ CHWILI!', en: 'BREAKING!' } }, lang, me),
+      lead: storyOf({ ...bee.lead, kicker: d === 0 ? { pl: 'PIERWSZY NUMER!', en: 'FIRST ISSUE!' } : bee.shared ? { pl: 'SZOK! TYLKO U NAS!', en: 'SHOCK! ONLY HERE!' } : { pl: 'Z OSTATNIEJ CHWILI!', en: 'BREAKING!' } }, bee.key, lang, me),
+      photo: { shot: photo.shot, caption: s(photo.caption) },
       jab: s(lead.jab ?? cycled(BEE_JABS, d, 'jab')!),
       buzz,
       flower: flowerOfWeek(garden, day, input.now, lang, me),
@@ -558,10 +596,10 @@ export function buildIssue(input: IssueInput): Issue {
 }
 
 /** Exposed for the tests and the test page: which story leads on a day, and whether the bees share it. */
-export const leadsFor = (day: Date, sky: Ctx['sky'] = 'clear') => {
-  void sky;
-  const d = dayIndex(day);
-  return { kurier: kurierLead(d).id, bee: beeLead(d) };
+export const leadsFor = (day: Date, since: Date) => {
+  const run = runFrom(since);
+  const d = Math.max(0, dayIndex(day, run.since));
+  return { kurier: kurierLead(run, d).id, bee: beeLead(run, d) };
 };
 
 export const EPISODE_COUNT = EPISODES.length;

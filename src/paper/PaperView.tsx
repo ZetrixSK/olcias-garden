@@ -23,7 +23,7 @@ import './paper.css';
 import type { GardenState } from '../garden/state';
 import type { Lang, Me } from '../i18n';
 import { PlantArt } from '../plants/PlantArt';
-import { buildIssue, roman, type Issue, type Story } from './issue';
+import { buildIssue, PAPERS_BEGAN, roman, type Issue, type Story } from './issue';
 import { dayKeyOf, paperDate } from './log';
 import { PaperArt } from './PaperArt';
 import { useWorld } from './worldCache';
@@ -60,9 +60,9 @@ function Lead({ story, tone }: { story: Story; tone: 'sepia' | 'black' }) {
       {story.kicker && <span className="paper-kicker">{story.kicker}</span>}
       <h2>{story.title}</h2>
       {story.sub && <p className="paper-sub">{story.sub}</p>}
-      {story.art && (
+      {story.shot && (
         <figure>
-          <PaperArt art={story.art} label={story.caption ?? story.title} tone={tone} />
+          <PaperArt shot={story.shot} label={story.caption ?? story.title} tone={tone} />
           {story.caption && <figcaption>{story.caption}</figcaption>}
         </figure>
       )}
@@ -167,9 +167,9 @@ function KurierBack({ issue, onBack, archive }: { issue: Issue; onBack: () => vo
           {s.name} · {t(L, `part ${s.part} of ${s.of}`, `odc. ${s.part} z ${s.of}`)}
         </span>
         <h3>{s.title}</h3>
-        {s.art && (
+        {s.shot && (
           <figure>
-            <PaperArt art={s.art} label={s.title} wide={2.6} />
+            <PaperArt shot={s.shot} label={s.title} />
           </figure>
         )}
         <div className="paper-body">
@@ -260,7 +260,9 @@ function KurierBack({ issue, onBack, archive }: { issue: Issue; onBack: () => vo
       )}
       <footer className="paper-foot">
         <Rule thick />
-        <p className="paper-colophon">{t(L, 'Out every day at dawn. Editorial office: the willow by the pond.', 'Wydawany codziennie o świcie. Redakcja: wierzba przy stawie.')}</p>
+        <p className="paper-colophon">
+          {t(L, 'Editor-in-chief: Bogdan Borsuk. Out every day at dawn. Office: the willow by the pond.', 'Redaktor naczelny: Bogdan Borsuk. Wydawany codziennie o świcie. Redakcja: wierzba przy stawie.')}
+        </p>
         <div className="paper-foot-row">
           <button className="paper-btn" onClick={onBack}>
             {t(L, '← Page 1', '← Strona 1')}
@@ -335,9 +337,9 @@ function Brzeczyk({ issue, onClose, archive, me }: { issue: Issue; onClose: () =
       <article className="bee-lead">
         <span className="bee-stamp">{b.lead.kicker}</span>
         <h2>{b.lead.title}</h2>
-        {b.lead.art && (
+        {b.lead.shot && (
           <figure>
-            <PaperArt art={b.lead.art} label={b.lead.caption ?? b.lead.title} tone="black" />
+            <PaperArt shot={b.lead.shot} label={b.lead.caption ?? b.lead.title} tone="black" />
             {b.lead.caption && <figcaption>{b.lead.caption}</figcaption>}
           </figure>
         )}
@@ -361,10 +363,15 @@ function Brzeczyk({ issue, onClose, archive, me }: { issue: Issue; onClose: () =
           </p>
         ))}
       </section>
+      <figure className="bee-photo">
+        <span className="bee-stamp small">{t(L, 'Caught on camera!', 'Przyłapane!')}</span>
+        <PaperArt shot={b.photo.shot} label={b.photo.caption} tone="black" />
+        <figcaption>{b.photo.caption}</figcaption>
+      </figure>
       <section className="bee-flower" aria-label={t(L, 'Flower of the week', 'Kwiat tygodnia')}>
         {b.flower ? (
           <>
-            <svg viewBox="-40 -96 80 100" aria-hidden="true" className="bee-flower-art">
+            <svg viewBox="-58 -150 116 156" preserveAspectRatio="xMidYMax meet" aria-hidden="true" className="bee-flower-art">
               <PlantArt species={b.flower.species} stage="bloom" />
             </svg>
             <div>
@@ -418,10 +425,20 @@ function Brzeczyk({ issue, onClose, archive, me }: { issue: Issue; onClose: () =
  * The morning papers, opened from the doormat or the menu: the Kurier Bratkowski (two pages) and
  * Brzęczyk (one), and the last week's issues. `world` overrides the news column (the test page).
  */
-export default function PaperView({ garden, now, lang, me, weather, onClose, onRead, world: worldOverride }: {
+const LANG_KEY = 'paper-lang';
+function savedLang(): 'pl' | 'en' {
+  try {
+    return localStorage.getItem(LANG_KEY) === 'en' ? 'en' : 'pl';
+  } catch {
+    return 'pl';
+  }
+}
+
+export default function PaperView({ garden, now, lang: fixedLang, me, weather, onClose, onRead, world: worldOverride }: {
   garden: GardenState;
   now: number;
-  lang: Lang;
+  /** The papers are Polish unless the reader switches them; the test page sets it. */
+  lang?: 'pl' | 'en';
   me: Me;
   weather: { sky: 'clear' | 'cloudy' | 'rain'; night: boolean };
   onClose: () => void;
@@ -429,6 +446,20 @@ export default function PaperView({ garden, now, lang, me, weather, onClose, onR
   world?: WorldItem[] | null;
 }) {
   const today = paperDate(now);
+  const [chosenLang, setChosenLang] = useState<'pl' | 'en'>(savedLang);
+  const lang: Lang = fixedLang ?? chosenLang;
+  const switchLang = () => {
+    const next = chosenLang === 'pl' ? 'en' : 'pl';
+    setChosenLang(next);
+    try {
+      localStorage.setItem(LANG_KEY, next);
+    } catch {
+      // the choice just won't be remembered
+    }
+  };
+  // older issues go back a week, but never before the first paper
+  const first = PAPERS_BEGAN;
+  const days = Math.max(0, Math.min(6, Math.round((today.getTime() - first.getTime()) / 86_400_000)));
   const [back, setBack] = useState(0);
   const day = useMemo(() => new Date(today.getFullYear(), today.getMonth(), today.getDate() - back, 12), [today.getTime(), back]); // eslint-disable-line react-hooks/exhaustive-deps
   const key = dayKeyOf(day);
@@ -448,7 +479,7 @@ export default function PaperView({ garden, now, lang, me, weather, onClose, onR
     scroller.current?.scrollTo({ top: 0 });
   }, [which, page, back]);
 
-  const archive = (
+  const archive = days === 0 ? null : (
     <button className="paper-btn dashed" aria-expanded={archiveOpen} onClick={() => setArchiveOpen((o) => !o)}>
       {t(L, 'Older issues', 'Starsze numery')}
     </button>
@@ -465,6 +496,12 @@ export default function PaperView({ garden, now, lang, me, weather, onClose, onR
             Brzęczyk
           </button>
         </div>
+        {!fixedLang && (
+          <button className="papers-lang" aria-label={L === 'pl' ? 'Read in English' : 'Czytaj po polsku'} onClick={switchLang}>
+            <span className={L === 'pl' ? 'on' : undefined}>PL</span>
+            <span className={L === 'en' ? 'on' : undefined}>EN</span>
+          </button>
+        )}
         <button className="papers-close" aria-label={t(L, 'Close', 'Zamknij')} onClick={onClose}>
           <svg viewBox="-14 -14 28 28" aria-hidden="true">
             <path d="M-7,-7 L7,7 M7,-7 L-7,7" />
@@ -473,7 +510,7 @@ export default function PaperView({ garden, now, lang, me, weather, onClose, onR
       </div>
       {archiveOpen && (
         <div className="papers-archive">
-          {Array.from({ length: 7 }, (_, i) => {
+          {Array.from({ length: days + 1 }, (_, i) => {
             const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i, 12);
             const label = i === 0 ? t(L, 'Today', 'Dziś') : d.toLocaleDateString(L === 'pl' ? 'pl-PL' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'numeric' });
             return (

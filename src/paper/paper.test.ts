@@ -8,6 +8,9 @@ import { parseSave, starterGarden } from '../garden/state';
 import { applyAction } from '../remote/actions';
 import { HEADLINES } from './bank/headlines';
 import { SERIALS } from './bank/serials';
+import { SHOTS } from './bank/shots';
+import { BEE_STORIES } from './bank/bee';
+import { INTRO } from './bank/intro';
 
 const noon = (y: number, m: number, d: number) => new Date(y, m, d, 12);
 
@@ -96,7 +99,10 @@ const strings = (issue: Issue): string[] => {
 };
 
 describe('building an issue', () => {
-  const g = testGarden(new Date(2026, 10, 1).getTime());
+  const base = testGarden(new Date(2026, 10, 1).getTime());
+  // her first paper came on 1 November
+  const g = { ...base, paper: { ...base.paper, since: '2026-11-01' } };
+  const since = noon(2026, 10, 1);
   const input = (day: Date, lang: 'pl' | 'en' | 'mixed' = 'pl', me: 'she' | 'he' = 'she') => ({ day, now: day.getTime(), garden: g, lang, me, weather: { sky: 'cloudy' as const, night: false }, world: null });
 
   it('is the same every time for the same day', () => {
@@ -117,12 +123,12 @@ describe('building an issue', () => {
   });
   it('never brings a front page back within a week, even where one round ends and the next begins', () => {
     const seen: string[] = [];
-    for (let i = 0; i < 300; i++) seen.push(leadsFor(noon(2026, 10, 10 + i)).kurier);
+    for (let i = 0; i < 300; i++) seen.push(leadsFor(noon(2026, 10, 10 + i), since).kurier);
     for (let i = 0; i < seen.length; i++) for (let k = 1; k <= 6 && i + k < seen.length; k++) expect(seen[i + k]).not.toBe(seen[i]);
   });
   it('lets the bees lead with the Kurier’s story about three or four days a week', () => {
     let shared = 0;
-    for (let i = 0; i < 70; i++) if (leadsFor(noon(2026, 10, 10 + i)).bee.shared) shared++;
+    for (let i = 0; i < 70; i++) if (leadsFor(noon(2026, 10, 10 + i), since).bee.shared) shared++;
     expect(shared / 10).toBeGreaterThanOrEqual(2);
     expect(shared / 10).toBeLessThanOrEqual(5);
   });
@@ -141,6 +147,39 @@ describe('building an issue', () => {
     const world = checkWorld({ items: [good('szczecin'), good('polska')] })!;
     expect(buildIssue({ ...input(noon(2026, 10, 20)), world }).kurier.world.fresh).toBe(true);
     expect(buildIssue(input(noon(2026, 10, 20))).kurier.world.fresh).toBe(false);
+  });
+  it('starts on 10 November 2026 with the founding of the papers, as number one', () => {
+    const first = buildIssue(input(noon(2026, 10, 10)));
+    expect(first.number).toBe(1);
+    expect(first.kurier.lead.title).toContain('Bratkowo');
+    expect(first.kurier.garden).toHaveLength(1);
+    expect(first.bee.lead.kicker).toBe('PIERWSZY NUMER!');
+    expect(first.kurier.retort).toBeNull();
+    const third = buildIssue(input(noon(2026, 10, 12)));
+    expect(third.number).toBe(3);
+    expect(third.bee.shared).toBe(true);
+    expect(buildIssue(input(noon(2027, 2, 3))).number).toBe(114);
+  });
+  it('reads a day before the first paper as the first', () => {
+    expect(buildIssue({ ...input(noon(2026, 9, 20)) }).number).toBe(1);
+  });
+  it('has a picture for every front page, serial part and photo of the day', () => {
+    for (let i = 0; i < 120; i++) {
+      const issue = buildIssue(input(noon(2026, 10, 1 + i)));
+      expect(issue.kurier.lead.shot).not.toBeNull();
+      expect(issue.bee.lead.shot).not.toBeNull();
+      expect(issue.kurier.serial.shot).not.toBeNull();
+      expect(issue.bee.photo.caption.length).toBeGreaterThan(3);
+    }
+  });
+  it('gives every story a scene of its own', () => {
+    const keys = [
+      ...HEADLINES.flatMap((h) => [`h:${h.id}`, ...(h.bee ? [`hb:${h.id}`] : [])]),
+      ...BEE_STORIES.map((b) => `b:${b.id}`),
+      ...SERIALS.flatMap((s) => s.episodes.map((_, i) => `s:${s.id}:${i + 1}`)),
+      ...INTRO.flatMap((_, i) => [`i:${i}`, `ib:${i}`]),
+    ];
+    expect(keys.filter((k) => !SHOTS[k])).toEqual([]);
   });
   it('every serial episode has a recap, and every bee story a picture', () => {
     for (const s of SERIALS) for (const e of s.episodes) expect(e.recap.pl.length).toBeGreaterThan(5);

@@ -21,9 +21,11 @@ export type PaperState = {
   notes: PaperNote[];
   /** The last day whose papers she opened (YYYY-MM-DD), so a new one can look new. */
   read: string | null;
+  /** The day the papers first came to this garden (YYYY-MM-DD): issue number one. Nothing before it. */
+  since: string | null;
 };
 
-export const NO_PAPER: PaperState = { log: [], notes: [], read: null };
+export const NO_PAPER: PaperState = { log: [], notes: [], read: null, since: null };
 
 const DAY = 86_400_000;
 /** The log keeps a little over a week, so last week's papers can still say what happened. */
@@ -98,7 +100,8 @@ export function parsePaper(v: unknown): PaperState {
     })
     .slice(-MAX_NOTES);
   const read = typeof v.read === 'string' && DAY_KEY.test(v.read) ? v.read : null;
-  return { log, notes, read };
+  const since = typeof v.since === 'string' && DAY_KEY.test(v.since) ? v.since : null;
+  return { log, notes, read, since };
 }
 
 /** The papers come out at five in the morning: before then, it's still yesterday's paper. */

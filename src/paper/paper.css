@@ -57,6 +57,51 @@
 .papers-tabs .tab-bee[aria-selected='true'] {
   background: #f2c34f;
 }
+.papers-lang {
+  flex: none;
+  display: flex;
+  height: 30px;
+  padding: 0;
+  border: 1.5px solid #231a1f;
+  border-radius: 15px;
+  overflow: hidden;
+  background: #f4ecdc;
+  font: 700 11px 'Archivo', system-ui, sans-serif;
+  color: #231a1f;
+}
+.papers-lang span {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  opacity: 0.45;
+}
+.papers-lang span.on {
+  background: #231a1f;
+  color: #f4ecdc;
+  opacity: 1;
+}
+/* a printed picture holds still */
+.paper-art * {
+  animation: none !important;
+}
+.bee-photo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+.bee-photo figcaption {
+  font-size: 12.5px;
+  font-style: italic;
+}
+.bee-stamp.small {
+  position: absolute;
+  top: -8px;
+  left: -6px;
+  z-index: 1;
+  font-size: 13px;
+}
 .papers-close {
   flex: none;
   width: 46px;
