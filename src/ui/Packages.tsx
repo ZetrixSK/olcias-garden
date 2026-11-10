@@ -1,3 +1,4 @@
+import { designName } from './designNames';
 import { useState } from 'react';
 import { designRef } from '../garden/designs';
 import { MAX_ITEMS, MAX_LETTER, type Package, type PackageItem } from '../garden/packages';
@@ -81,7 +82,10 @@ function ItemArt({ item, peek = false }: { item: PackageItem; peek?: boolean }) 
 function itemName(item: PackageItem, t: (en: string, pl: string) => string, peek = false) {
   if (item.kind === 'seeds' && item.mystery && !peek)
     return t(`Mystery seeds × ${item.count}`, `Tajemnicze nasiona × ${item.count}`);
-  if (item.kind === 'seeds') return t(`${item.design.name || 'Bratek'} seeds × ${item.count}`, `Nasiona: ${item.design.name || 'bratek'} × ${item.count}`);
+  if (item.kind === 'seeds') {
+    const name = designName(item.design, t);
+    return t(`${name || 'Bratek'} seeds × ${item.count}`, `Nasiona: ${name || 'bratek'} × ${item.count}`);
+  }
   return t('A bouquet', 'Bukiet');
 }
 
@@ -245,7 +249,7 @@ export function PackageComposer({ garden, onSend, onClose }: {
                     <button key={s.id} className="choice" onClick={() => addSeed(s.id)}>
                       <ItemArt item={{ kind: 'seeds', design, count: 1, mystery: s.mystery === true }} />
                       <span>
-                        {s.mystery ? '?' : design.name || t('Seeds', 'Nasiona')} · {seedsLeft(s.id)}
+                        {s.mystery ? '?' : designName(design, t) || t('Seeds', 'Nasiona')} · {seedsLeft(s.id)}
                       </span>
                     </button>
                   );
@@ -350,7 +354,7 @@ export function PackageOpen({ pkg, onTake, onClose }: { pkg: Package; onTake: ()
                 </div>
                 <p>
                   {itemName(item, t)}
-                  {item.kind === 'bouquet' && item.bouquet.note ? ` · „${item.bouquet.note}”` : ''}
+                  {item.kind === 'bouquet' && item.bouquet.note ? ` · ${t(`“${item.bouquet.note}”`, `„${item.bouquet.note}”`)}` : ''}
                 </p>
               </div>
             )}

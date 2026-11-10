@@ -14,7 +14,7 @@ import { PansyFlower } from '../plants/Pansy';
 import { designColors } from '../plants/looks';
 import { ConfirmButton } from './Decorate';
 import { VASE_NAMES } from './Bouquets';
-import { giftLine, noteClose, noteOpen, say, stillHereLine, thanksLine, VISITOR_NAME, wishLine } from './visitorWords';
+import { giftLine, noteClose, noteOpen, quote, say, stillHereLine, thanksLine, VISITOR_NAME, wishLine } from './visitorWords';
 import { ambienceIfMade } from '../sound/ambience';
 
 /** The doorway: an arch in the wall, 180 wide, its threshold at y 470. */
@@ -383,7 +383,7 @@ export function Doorstep({ request, thanks, weather, onOpen, onMake, onNotNow, o
             <>
               <h2>{name}</h2>
               <PetalRow n={thanks.petals} />
-              <p className="visitor-says">„{thanksLine(w, visitor, thanks.petals, pick)}”</p>
+              <p className="visitor-says">{quote(w, thanksLine(w, visitor, thanks.petals, pick))}</p>
               <p className="hint petals-earned">
                 {t(`+${thanks.petals} ${thanks.petals === 1 ? 'petal' : 'petals'} in your purse`, `+${thanks.petals} ${w.plural(thanks.petals, 'płatek', 'płatki', 'płatków')} do sakiewki`)}
               </p>
@@ -406,7 +406,7 @@ export function Doorstep({ request, thanks, weather, onOpen, onMake, onNotNow, o
             </>
           ) : request ? (
             <>
-              {again && <p className="visitor-says">„{stillHereLine(w, visitor, pick)}”</p>}
+              {again && <p className="visitor-says">{quote(w, stillHereLine(w, visitor, pick))}</p>}
               <div className="visitor-note">
                 <p>{noteOpen(w, visitor, request.text)}</p>
                 <ul>

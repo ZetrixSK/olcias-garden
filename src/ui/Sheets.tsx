@@ -1,3 +1,4 @@
+import { designName } from './designNames';
 import { MysterySeedsArt } from './Packages';
 import { whoHasSeeds, type VisitorId } from '../garden/visitors';
 import { say, VISITOR_NAME } from './visitorWords';
@@ -106,7 +107,7 @@ export function VarietyPicker({ designs, hidden, onPick, onDesign, onEdit, onClo
           </Tile>
         ))}
         {designs.pansies.filter((d) => !hidden?.has(designRef(d.id))).map((d) => (
-          <Tile key={d.id} label={d.name || w.t('Mine', 'Mój')} onPick={() => onPick(designRef(d.id))} onEdit={() => onEdit(d.id)}>
+          <Tile key={d.id} label={designName(d, w.t) || w.t('Mine', 'Mój')} onPick={() => onPick(designRef(d.id))} onEdit={() => onEdit(d.id)}>
             <Preview species="pansy" variety={designRef(d.id)} designs={designs} />
           </Tile>
         ))}
@@ -166,7 +167,7 @@ export function StyleSheet({ plant, designs, hidden, now, onPot, onVariety, onPa
               </Tile>
             ))}
             {designs.pansies.filter((d) => !hidden?.has(designRef(d.id))).map((d) => (
-              <Tile key={d.id} label={d.name || w.t('Mine', 'Mój')} selected={variety === designRef(d.id)} onPick={() => onVariety(designRef(d.id))} onEdit={() => onEditPansy(d.id)}>
+              <Tile key={d.id} label={designName(d, w.t) || w.t('Mine', 'Mój')} selected={variety === designRef(d.id)} onPick={() => onVariety(designRef(d.id))} onEdit={() => onEditPansy(d.id)}>
                 <Preview species="pansy" pot={plant.pot} variety={designRef(d.id)} designs={designs} />
               </Tile>
             ))}
@@ -281,7 +282,10 @@ export function PlantPicker({ onPick, onDrawing, onPaint, seeds = [], designs, o
             {seeds.map((packet) => {
               const name = packet.mystery
                 ? w.t('Mystery seeds', 'Tajemnicze nasiona')
-                : designs.pansies.find((d) => designRef(d.id) === packet.variety)?.name || w.flower('pansy');
+                : (() => {
+                    const d = designs.pansies.find((x) => designRef(x.id) === packet.variety);
+                    return (d && designName(d, w.t)) || w.flower('pansy');
+                  })();
               return (
                 <button key={packet.id} data-sound="soil" onClick={() => onSow(packet.id)} aria-label={`${name}, ${packet.count}`}>
                   <SeedPacketArt packet={packet} designs={designs} />

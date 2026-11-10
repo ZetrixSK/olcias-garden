@@ -1,3 +1,4 @@
+import { designName } from './designNames';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { designRef, NO_DESIGNS, PANSY_PRESETS, type PansyPreset } from '../garden/designs';
 import { MAX_NOTE, type Pressing } from '../garden/pressed';
@@ -11,7 +12,7 @@ const PER_PAGE = 4;
 /** What's written under a pressed flower: the plant's own name, her bratek's name, a variety's name, or just the plant's kind. */
 export function pressedName(p: Pressing, w: Words = words('mixed')): string {
   if (p.name) return p.name;
-  if (p.design?.name) return p.design.name;
+  if (p.design?.name) return designName(p.design, w.t);
   if (p.variety && p.variety !== 'mix' && PANSY_PRESETS.includes(p.variety as PansyPreset)) return w.preset(p.variety as PansyPreset);
   return w.marker(p.species);
 }

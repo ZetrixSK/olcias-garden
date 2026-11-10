@@ -10,7 +10,7 @@ import { BouquetArt } from '../plants/Bouquet';
 import { Blossom, CardBack, StallDressing, PaniCma, PanJezyk, RARITY_COLOUR, Stall, TrinketPortrait, type KeeperMood } from '../scene/MarketArt';
 import type { Weather } from '../theme/palettes';
 import { cmaDone, cmaHello, CMA_MILTON, cmaShort, cmaThanks, jezykAsleep, jezykEmpty, jezykHello, jezykShort, jezykThanks, RARITY_NAME, seedAbout, seedName, TRINKET_ABOUT, TRINKET_NAME } from './marketWords';
-import { say } from './visitorWords';
+import { quote, say } from './visitorWords';
 
 /** Stars scattered up the night sky, however tall the screen. */
 const SKY_DOTS: Array<[number, number, number]> = (() => {
@@ -164,7 +164,7 @@ export function MarketStall({ garden, weather, nightKey, onBuySeed, onTurn, onBu
         </svg>
         <div className="market-card">
           <div className="market-top">
-            <p className="visitor-says">„{say_ ?? hello}”</p>
+            <p className="visitor-says">{quote(w, say_ ?? hello)}</p>
             <Purse petals={m.petals} />
           </div>
           {closed ? (

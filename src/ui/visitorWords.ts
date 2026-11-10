@@ -1,3 +1,4 @@
+import { designName } from './designNames';
 import type { Colour, Gift, VisitorId, Wish } from '../garden/visitors';
 import type { Vase } from '../garden/bouquets';
 import type { words } from '../i18n';
@@ -6,6 +7,8 @@ type W = ReturnType<typeof words>;
 /** English, Polish to her, and Polish to him where it differs. */
 type Line = readonly [string, string, string?];
 export const say = (w: W, [en, she, he]: Line) => w.t(en, w.g(she, he ?? she));
+/** Words someone says, in the quotation marks of her language. */
+export const quote = (w: W, text: string) => w.t(`“${text}”`, `„${text}”`);
 
 export const VISITOR_NAME: Record<VisitorId, Line> = {
   jadzia: ['Mrs Jadzia', 'Pani Jadzia'],
@@ -432,7 +435,7 @@ export function giftLine(w: W, g: Gift, vaseName: (v: Vase) => string): { title:
       };
     case 'design':
       return {
-        title: w.t(`Seeds of their bratek, “${g.design.name}” × ${g.count}`, `Nasiona bratka „${g.design.name}” × ${g.count}`),
+        title: w.t(`Seeds of their bratek, “${designName(g.design, w.t)}” × ${g.count}`, `Nasiona bratka „${designName(g.design, w.t)}” × ${g.count}`),
         text: w.t('In your seed tin.', 'W puszce z nasionami.'),
       };
   }

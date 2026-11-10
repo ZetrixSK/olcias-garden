@@ -1,3 +1,4 @@
+import { designName } from './designNames';
 import type { Rarity, SeedItem } from '../garden/market';
 import type { words } from '../i18n';
 import { RIBBON_NAMES, say } from './visitorWords';
@@ -78,7 +79,7 @@ export function seedName(w: W, item: SeedItem): string {
     case 'species':
       return w.flower(item.species);
     case 'pansy':
-      return item.design.name;
+      return designName(item.design, w.t);
     case 'ribbon':
       return w.t(`${RIBBON_NAMES[item.color]?.[0] ?? ''} ribbon`, `Wstążka: ${RIBBON_NAMES[item.color]?.[1].toLowerCase() ?? ''}`);
     case 'vase':
