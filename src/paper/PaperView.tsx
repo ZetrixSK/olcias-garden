@@ -351,10 +351,12 @@ function Brzeczyk({ issue, onClose, archive, me }: { issue: Issue; onClose: () =
           ))}
         </div>
       </article>
-      <aside className="bee-jab">
-        <span>{t(L, 'The Kurier is wrong!', 'Kurier się myli!')}</span>
-        <p>{b.jab}</p>
-      </aside>
+      {b.jab && (
+        <aside className="bee-jab">
+          <span>{t(L, 'The Kurier is wrong!', 'Kurier się myli!')}</span>
+          <p>{b.jab}</p>
+        </aside>
+      )}
       <section className="bee-section">
         <h3>{t(L, 'From the hive', 'Z ula')}</h3>
         {b.buzz.map((x, i) => (
@@ -408,7 +410,9 @@ function Brzeczyk({ issue, onClose, archive, me }: { issue: Issue; onClose: () =
         <p className="bee-colophon">
           {t(L, 'Editor-in-chief: Trzmielina · Honorary member of staff: Jingleton', 'Redaktor naczelna: Trzmielina · Honorowy członek redakcji: Jingleton')}
           <br />
-          {t(L, 'Brzęczyk: read in every hive. Kurier: read by Pan Jeżyk and his glasses.', 'Brzęczyk: czytany w każdym ulu. Kurier: czytany przez Pana Jeżyka i jego okulary.')}
+          {b.rivals
+            ? t(L, 'Brzęczyk: read in every hive. Kurier: read by Pan Jeżyk and his glasses.', 'Brzęczyk: czytany w każdym ulu. Kurier: czytany przez Pana Jeżyka i jego okulary.')
+            : t(L, 'Brzęczyk: read in every hive. Soon in every garden.', 'Brzęczyk: czytany w każdym ulu. Wkrótce w każdym ogrodzie.')}
         </p>
         <div className="paper-foot-row center">
           {archive}

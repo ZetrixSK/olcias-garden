@@ -17,8 +17,10 @@ const noon = (y: number, m: number, d: number) => new Date(y, m, d, 12);
 describe('the calendar', () => {
   it('has a name day for every day of a leap year', () => {
     expect(nameDayCount()).toBe(366);
-    expect(nameDays(noon(2026, 10, 11))).toContain('Marcina');
-    expect(nameDays(noon(2026, 11, 24))).toContain('Adama');
+    // as names, not in the calendar's genitive: "Marcin", not "Marcina"
+    expect(nameDays(noon(2026, 10, 11))).toBe('Marcin, Bartłomiej, Prot');
+    expect(nameDays(noon(2026, 11, 24))).toBe('Adam, Ewa, Ewelina');
+    expect(nameDays(noon(2026, 3, 22))).toContain('Kaja');
   });
   it('knows when Easter is', () => {
     expect(easter(2025)).toEqual({ month: 3, day: 20 });
@@ -157,8 +159,27 @@ describe('building an issue', () => {
     expect(first.kurier.retort).toBeNull();
     const third = buildIssue(input(noon(2026, 10, 12)));
     expect(third.number).toBe(3);
-    expect(third.bee.shared).toBe(true);
+    expect(third.bee.shared).toBe(false);
     expect(buildIssue(input(noon(2027, 2, 3))).number).toBe(114);
+  });
+  it('keeps the two papers strangers for two days, then has them meet', () => {
+    for (const day of [10, 11]) {
+      const issue = buildIssue(input(noon(2026, 10, day)));
+      expect(issue.bee.jab).toBeNull();
+      expect(issue.bee.rivals).toBe(false);
+      expect(issue.kurier.retort).toBeNull();
+      const bee = [issue.bee.lead.title, ...issue.bee.lead.body, issue.bee.lead.caption ?? '', ...issue.bee.buzz.map((b) => `${b.title} ${b.body}`), issue.bee.horoscope].join(' ');
+      expect(bee).not.toMatch(/Kurier/);
+      const kurier = [issue.kurier.lead.title, ...issue.kurier.lead.body, issue.kurier.gossip.body, issue.kurier.letter.text, issue.kurier.letter.reply ?? '', ...issue.kurier.world.items.map((w) => w.body)].join(' ');
+      expect(kurier).not.toMatch(/Brzęczyk/);
+    }
+    // on the third day the bees find the Kurier; on the fourth it answers
+    const met = buildIssue(input(noon(2026, 10, 12)));
+    expect(met.bee.lead.title).toMatch(/DRUGA GAZETA/);
+    expect(met.bee.jab).not.toBeNull();
+    const answer = buildIssue(input(noon(2026, 10, 13)));
+    expect(answer.kurier.lead.title).toMatch(/konkurencji/);
+    expect(answer.kurier.retort).not.toBeNull();
   });
   it('reads a day before the first paper as the first', () => {
     expect(buildIssue({ ...input(noon(2026, 9, 20)) }).number).toBe(1);

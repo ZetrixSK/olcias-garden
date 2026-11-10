@@ -12,7 +12,7 @@ import { dayKeyOf, noteFor, yesterdayWindow, type PaperEvent } from './log';
 import type { ArtKey, BeeLead, Headline, Piece, Vox, When } from './types';
 import type { Actor, Shot } from './PaperArt';
 import { PHOTOS, SHOTS } from './bank/shots';
-import { FIRST_GARDEN_LINE, INTRO } from './bank/intro';
+import { FIRST_GARDEN_LINE, INTRO, mentionsBees, mentionsKurier, STRANGERS_DAYS } from './bank/intro';
 import type { WorldItem, WorldPlace } from './world';
 import { HEADLINES } from './bank/headlines';
 import { SERIALS } from './bank/serials';
@@ -157,7 +157,10 @@ export type Issue = {
     date: string;
     shared: boolean;
     lead: Story;
-    jab: string;
+    /** Brzęczyk's correction of the Kurier, once the papers know of each other. */
+    jab: string | null;
+    /** Whether the papers know of each other yet (for the jab in Brzęczyk's footer). */
+    rivals: boolean;
     buzz: Array<{ title: string; body: string }>;
     flower: { species: SpeciesId; name: string; text: string; barrels: number } | null;
     photo: { shot: Shot; caption: string };
@@ -232,7 +235,7 @@ function kurierLead(r: Run, d: number): Headline {
 function beeLead(r: Run, d: number): { lead: BeeLead; shared: boolean; key: string } {
   return memoRun(r.bee, d, (k) => {
     const kl = kurierLead(r, k);
-    if (k < INTRO.length) return { lead: kl.bee!, shared: true, id: kl.id, key: `ib:${k}` };
+    if (k < INTRO.length) return { lead: kl.bee!, shared: false, id: kl.id, key: `ib:${k}` };
     const day = dateIn(r, k);
     if (sharedDay(day, kl)) return { lead: kl.bee!, shared: true, id: kl.id, key: `hb:${kl.id}` };
     const list = suited(BEE_STORIES, ctxFor(day, 'clear'));
@@ -522,14 +525,19 @@ export function buildIssue(input: IssueInput): Issue {
   const ep = EPISODES[((d % EPISODES.length) + EPISODES.length) % EPISODES.length]!;
   const prev = ep.part > 1 ? EPISODES[(((d - 1) % EPISODES.length) + EPISODES.length) % EPISODES.length] : undefined;
 
+  // for the first two days the papers don't yet know about each other: nothing in either names the other
+  const rivals = d >= STRANGERS_DAYS;
+  const forKurier = <T,>(list: readonly T[], texts: (x: T) => Array<L | undefined>) => (rivals ? list : list.filter((x) => !mentionsBees(...texts(x))));
+  const forBees = <T,>(list: readonly T[], texts: (x: T) => Array<L | undefined>) => (rivals ? list : list.filter((x) => !mentionsKurier(...texts(x))));
+
   const note = noteFor(garden.paper, key)?.text ?? null;
   const vox: Vox = lead.vox ?? cycled(VOX, d, 'vox')!;
-  const letter = cycled(LETTERS, d, 'letter')!;
+  const letter = cycled(forKurier(LETTERS, (x) => [x.text, x.reply]), d, 'letter')!;
   const adCount = note ? 2 : 3;
   const ads = Array.from({ length: adCount }, (_, i) => cycled(ADS, d * 3 + i, 'ads')!);
 
   const worldItems = input.world;
-  const standin: Piece = cycled(suited(STANDINS, c), d, 'standin') ?? STANDINS[0]!;
+  const standin: Piece = cycled(forKurier(suited(STANDINS, c), (x) => [x.title, x.body]), d, 'standin') ?? STANDINS[0]!;
   const world = worldItems
     ? { fresh: true, items: worldItems.map((w) => ({ place: PLACE[w.place][lang], title: w.title[lang], body: w.body[lang] })) }
     : { fresh: false, items: [{ place: null, title: s(standin.title), body: s(standin.body) }] };
@@ -539,9 +547,9 @@ export function buildIssue(input: IssueInput): Issue {
   const moon = moonWords(day.getTime())[lang];
   const date = capital(day.toLocaleDateString(lang === 'pl' ? 'pl-PL' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }));
 
-  const buzzList = suited(BUZZ, c);
+  const buzzList = forBees(suited(BUZZ, c), (x) => [x.title, x.body]);
   const buzz = [
-    ...(ep.episode.buzz ? [{ title: s(ep.serial.name), body: s(ep.episode.buzz) }] : []),
+    ...(ep.episode.buzz && (rivals || !mentionsKurier(ep.episode.buzz)) ? [{ title: s(ep.serial.name), body: s(ep.episode.buzz) }] : []),
     ...Array.from({ length: 3 }, (_, i) => cycled(buzzList, d * 3 + i, 'buzz')!).map((b) => ({ title: s(b.title), body: s(b.body) })),
   ].slice(0, 4);
 
@@ -571,7 +579,7 @@ export function buildIssue(input: IssueInput): Issue {
       },
       retort: retortFrom ? s(retortFrom) : null,
       gossip: (() => {
-        const gp = cycled(suited(GOSSIP, c), d, 'gossip')!;
+        const gp = cycled(forKurier(suited(GOSSIP, c), (x) => [x.title, x.body]), d, 'gossip')!;
         return { title: s(gp.title), body: s(gp.body) };
       })(),
       vox: { q: s(vox.q), a: vox.a.map((a) => ({ who: s(a.who), say: s(a.say) })) },
@@ -585,12 +593,13 @@ export function buildIssue(input: IssueInput): Issue {
     bee: {
       date: `${capital(day.toLocaleDateString(lang === 'pl' ? 'pl-PL' : 'en-GB', { weekday: 'long' }))}, ${day.getDate()}.${String(day.getMonth() + 1).padStart(2, '0')}.${day.getFullYear()}`,
       shared: bee.shared,
-      lead: storyOf({ ...bee.lead, kicker: d === 0 ? { pl: 'PIERWSZY NUMER!', en: 'FIRST ISSUE!' } : bee.shared ? { pl: 'SZOK! TYLKO U NAS!', en: 'SHOCK! ONLY HERE!' } : { pl: 'Z OSTATNIEJ CHWILI!', en: 'BREAKING!' } }, bee.key, lang, me),
+      lead: storyOf({ ...bee.lead, kicker: d === 0 ? { pl: 'PIERWSZY NUMER!', en: 'FIRST ISSUE!' } : d === STRANGERS_DAYS ? { pl: 'SZOK!', en: 'SHOCK!' } : bee.shared ? { pl: 'SZOK! TYLKO U NAS!', en: 'SHOCK! ONLY HERE!' } : { pl: 'Z OSTATNIEJ CHWILI!', en: 'BREAKING!' } }, bee.key, lang, me),
       photo: { shot: photo.shot, caption: s(photo.caption) },
-      jab: s(lead.jab ?? cycled(BEE_JABS, d, 'jab')!),
+      jab: rivals ? s(lead.jab ?? cycled(BEE_JABS, d, 'jab')!) : null,
+      rivals,
       buzz,
       flower: flowerOfWeek(garden, day, input.now, lang, me),
-      horoscope: s(cycled(BEE_HOROSCOPES, d, 'beehoro')!),
+      horoscope: s(cycled(forBees(BEE_HOROSCOPES, (x) => [x]), d, 'beehoro')!),
     },
   };
 }

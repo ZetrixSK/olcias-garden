@@ -10,6 +10,10 @@ import { admin, useSession, useWorldRows } from './staff';
 import type { Me } from '../i18n';
 import { PaperArt } from '../paper/PaperArt';
 import { PHOTOS, SHOTS } from '../paper/bank/shots';
+import { HEADLINES } from '../paper/bank/headlines';
+import { BEE_STORIES } from '../paper/bank/bee';
+import { SERIALS } from '../paper/bank/serials';
+import { INTRO } from '../paper/bank/intro';
 
 type Lang = 'pl' | 'en';
 
@@ -119,20 +123,55 @@ export function TestPrewritten() {
 }
 
 /** Sixty days from the chosen one: which story leads each paper, the serial's part, and repeats too close together. */
-/** Every picture the papers can print, to look them over at once. */
+/** What each picture belongs to: its paper and its story's headline. */
+function pictureTitle(k: string): string {
+  const [kind, id, part] = k.split(':');
+  if (kind === 'h') return `Kurier: ${HEADLINES.find((h) => h.id === id)?.title.pl ?? id}`;
+  if (kind === 'hb') return `Brzęczyk: ${HEADLINES.find((h) => h.id === id)?.bee?.title.pl ?? id}`;
+  if (kind === 'b') return `Brzęczyk: ${BEE_STORIES.find((b) => b.id === id)?.title.pl ?? id}`;
+  if (kind === 'i') return `Kurier, dzień ${Number(id) + 1}: ${INTRO[Number(id)]?.title.pl ?? ''}`;
+  if (kind === 'ib') return `Brzęczyk, dzień ${Number(id) + 1}: ${INTRO[Number(id)]?.bee?.title.pl ?? ''}`;
+  if (kind === 's') {
+    const serial = SERIALS.find((x) => x.id === id);
+    return `Kurier, ${serial?.name.pl ?? id} (odc. ${part}): ${serial?.episodes[Number(part) - 1]?.title.pl ?? ''}`;
+  }
+  return k;
+}
+
+/** Every picture the papers can print: all at once, or one by one, large. */
 function Pictures() {
+  const all = [
+    ...Object.entries(SHOTS).map(([k, shot]) => ({ k, shot, title: pictureTitle(k), tone: (k.startsWith('hb:') || k.startsWith('b:') || k.startsWith('ib:') ? 'black' : 'sepia') as 'black' | 'sepia' })),
+    ...PHOTOS.map((p, i) => ({ k: `photo:${i}`, shot: p.shot, title: `Brzęczyk, Przyłapane!: ${p.caption.pl}`, tone: 'black' as const })),
+  ];
+  const [one, setOne] = useState<number | null>(0);
+  if (one !== null) {
+    const p = all[one]!;
+    const go = (n: number) => setOne((one + n + all.length) % all.length);
+    return (
+      <div className="papertest-one">
+        <div className="papertest-one-bar">
+          <button onClick={() => go(-1)}>◀</button>
+          <span>
+            {one + 1} / {all.length}
+          </span>
+          <button onClick={() => go(1)}>▶</button>
+          <button onClick={() => setOne(null)}>All at once</button>
+        </div>
+        <PaperArt shot={p.shot} label={p.title} tone={p.tone} />
+        <p className="papertest-one-title">{p.title}</p>
+        <p className="papertest-one-key">{p.k}</p>
+      </div>
+    );
+  }
   return (
     <div className="papertest-pictures">
-      {Object.entries(SHOTS).map(([k, shot]) => (
-        <figure key={k}>
-          <PaperArt shot={shot} label={k} tone={k.startsWith('hb:') || k.startsWith('b:') || k.startsWith('ib:') ? 'black' : 'sepia'} />
-          <figcaption>{k}</figcaption>
-        </figure>
-      ))}
-      {PHOTOS.map((p, i) => (
-        <figure key={`p${i}`}>
-          <PaperArt shot={p.shot} label={p.caption.pl} tone="black" />
-          <figcaption>photo {i}: {p.caption.pl}</figcaption>
+      {all.map((p, i) => (
+        <figure key={p.k}>
+          <button className="papertest-pick" onClick={() => setOne(i)}>
+            <PaperArt shot={p.shot} label={p.title} tone={p.tone} />
+          </button>
+          <figcaption>{p.title}</figcaption>
         </figure>
       ))}
     </div>
@@ -231,15 +270,31 @@ function GeminiRunner({ session }: { session: Session }) {
   const { rows, reload } = useWorldRows();
   const items = result ? checkWorld(result.items) : null;
   const garden = useMemo(() => gardenFor('busy', new Date(), '', dayKeyOf(new Date(Date.now() - 10 * 86_400_000))), []);
-  const run = async () => {
+  const [posted, setPosted] = useState<string | null>(null);
+  /** Approves a day's column, so her papers print it the next time they open. */
+  const post = async (day: string) => {
+    if (!admin) return;
+    const { error: err } = await admin.from('paper_world').update({ status: 'approved', updated_at: new Date().toISOString() }).eq('day', day);
+    if (err) setError(`Written, but not posted: ${err.message}`);
+    else setPosted(day);
+    reload();
+  };
+  const run = async (andPost: boolean) => {
     if (!admin) return;
     setBusy(true);
     setError(null);
+    setPosted(null);
     const { data, error: err } = await admin.functions.invoke('paper-world', { body: { force: true }, headers: { Authorization: `Bearer ${session.access_token}` } });
     setBusy(false);
-    if (err) setError(err.message);
-    else setResult(data as RunResult);
-    reload();
+    if (err) {
+      setError(err.message);
+      reload();
+      return;
+    }
+    const got = data as RunResult;
+    setResult(got);
+    if (andPost && checkWorld(got.items)) await post(got.day);
+    else reload();
   };
   if (preview && items) {
     return (
@@ -262,12 +317,22 @@ function GeminiRunner({ session }: { session: Session }) {
       <h1>The news column</h1>
       <p>
         Runs today’s column now: reads the headlines, asks Gemini, checks the answer. It replaces today’s column and marks it new, so it only reaches her once you approve it (or if the column is
-        switched to go out every day). Each run is one Gemini request.
+        switched to go out every day). “Write and post” approves it straight away if it passes the check, so it goes in her paper. Each run is one Gemini request.
       </p>
-      <button onClick={() => void run()} disabled={busy}>
-        {busy ? 'Writing… (up to a minute)' : 'Write today’s column now'}
-      </button>
+      <div className="papertest-actions">
+        <button onClick={() => void run(true)} disabled={busy}>
+          {busy ? 'Writing… (up to a minute)' : 'Write and post today’s column'}
+        </button>
+        <button onClick={() => void run(false)} disabled={busy}>
+          Write only (don’t post)
+        </button>
+      </div>
       {error && <p className="error">{error}</p>}
+      {posted && (
+        <p className="ok">
+          Posted for {posted}. Her paper prints it the next time it opens, unless that phone already kept a column for today.
+        </p>
+      )}
       {result && (
         <>
           <h2>
@@ -287,7 +352,10 @@ function GeminiRunner({ session }: { session: Session }) {
                   </p>
                 </div>
               ))}
-              <button onClick={() => setPreview(true)}>See it in the paper</button>
+              <div className="papertest-actions">
+                <button onClick={() => setPreview(true)}>See it in the paper</button>
+                {posted !== result.day && <button onClick={() => void post(result.day)}>Post this one</button>}
+              </div>
             </>
           )}
           <details>

@@ -8,7 +8,8 @@
 // Anyone may call it, but it only ever writes a day once (with two retries if writing failed), so
 // at most three calls to Gemini a day. Writing again on demand needs the admin's sign-in.
 //
-// Needs the secret GEMINI_API_KEY (Google AI Studio). GEMINI_MODEL may name a model to use first.
+// Needs the secret GEMINI_API_KEY (Google AI Studio). GEMINI_MODEL may name a model to use first;
+// otherwise it uses the newest "flash" model Google offers that day.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { checkWorld } from './world.ts';
@@ -21,14 +22,41 @@ const CORS = {
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
+/** Where the headlines come from: Szczecin first, then Poland. Several sources, so one refusing never leaves the column empty. */
 const FEEDS: Array<{ place: string; url: string }> = [
+  { place: 'szczecin', url: 'https://szczecin.wyborcza.pl/pub/rss/szczecin.xml' },
   { place: 'szczecin', url: 'https://news.google.com/rss/search?q=Szczecin&hl=pl&gl=PL&ceid=PL:pl' },
-  { place: 'polska', url: 'https://news.google.com/rss?hl=pl&gl=PL&ceid=PL:pl' },
+  { place: 'polska', url: 'https://www.rmf24.pl/feed' },
+  { place: 'polska', url: 'https://www.polsatnews.pl/rss/wszystkie.xml' },
+  { place: 'polska', url: 'https://tvn24.pl/najnowsze.xml' },
   { place: 'polska', url: 'https://news.google.com/rss/search?q=ciekawostki+OR+kultura+OR+nauka+OR+przyroda&hl=pl&gl=PL&ceid=PL:pl' },
-  { place: 'polska', url: 'https://news.google.com/rss/search?q=sport+Polska+OR+festiwal+OR+koncert&hl=pl&gl=PL&ceid=PL:pl' },
 ];
 
-const MODELS = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+/** Used only if Google's list of models can't be read. */
+const FALLBACK_MODELS = ['gemini-flash-latest', 'gemini-2.5-flash'];
+
+/**
+ * The models to try, best first. Google retires model names often, so rather than naming one,
+ * this asks which "flash" models can write text today and takes the newest (not the "lite" or
+ * experimental ones, which come last).
+ */
+async function currentModels(key: string): Promise<string[]> {
+  try {
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': key }, signal: AbortSignal.timeout(10_000) });
+    if (!res.ok) return FALLBACK_MODELS;
+    const data = await res.json();
+    const names: string[] = (data?.models ?? [])
+      .filter((m: { name?: string; supportedGenerationMethods?: string[] }) => m.name && m.supportedGenerationMethods?.includes('generateContent'))
+      .map((m: { name: string }) => m.name.replace(/^models\//, ''))
+      .filter((n: string) => /flash/.test(n) && !/image|tts|audio|live|embedding|thinking/.test(n));
+    const version = (n: string) => Number((n.match(/(\d+(?:\.\d+)?)/) ?? ['0'])[0]);
+    const worse = (n: string) => (/lite/.test(n) ? 2 : 0) + (/exp|preview/.test(n) ? 1 : 0);
+    const ranked = names.sort((a, b) => worse(a) - worse(b) || version(b) - version(a) || a.length - b.length);
+    return ranked.length ? ranked.slice(0, 4) : FALLBACK_MODELS;
+  } catch {
+    return FALLBACK_MODELS;
+  }
+}
 
 /** The day in Poland, as YYYY-MM-DD. */
 const warsawDay = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
@@ -38,6 +66,8 @@ function decode(s: string): string {
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
     .replace(/&quot;/g, '"')
     .replace(/&#39;|&apos;/g, "'")
+    .replace(/&#x([0-9a-f]+);/gi, (_, h: string) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d: string) => String.fromCodePoint(Number(d)))
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&amp;/g, '&')
@@ -46,19 +76,24 @@ function decode(s: string): string {
 }
 
 /** The headlines of one feed, without the source's name tacked on the end. */
-async function headlines(url: string): Promise<string[]> {
+async function headlines(url: string, report: string[]): Promise<string[]> {
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (garden newspaper)' }, signal: AbortSignal.timeout(10_000) });
-    if (!res.ok) return [];
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; garden-newspaper/1.0)', Accept: 'application/rss+xml, application/xml, text/xml' }, signal: AbortSignal.timeout(10_000) });
+    if (!res.ok) {
+      report.push(`${new URL(url).host}: HTTP ${res.status}`);
+      return [];
+    }
     const xml = await res.text();
     const out: string[] = [];
-    for (const m of xml.matchAll(/<item>[\s\S]*?<title>([\s\S]*?)<\/title>/g)) {
+    for (const m of xml.matchAll(/<item[\s>][\s\S]*?<title[^>]*>([\s\S]*?)<\/title>/g)) {
       const t = decode(m[1] ?? '').replace(/\s+-\s+[^-]{2,60}$/, '');
       if (t.length > 12 && t.length < 220) out.push(t);
-      if (out.length >= 14) break;
+      if (out.length >= 12) break;
     }
+    if (out.length === 0) report.push(`${new URL(url).host}: no headlines`);
     return out;
-  } catch {
+  } catch (e) {
+    report.push(`${new URL(url).host}: ${e instanceof Error ? e.message : String(e)}`);
     return [];
   }
 }
@@ -71,7 +106,7 @@ Nigdy nie pisz o: śmierci, wypadkach, przemocy, wojnie, zamachach, polityce par
 
 Każda pozycja: najpierw jedno zdanie o tym, co się naprawdę wydarzyło (bez zmyślania faktów, liczb ani nazwisk, których nie ma w nagłówku), potem jak zareagowało Bratkowo. Gazetę prowadzi Redaktor Bogdan Borsuk (poważny borsuk w okularach, niedawno przyjechał z dużego miasta, mówi „uprzejmie informuję”); obok wychodzi konkurencyjny Brzęczyk pszczoły Trzmieliny. Mieszkańcy Bratkowa: Pan Jeżyk (jeż, prowadzi stragan z nasionami, lubi drzemki i herbatę), Pani Ćma (ćma, nocny targ, kocha światło), Pani Jadzia (robi na drutach swetry dla wszystkiego), Atrament (czarny kot, radny, śpi), Rechotka (żaba w żółtych kaloszach), Pan listonosz (dumny z wąsów), Wiedźmusia (uczennica czarownicy, kapelusz o rozmiar za duży), Duszek (grzeczny duch ze strychu), Jingleton (puchaty trzmiel, kocha stokrotki), kret Zenon, sowa (stróż nocny), wiewiórka Halinka (gubi orzechy), Milton (jajko, które się nie wykluwa; mówi bardzo mało). Nie wymyślaj nowych postaci.
 
-Styl: ciepły, dowcipny, krótki, jak w prawdziwej małomiasteczkowej gazecie. Bez emotek, bez wykrzykników co zdanie. Tytuł 4-10 słów. Treść 2-3 zdania, 160-380 znaków. Polski poprawny i naturalny. Podaj też wersję angielską (en) tego samego, naturalną, nie dosłowną.
+Styl: ciepły, dowcipny, krótki, jak w prawdziwej małomiasteczkowej gazecie. Bez emotek, bez wykrzykników co zdanie. Tytuł 4-10 słów. Treść 2-3 zdania, 160-380 znaków. Polski poprawny i naturalny. Podaj też wersję angielską (en) tego samego, naturalną, nie dosłowną. W wersji angielskiej imion nie tłumacz: zostają Bogdan Borsuk (Editor Borsuk), Pan Jeżyk, Pani Ćma, Pani Jadzia, Atrament, Rechotka, Wiedźmusia, Duszek, Jingleton, Zenon, Halinka, Milton, Trzmielina, Brzęczyk, Kurier Bratkowski, Bratkowo.
 
 Przykład dobrego stylu (pl): tytuł "Poznań piecze rogale. Jeden zaginął w drodze", treść "Na świętego Marcina w Poznaniu znowu pieką rogale z białym makiem. Pan Jeżyk zamówił jednego „dla gości”. Goście rogala nie widzieli. Pan Jeżyk ma okruszki na kolcach i odmawia komentarza."
 Przykład (pl): tytuł "Flagi na Wałach Chrobrego. W Bratkowie na słoneczniku", treść "Szczecin świętuje nad Odrą, z flagami i paradą. Bratkowo nie zostało w tyle: flagę zawieszono na najwyższym słoneczniku w okolicy. Słonecznik jest dumny, choć od rana trochę się pochyla."
@@ -99,7 +134,8 @@ const SCHEMA = {
 
 async function askGemini(key: string, lines: string): Promise<{ raw: string; model: string } | { error: string }> {
   const preferred = Deno.env.get('GEMINI_MODEL');
-  const models = preferred ? [preferred, ...MODELS.filter((m) => m !== preferred)] : MODELS;
+  const found = await currentModels(key);
+  const models = preferred ? [preferred, ...found.filter((m) => m !== preferred)] : found;
   let last = 'no model answered';
   for (const model of models) {
     try {
@@ -114,7 +150,8 @@ async function askGemini(key: string, lines: string): Promise<{ raw: string; mod
         }),
       });
       if (!res.ok) {
-        last = `${model}: HTTP ${res.status} ${(await res.text()).slice(0, 300)}`;
+        // keep every model's answer, so the admin page shows why each one failed
+        last = `${last === 'no model answered' ? '' : `${last} | `}${model}: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`;
         continue;
       }
       const data = await res.json();
@@ -164,7 +201,8 @@ Deno.serve(async (req) => {
   }
 
   const key = Deno.env.get('GEMINI_API_KEY');
-  const lists = await Promise.all(FEEDS.map(async (f) => (await headlines(f.url)).map((t) => ({ place: f.place, t }))));
+  const report: string[] = [];
+  const lists = await Promise.all(FEEDS.map(async (f) => (await headlines(f.url, report)).map((t) => ({ place: f.place, t }))));
   const seen = new Set<string>();
   const all = lists.flat().filter((h) => (seen.has(h.t) ? false : (seen.add(h.t), true)));
   const lines = all.map((h) => `[${h.place}] ${h.t}`).join('\n');
@@ -174,7 +212,7 @@ Deno.serve(async (req) => {
   let model: string | null = null;
   let error: string | null = null;
   if (!key) error = 'GEMINI_API_KEY is not set';
-  else if (all.length < 4) error = 'Too few headlines could be read';
+  else if (all.length < 4) error = `Too few headlines could be read (${report.join('; ')})`;
   else {
     const got = await askGemini(key, lines);
     if ('error' in got) error = got.error;
