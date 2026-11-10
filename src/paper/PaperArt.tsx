@@ -44,32 +44,56 @@ export type Shot = { set?: SetKey; cast: Part[] };
 
 // ---- townsfolk drawn for the papers ----------------------------------------------------------
 
-/** Redaktor Bogdan Borsuk, who came from the big city and started the Kurier: glasses, a bow tie, a paper under his arm. */
+/** Redaktor Bogdan Borsuk, who came from the big city and started the Kurier: round glasses, a tweed waistcoat, a bow tie, today's paper. */
 function Borsuk() {
+  const fur = '#958f9a';
   return (
     <g>
-      <ellipse cx="0" cy="0" rx="20" ry="3" fill="#000" opacity="0.12" />
-      <path d="M-18,-2 C-22,-22 -18,-40 0,-42 C18,-40 22,-22 18,-2 Z" fill="#8d8792" {...ink} />
-      <path d="M-10,-4 L-10,-26 L10,-26 L10,-4 Z" fill="#5a4f63" {...thin} />
-      <path d="M-4,-26 L0,-20 L4,-26" fill="#f4ecdc" {...thin} />
-      <path d="M-5,-27 L0,-24 L5,-27 L5,-22 L0,-24.6 L-5,-22 Z" fill="#9c3d5a" {...thin} />
-      <path d="M-14,-6 L-14,0 M-6,-4 L-6,0 M6,-4 L6,0 M14,-6 L14,0" {...ink} />
-      <path d="M-22,-62 C-26,-48 -18,-36 0,-36 C18,-36 26,-48 22,-62 C18,-74 -18,-74 -22,-62 Z" fill="#f2ede6" {...ink} />
-      <path d="M-14,-72 C-12,-60 -9,-50 -6,-42 L-2,-42 C-4,-52 -7,-62 -8,-73 Z M14,-72 C12,-60 9,-50 6,-42 L2,-42 C4,-52 7,-62 8,-73 Z" fill="#2d2228" />
-      <path d="M-20,-66 C-26,-74 -22,-80 -16,-76 M20,-66 C26,-74 22,-80 16,-76" fill="#8d8792" {...thin} />
-      <circle cx="-8" cy="-56" r="5" fill="#fffaf0" {...thin} />
-      <circle cx="8" cy="-56" r="5" fill="#fffaf0" {...thin} />
-      <path d="M-3,-56 L3,-56" {...thin} />
-      <circle cx="-8" cy="-56" r="1.6" fill={INK} />
-      <circle cx="8" cy="-56" r="1.6" fill={INK} />
-      <ellipse cx="0" cy="-46" rx="3.2" ry="2.4" fill={INK} />
-      <path d="M-3,-41 C-1,-40 1,-40 3,-41" fill="none" {...thin} />
-      {/* the paper under his arm */}
-      <g transform="translate(14 -20) rotate(-14)">
-        <path d="M-3,-10 L12,-10 L12,8 L-3,8 Z" fill="#f4ecdc" {...thin} />
-        <path d="M0,-6 L9,-6 M0,-3 L9,-3 M0,0 L6,0 M0,3 L8,3" stroke={INK} strokeWidth="0.6" />
+      <ellipse cx="0" cy="0.5" rx="20" ry="3" fill="#000" opacity="0.12" />
+      {/* feet and body */}
+      <ellipse cx="-8" cy="-1.5" rx="5.4" ry="2.8" fill="#3a3238" {...thin} />
+      <ellipse cx="8" cy="-1.5" rx="5.4" ry="2.8" fill="#3a3238" {...thin} />
+      <path d="M-17,-3 C-21,-16 -19,-32 -10,-38 L10,-38 C19,-32 21,-16 17,-3 C10,-1 -10,-1 -17,-3 Z" fill={fur} {...ink} />
+      <path d="M-7,-38 L7,-38 L5,-26 L-5,-26 Z" fill="#fffaf0" {...thin} />
+      {/* the tweed waistcoat, buttoned */}
+      <path d="M-12,-34 C-14,-22 -13,-11 -11,-4 L11,-4 C13,-11 14,-22 12,-34 L5,-26 L0,-15 L-5,-26 Z" fill="#a0714a" {...ink} />
+      <path d="M-10,-28 L-7,-10 M10,-28 L7,-10" stroke="#7d5536" strokeWidth="0.7" strokeDasharray="1.2 1.6" />
+      <circle cx="0" cy="-11" r="1.1" fill="#f2d16b" {...thin} />
+      <circle cx="0" cy="-6.5" r="1.1" fill="#f2d16b" {...thin} />
+      <path d="M-5.4,-36.6 L0,-34 L5.4,-36.6 L5.4,-31 L0,-34 L-5.4,-31 Z" fill="#c95d7f" {...thin} />
+      {/* an arm at his side */}
+      <path d="M-15,-31 C-21,-24 -21,-15 -18,-10 C-16,-8.6 -13.6,-9.4 -13.8,-11.6 C-15.4,-17 -15,-23 -11.6,-28 Z" fill={fur} {...ink} />
+      {/* today's paper, and the arm that holds it */}
+      <g transform="translate(17 -24) rotate(-10)">
+        <path d="M-2,-9 L13,-9 L13,10 L-2,10 Z" fill="#fbf4e6" {...thin} />
+        <path d="M0.5,-5.5 L10.5,-5.5" stroke={INK} strokeWidth="1.6" />
+        <path d="M0.5,-2 L10.5,-2 M0.5,1 L10.5,1 M0.5,4 L7.5,4 M0.5,7 L9.5,7" stroke={INK} strokeWidth="0.55" />
       </g>
-      <path d="M10,-30 C16,-26 18,-20 16,-14" fill="none" {...ink} />
+      <path d="M13,-31 C20,-27 22,-20 20,-14 C18.6,-12 15.6,-12.6 15.6,-15 C16.6,-19.6 15.6,-24 12,-27.6 Z" fill={fur} {...ink} />
+      {/* ears, tucked into the top of his head */}
+      <circle cx="-15.5" cy="-67" r="6.4" fill="#3a3238" {...ink} />
+      <circle cx="-15.5" cy="-67" r="2.8" fill="#f4f1ea" />
+      <circle cx="15.5" cy="-67" r="6.4" fill="#3a3238" {...ink} />
+      <circle cx="15.5" cy="-67" r="2.8" fill="#f4f1ea" />
+      {/* his head: white, grey at the cheeks, with the badger's two black stripes from nose to ears */}
+      <path d="M-21,-54 C-21,-66 -12,-72 0,-72 C12,-72 21,-66 21,-54 C21,-44 12,-38 0,-37 C-12,-38 -21,-44 -21,-54 Z" fill="#f4f1ea" />
+      <path d="M-20.4,-56 C-20,-64 -15.6,-69.4 -10.6,-71 C-13.6,-62 -15.4,-52 -12.4,-40.4 C-17.4,-43 -20.6,-48 -20.4,-56 Z" fill={fur} />
+      <path d="M20.4,-56 C20,-64 15.6,-69.4 10.6,-71 C13.6,-62 15.4,-52 12.4,-40.4 C17.4,-43 20.6,-48 20.4,-56 Z" fill={fur} />
+      <path d="M-12.6,-70 C-10,-62 -9.4,-52 -6.2,-44.6 L-2.6,-45.4 C-4.2,-53 -5,-62 -6.8,-71.6 Z" fill="#2d2228" />
+      <path d="M12.6,-70 C10,-62 9.4,-52 6.2,-44.6 L2.6,-45.4 C4.2,-53 5,-62 6.8,-71.6 Z" fill="#2d2228" />
+      <path d="M-21,-54 C-21,-66 -12,-72 0,-72 C12,-72 21,-66 21,-54 C21,-44 12,-38 0,-37 C-12,-38 -21,-44 -21,-54 Z" fill="none" {...ink} />
+      {/* eyes behind round gold glasses */}
+      <circle cx="-7.6" cy="-56" r="2.3" fill="#fffaf0" />
+      <circle cx="-7.4" cy="-55.6" r="1.3" fill={INK} />
+      <circle cx="7.6" cy="-56" r="2.3" fill="#fffaf0" />
+      <circle cx="7.4" cy="-55.6" r="1.3" fill={INK} />
+      <circle cx="-7.6" cy="-56" r="5" fill="none" stroke="#b8893a" strokeWidth="1.2" />
+      <circle cx="7.6" cy="-56" r="5" fill="none" stroke="#b8893a" strokeWidth="1.2" />
+      <path d="M-2.6,-56.6 C-1,-58 1,-58 2.6,-56.6" fill="none" stroke="#b8893a" strokeWidth="1.1" />
+      <ellipse cx="-13.4" cy="-47.6" rx="3" ry="1.8" fill="#f2a6bb" opacity="0.75" />
+      <ellipse cx="13.4" cy="-47.6" rx="3" ry="1.8" fill="#f2a6bb" opacity="0.75" />
+      <ellipse cx="0" cy="-42" rx="3.4" ry="2.4" fill={INK} />
+      <path d="M-2.4,-39.2 C-1,-37.8 1,-37.8 2.4,-39.2" fill="none" {...thin} />
     </g>
   );
 }
@@ -575,42 +599,82 @@ const Seeds = () => (
 
 // ---- places ----------------------------------------------------------------------------------
 
+const SKY = '#d9e9ef';
+const GRASS = '#bcd59c';
+const COBBLE = '#dccdb0';
+
+/** Sky above, ground below: every place outside starts from these. */
+function Outdoors({ ground = GRASS, sky = SKY }: { ground?: string; sky?: string }) {
+  return (
+    <g>
+      <rect x="0" y="0" width="240" height="100" fill={sky} />
+      <rect x="0" y="100" width="240" height="14" fill={ground} />
+      <path d="M-2,100 L242,100" {...ink} />
+    </g>
+  );
+}
+
+/** A little house: walls, a roof, a window with its light. */
+function House({ x, w, h, wall, roof }: { x: number; w: number; h: number; wall: string; roof: string }) {
+  const top = 100 - h;
+  return (
+    <g>
+      <path d={`M${x},100 L${x},${top} L${x + w},${top} L${x + w},100 Z`} fill={wall} {...thin} />
+      <path d={`M${x - 4},${top + 1} L${x + w / 2},${top - w * 0.42} L${x + w + 4},${top + 1} Z`} fill={roof} {...thin} />
+      <path d={`M${x + w * 0.3},${top + h * 0.28} L${x + w * 0.7},${top + h * 0.28} L${x + w * 0.7},${top + h * 0.56} L${x + w * 0.3},${top + h * 0.56} Z`} fill="#fff1c9" {...thin} />
+      <path d={`M${x + w / 2},${top + h * 0.28} L${x + w / 2},${top + h * 0.56}`} {...thin} />
+    </g>
+  );
+}
+
+function Street() {
+  return (
+    <g>
+      <Outdoors ground={COBBLE} />
+      <path d="M150,24 C156,18 168,18 172,24 C180,22 184,30 178,32 L148,32 C142,30 144,24 150,24 Z" fill="#fbfaf6" {...thin} />
+      <House x={8} w={40} h={46} wall="#f3dcc6" roof="#c9705a" />
+      <House x={60} w={46} h={56} wall="#efd3da" roof="#9c5a6e" />
+      <House x={194} w={38} h={50} wall="#eadfbe" roof="#b0805a" />
+      <path d="M14,106 l10,0 M44,108 l12,0 M90,106 l10,0 M150,108 l12,0 M196,106 l10,0" {...thin} />
+    </g>
+  );
+}
+
 function SetBack({ set }: { set: SetKey }) {
   switch (set) {
     case 'street':
-      return (
-        <g>
-          <path d="M8,100 L8,58 L28,44 L48,58 L48,100 M60,100 L60,50 L84,34 L108,50 L108,100 M196,100 L196,54 L214,42 L232,54 L232,100" fill="#efe6d4" {...thin} />
-          <path d="M20,70 L36,70 L36,82 L20,82 Z M74,62 L92,62 L92,76 L74,76 Z M206,66 L222,66 L222,78 L206,78 Z" fill="#fffaf0" {...thin} />
-          <path d="M0,100 L240,100" {...ink} />
-          <path d="M14,106 l10,0 M44,108 l12,0 M90,106 l10,0 M150,108 l12,0 M196,106 l10,0" {...thin} />
-        </g>
-      );
+    case 'fog':
+      return <Street />;
     case 'pond':
     case 'pinkpond':
       return (
         <g>
-          <path d="M0,86 C40,80 80,78 120,78 C160,78 200,80 240,86" fill="none" {...thin} />
-          <ellipse cx="120" cy="100" rx="110" ry="14" fill={set === 'pinkpond' ? '#f3a6bf' : '#b9cfd9'} {...ink} />
-          <path d="M60,98 l18,0 M120,104 l22,0 M170,97 l16,0" stroke="#fffaf0" strokeWidth="1.2" />
+          <Outdoors />
+          <path d="M0,86 C40,76 80,74 120,76 C160,78 200,76 240,84 L240,100 L0,100 Z" fill="#a9c98c" {...thin} />
+          <ellipse cx="120" cy="101" rx="110" ry="13" fill={set === 'pinkpond' ? '#f3a6bf' : '#9fc3d3'} {...ink} />
+          <path d="M60,99 l18,0 M120,104 l22,0 M170,98 l16,0" stroke="#fffaf0" strokeWidth="1.2" />
           <path d="M14,100 C12,90 14,82 16,76 M20,100 C20,92 22,86 24,82 M226,100 C226,90 224,84 222,78" fill="none" stroke="#5d7a4a" strokeWidth="1.4" />
         </g>
       );
     case 'hall':
       return (
         <g>
-          <path d="M140,100 L140,40 L240,40 L240,100" fill="#e6dccb" {...thin} />
-          <path d="M134,40 L190,16 L246,40 Z" fill="#9c6a5a" {...thin} />
+          <Outdoors ground={COBBLE} />
+          <path d="M140,100 L140,40 L240,40 L240,100" fill="#efe3cc" {...thin} />
+          <path d="M134,40 L190,16 L246,40 Z" fill="#a8564a" {...thin} />
           <path d="M156,100 L156,48 M176,100 L176,48 M204,100 L204,48 M224,100 L224,48" {...thin} />
-          <path d="M0,100 L240,100" {...ink} />
+          <path d="M183,100 L183,80 C183,74 197,74 197,80 L197,100" fill="#8a5a3c" {...thin} />
         </g>
       );
     case 'meadow':
       return (
         <g>
-          <path d="M0,74 C50,62 110,60 160,66 C200,70 220,72 240,70" fill="none" {...thin} />
-          <path d="M0,100 L240,100" {...ink} />
+          <Outdoors />
+          <path d="M0,76 C50,62 110,60 160,66 C200,70 220,70 240,68 L240,100 L0,100 Z" fill="#c9dfab" {...thin} />
           <path d="M20,100 l2,-6 l2,6 M64,100 l2,-7 l2,7 M140,100 l2,-6 l2,6 M200,100 l2,-7 l2,7 M226,100 l2,-5 l2,5" fill="none" stroke="#5d7a4a" strokeWidth="1.2" />
+          <circle cx="44" cy="84" r="1.6" fill="#f2a6bb" />
+          <circle cx="182" cy="80" r="1.6" fill="#fffaf0" />
+          <circle cx="120" cy="88" r="1.6" fill="#f2d16b" />
         </g>
       );
     case 'night':
@@ -618,25 +682,35 @@ function SetBack({ set }: { set: SetKey }) {
         <g>
           <rect x="0" y="0" width="240" height="114" fill="#3a3550" />
           <path d="M30,20 l0,4 M28,22 l4,0 M90,12 l0,4 M88,14 l4,0 M200,24 l0,4 M198,26 l4,0 M160,8 l0,3 M158.5,9.5 l3,0" stroke="#fff6dc" strokeWidth="1" />
+          <rect x="0" y="100" width="240" height="14" fill="#2c2840" />
           <path d="M0,100 L240,100" stroke="#fff6dc" strokeWidth="1.2" opacity="0.6" />
         </g>
       );
     case 'room':
       return (
         <g>
-          <path d="M0,84 L240,84" {...thin} />
-          <path d="M0,100 L240,100" {...ink} />
-          <path d="M30,84 L20,114 M90,84 L84,114 M150,84 L156,114 M210,84 L220,114" stroke={INK} strokeWidth="0.6" opacity="0.5" />
-          <path d="M170,20 L220,20 L220,64 L170,64 Z M195,20 L195,64 M170,42 L220,42" fill="#dfe8ee" {...thin} />
+          <rect x="0" y="0" width="240" height="86" fill="#f2dfd3" />
+          <rect x="0" y="86" width="240" height="28" fill="#c79b6d" />
+          <path d="M0,86 L240,86" {...thin} />
+          <path d="M30,86 L20,114 M90,86 L84,114 M150,86 L156,114 M210,86 L220,114" stroke={INK} strokeWidth="0.6" opacity="0.5" />
+          <path d="M170,20 L220,20 L220,64 L170,64 Z" fill={SKY} {...thin} />
+          <path d="M195,20 L195,64 M170,42 L220,42" {...thin} />
         </g>
       );
     case 'snow':
-      return <path d="M0,96 C60,90 180,90 240,96 L240,114 L0,114 Z" fill="#fbfbf8" {...ink} />;
+      return (
+        <g>
+          <rect x="0" y="0" width="240" height="114" fill="#e4ecf2" />
+          <path d="M0,96 C60,90 180,90 240,96 L240,114 L0,114 Z" fill="#fbfbf8" {...ink} />
+        </g>
+      );
     case 'attic':
       return (
         <g>
-          <path d="M0,40 L120,4 L240,40" fill="none" {...ink} />
-          <path d="M40,28 L40,100 M200,28 L200,100" stroke="#8a5a32" strokeWidth="2" />
+          <rect x="0" y="0" width="240" height="114" fill="#e2c9a4" />
+          <path d="M0,40 L120,4 L240,40 L240,0 L0,0 Z" fill="#b08a62" {...ink} />
+          <path d="M40,28 L40,100 M200,28 L200,100" stroke="#8a5a32" strokeWidth="3" />
+          <rect x="0" y="100" width="240" height="14" fill="#a77b52" />
           <path d="M0,100 L240,100" {...ink} />
           <path d="M108,36 L132,36 L132,56 L108,56 Z" fill="#cfd9e6" {...thin} />
         </g>
@@ -644,26 +718,34 @@ function SetBack({ set }: { set: SetKey }) {
     case 'willow':
       return (
         <g>
+          <Outdoors />
+          <ellipse cx="60" cy="104" rx="56" ry="6" fill="#9fc3d3" {...thin} />
           <path d="M210,100 C206,80 208,60 214,44" stroke="#6e4f30" strokeWidth="5" fill="none" />
-          <path d="M214,44 C180,30 160,40 150,80 M214,44 C200,36 182,50 176,90 M214,44 C228,40 240,50 240,80 M214,44 C206,46 196,64 196,92" fill="none" stroke="#6f8f5a" strokeWidth="1.6" />
-          <path d="M0,100 L240,100" {...ink} />
-          <ellipse cx="60" cy="104" rx="56" ry="6" fill="#b9cfd9" {...thin} />
+          <path d="M214,44 C180,30 160,40 150,80 M214,44 C200,36 182,50 176,90 M214,44 C228,40 240,50 240,80 M214,44 C206,46 196,64 196,92" fill="none" stroke="#6f8f5a" strokeWidth="1.8" />
+          <path d="M214,44 C190,32 172,44 164,64 M214,44 C220,40 232,48 236,62" fill="none" stroke="#86a86c" strokeWidth="1.2" />
         </g>
       );
     case 'hive':
       return (
-        <g opacity="0.55">
-          {Array.from({ length: 6 }, (_, r) =>
-            Array.from({ length: 12 }, (_, c) => (
-              <path key={`${r}-${c}`} d={`M${c * 22 + (r % 2 ? 11 : 0)},${r * 19 + 8} l6,-8 h10 l6,8 l-6,8 h-10 Z`} fill="#f2c94c" stroke="#b07a1e" strokeWidth="0.8" />
-            )),
-          )}
+        <g>
+          <rect x="0" y="0" width="240" height="114" fill="#f7e2a0" />
+          <g opacity="0.7">
+            {Array.from({ length: 7 }, (_, r) =>
+              Array.from({ length: 12 }, (_, c) => (
+                <path key={`${r}-${c}`} d={`M${c * 22 + (r % 2 ? 11 : 0)},${r * 19 + 8} l6,-8 h10 l6,8 l-6,8 h-10 Z`} fill="#f2c94c" stroke="#b07a1e" strokeWidth="0.8" />
+              )),
+            )}
+          </g>
         </g>
       );
     case 'kitchen':
       return (
         <g>
-          <path d="M20,18 L70,18 L70,58 L20,58 Z M45,18 L45,58" fill="#dfe8ee" {...thin} />
+          <rect x="0" y="0" width="240" height="100" fill="#f4e6cf" />
+          <rect x="0" y="100" width="240" height="14" fill="#c79b6d" />
+          <path d="M20,18 L70,18 L70,58 L20,58 Z" fill={SKY} {...thin} />
+          <path d="M45,18 L45,58" {...thin} />
+          <path d="M14,18 C22,30 22,46 18,60 M76,18 C68,30 68,46 72,60" fill="none" stroke="#e58aa6" strokeWidth="2" />
           <path d="M100,72 L220,72 L220,76 L100,76 Z M110,76 L110,100 M210,76 L210,100" fill="#8a5a32" {...thin} />
           <path d="M0,100 L240,100" {...ink} />
         </g>
@@ -671,13 +753,15 @@ function SetBack({ set }: { set: SetKey }) {
     case 'hill':
       return (
         <g>
-          <path d="M0,96 C60,70 140,62 240,84 L240,114 L0,114 Z" fill="#d6ccb4" {...ink} />
-          <path d="M40,8 l0,5 M37.5,10.5 l5,0 M120,20 l0,4 M118,22 l4,0 M210,14 l0,5 M207.5,16.5 l5,0" {...thin} />
+          <rect x="0" y="0" width="240" height="114" fill="#3e3a5c" />
+          <path d="M40,8 l0,5 M37.5,10.5 l5,0 M120,20 l0,4 M118,22 l4,0 M210,14 l0,5 M207.5,16.5 l5,0" stroke="#fff6dc" strokeWidth="1" />
+          <path d="M0,96 C60,70 140,62 240,84 L240,114 L0,114 Z" fill="#5b6b4e" {...ink} />
         </g>
       );
     case 'orchard':
       return (
         <g>
+          <Outdoors />
           {[30, 120, 210].map((x) => (
             <g key={x}>
               <path d={`M${x},100 L${x},62`} stroke="#6e4f30" strokeWidth="4" />
@@ -686,11 +770,10 @@ function SetBack({ set }: { set: SetKey }) {
               <circle cx={x + 9} cy="54" r="2.4" fill="#c9433f" />
             </g>
           ))}
-          <path d="M0,100 L240,100" {...ink} />
         </g>
       );
     default:
-      return <path d="M0,100 L240,100" {...ink} />;
+      return <Outdoors />;
   }
 }
 
