@@ -321,7 +321,8 @@ html.still .papers {
   aspect-ratio: 2.6;
 }
 .paper-art.sepia svg {
-  filter: grayscale(1) sepia(0.4) contrast(1.12);
+  /* an old colour print: the colours are there, faded and warm, as on newsprint */
+  filter: saturate(0.8) sepia(0.18) contrast(1.04);
   mix-blend-mode: multiply;
 }
 /* Brzęczyk prints its pictures in colour, a little too bright, as tabloids do */

@@ -719,10 +719,15 @@ function SetBack({ set }: { set: SetKey }) {
       return (
         <g>
           <Outdoors />
+          <path d="M0,82 C40,66 90,64 130,72 C170,80 200,70 240,74 L240,100 L0,100 Z" fill="#c9dfab" {...thin} />
+          <path d="M0,90 C30,84 60,86 90,90 L90,100 L0,100 Z" fill="#b2cf92" />
           <ellipse cx="60" cy="104" rx="56" ry="6" fill="#9fc3d3" {...thin} />
-          <path d="M210,100 C206,80 208,60 214,44" stroke="#6e4f30" strokeWidth="5" fill="none" />
-          <path d="M214,44 C180,30 160,40 150,80 M214,44 C200,36 182,50 176,90 M214,44 C228,40 240,50 240,80 M214,44 C206,46 196,64 196,92" fill="none" stroke="#6f8f5a" strokeWidth="1.8" />
-          <path d="M214,44 C190,32 172,44 164,64 M214,44 C220,40 232,48 236,62" fill="none" stroke="#86a86c" strokeWidth="1.2" />
+          <path d="M40,104 l14,0 M70,106 l12,0" stroke="#fffaf0" strokeWidth="1.1" />
+          {/* the willow: a trunk, and a curtain of green falling round it */}
+          <path d="M210,100 C206,80 208,60 214,44" stroke="#6e4f30" strokeWidth="6" fill="none" />
+          <path d="M214,30 C186,26 164,40 156,66 C152,78 154,90 158,98 L166,98 C166,84 170,70 178,60 L176,96 L186,96 C186,80 190,66 196,56 L198,96 L208,96 L212,52 L226,96 L236,96 C238,80 240,64 240,52 L240,32 C232,26 222,26 214,30 Z" fill="#9cbf7e" {...thin} />
+          <path d="M170,50 C172,64 170,78 168,90 M188,44 C190,60 190,76 190,92 M224,40 C226,56 228,72 230,90" fill="none" stroke="#7aa25e" strokeWidth="1.2" />
+          <path d="M200,34 C204,48 204,62 202,78" fill="none" stroke="#b6d39a" strokeWidth="1.2" />
         </g>
       );
     case 'hive':
