@@ -17,7 +17,8 @@ import type { WorldItem, WorldPlace } from './world';
 import { HEADLINES } from './bank/headlines';
 import { SERIALS } from './bank/serials';
 import { BEE_JABS, BEE_HOROSCOPES, BEE_STORIES, BUZZ, FLOWER_OF_WEEK } from './bank/bee';
-import { ADS, GOSSIP, HOROSCOPES, LETTERS, RUMOURS, STANDINS, VOX, WEATHER_LINES } from './bank/small';
+import { ADS, GOSSIP, HOROSCOPES, LETTERS, RUMOURS, VOX, WEATHER_LINES } from './bank/small';
+import { NO_NEWS, TOWN } from './bank/town';
 
 /**
  * Builds the day's two papers: the Kurier Bratkowski and Brzęczyk. Everything comes from the date
@@ -140,7 +141,8 @@ export type Issue = {
     date: string;
     weather: { sky: 'clear' | 'cloudy' | 'rain'; night: boolean; line: string; sun: string };
     lead: Story;
-    world: { fresh: boolean; items: Array<{ place: string | null; title: string; body: string }> };
+    world: { fresh: boolean; items: Array<{ place: string | null; title: string; body: string }>; none: string | null };
+    town: Array<{ title: string; body: string }>;
     garden: string[];
     serial: { name: string; part: number; of: number; title: string; recap: string | null; body: string[]; shot: Shot | null };
     retort: string | null;
@@ -189,14 +191,14 @@ const sharedDay = (day: Date, lead: Headline) => !!lead.bee && day.getDay() !== 
 const FRESH_DAYS = 7;
 
 /** One reader's run of papers, from the first one they had; remembered as it's worked out. */
-type Run = { since: Date; kurier: Map<number, Headline>; bee: Map<number, { lead: BeeLead; shared: boolean; id: string; key: string }> };
+type Run = { since: Date; kurier: Map<number, Headline>; bee: Map<number, { lead: BeeLead; shared: boolean; id: string; key: string }>; town: Map<number, Piece[]> };
 const RUNS = new Map<string, Run>();
 
 function runFrom(since: Date): Run {
   const key = dayKeyOf(since);
   let r = RUNS.get(key);
   if (!r) {
-    r = { since: atNoon(since.getFullYear(), since.getMonth(), since.getDate()), kurier: new Map(), bee: new Map() };
+    r = { since: atNoon(since.getFullYear(), since.getMonth(), since.getDate()), kurier: new Map(), bee: new Map(), town: new Map() };
     RUNS.set(key, r);
   }
   return r;
@@ -214,6 +216,24 @@ function memoRun<T>(memo: Map<number, T>, d: number, choose: (k: number) => T): 
   while (k > 0 && !memo.has(k - 1)) k--;
   for (; k <= target; k++) if (!memo.has(k)) memo.set(k, choose(k));
   return memo.get(target)!;
+}
+
+/** "Z Bratkowa": two town items a day, for the season, none of them printed in the last week. */
+function townOn(r: Run, d: number): Piece[] {
+  return memoRun(r.town, d, (k) => {
+    // before the papers know of each other, nothing here names the bees
+    const list = suited(TOWN, ctxFor(dateIn(r, k), 'clear')).filter((x) => k >= STRANGERS_DAYS || !mentionsBees(x.title, x.body));
+    const recent = new Set(Array.from({ length: FRESH_DAYS - 1 }, (_, j) => r.town.get(k - 1 - j) ?? []).flat());
+    const out: Piece[] = [];
+    for (let t = 0; t < list.length && out.length < 2; t++) {
+      const x = cycled(list, k * 2 + t, 'town')!;
+      if (!recent.has(x) && !out.includes(x)) out.push(x);
+    }
+    // the rotation's next stretch may all be recent ones: then the first of the season not printed lately
+    for (const x of list) if (out.length < 2 && !recent.has(x) && !out.includes(x)) out.push(x);
+    for (const x of list) if (out.length < 2 && !out.includes(x)) out.push(x);
+    return out;
+  });
 }
 
 /** The Kurier's front page: first the founding days, then each story in its turn, never one printed in the last week. */
@@ -537,10 +557,12 @@ export function buildIssue(input: IssueInput): Issue {
   const ads = Array.from({ length: adCount }, (_, i) => cycled(ADS, d * 3 + i, 'ads')!);
 
   const worldItems = input.world;
-  const standin: Piece = cycled(forKurier(suited(STANDINS, c), (x) => [x.title, x.body]), d, 'standin') ?? STANDINS[0]!;
+  // the real news when it came; when not, a plain word that it didn't, never a made-up story
   const world = worldItems
-    ? { fresh: true, items: worldItems.map((w) => ({ place: PLACE[w.place][lang], title: w.title[lang], body: w.body[lang] })) }
-    : { fresh: false, items: [{ place: null, title: s(standin.title), body: s(standin.body) }] };
+    ? { fresh: true, items: worldItems.map((w) => ({ place: PLACE[w.place][lang], title: w.title[lang], body: w.body[lang] })), none: null }
+    : { fresh: false, items: [], none: s(cycled(NO_NEWS, d, 'nonews')!) };
+  // and the town in brief, two a day, for the season
+  const town = townOn(run, d).map((x) => ({ title: s(x.title), body: s(x.body) }));
 
   const sun = sunTimes(day);
   const weatherFlavour = cycled(WEATHER_LINES[weather.night ? 'night' : weather.sky], d, 'wx')!;
@@ -567,6 +589,7 @@ export function buildIssue(input: IssueInput): Issue {
       weather: { sky: weather.sky, night: weather.night, line: `${skyWord(weather.sky, weather.night, lang)}. ${s(weatherFlavour)}`, sun: `${lang === 'pl' ? 'Wschód' : 'Sunrise'} ${hm(sun.rise)} · ${lang === 'pl' ? 'zachód' : 'sunset'} ${hm(sun.set)} · ${moon}` },
       lead: storyOf(lead, leadKey, lang, me),
       world,
+      town,
       garden: d === 0 ? [s(FIRST_GARDEN_LINE)] : gardenLines(garden, day, lang, me),
       serial: {
         name: s(ep.serial.name),

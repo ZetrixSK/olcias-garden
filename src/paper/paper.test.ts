@@ -145,10 +145,26 @@ describe('building an issue', () => {
     expect(withIt.kurier.ads).toHaveLength(2);
     expect(withIt.kurier.letter.reply).toBeNull();
   });
-  it('prints the news column when it came, and the stand-in when not', () => {
+  it('prints the news column when it came, and says plainly when it did not', () => {
     const world = checkWorld({ items: [good('szczecin'), good('polska')] })!;
-    expect(buildIssue({ ...input(noon(2026, 10, 20)), world }).kurier.world.fresh).toBe(true);
-    expect(buildIssue(input(noon(2026, 10, 20))).kurier.world.fresh).toBe(false);
+    const fresh = buildIssue({ ...input(noon(2026, 10, 20)), world }).kurier.world;
+    expect(fresh.fresh).toBe(true);
+    expect(fresh.items).toHaveLength(2);
+    expect(fresh.none).toBeNull();
+    const none = buildIssue(input(noon(2026, 10, 20))).kurier.world;
+    expect(none.fresh).toBe(false);
+    expect(none.items).toHaveLength(0);
+    expect(none.none).toBeTruthy();
+  });
+  it('prints two different town items every day, without repeating any within a week', () => {
+    const recent: string[][] = [];
+    for (let i = 0; i < 366; i++) {
+      const town = buildIssue(input(noon(2026, 10, 10 + i))).kurier.town.map((x) => x.title);
+      expect(town).toHaveLength(2);
+      expect(new Set(town).size).toBe(2);
+      for (const past of recent.slice(-6)) for (const tt of town) expect(past).not.toContain(tt);
+      recent.push(town);
+    }
   });
   it('starts on 10 November 2026 with the founding of the papers, as number one', () => {
     const first = buildIssue(input(noon(2026, 10, 10)));

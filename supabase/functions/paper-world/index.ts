@@ -1,7 +1,7 @@
 // The Kurier's news column, written once a day at dawn.
 //
 // Reads the day's public headlines (Szczecin first, then Poland), asks Gemini to tell two or three
-// light ones as the little town of Bratkowo would, checks the answer with the same code the garden
+// light ones as plain, friendly news (the town itself is in the pre-written pages), checks the answer with the same code the garden
 // uses (world.ts, a copy of src/paper/world.ts), and keeps it in public.paper_world. Nothing about
 // any garden or anyone's phone is ever sent anywhere.
 //
@@ -102,8 +102,13 @@ function decode(s: string): string {
     .trim();
 }
 
-/** The headlines of one feed, without the source's name tacked on the end. */
-async function headlines(url: string, report: string[]): Promise<string[]> {
+type Headline = { t: string; d?: string };
+
+/**
+ * The headlines of one feed, without the source's name tacked on the end, each with the start of
+ * its description when the feed gives one: the facts the column may tell, beyond the title.
+ */
+async function headlines(url: string, report: string[]): Promise<Headline[]> {
   try {
     const res = await fetch(url, {
       headers: {
@@ -116,11 +121,29 @@ async function headlines(url: string, report: string[]): Promise<string[]> {
       report.push(`${new URL(url).host}: HTTP ${res.status}`);
       return [];
     }
-    const xml = await res.text();
-    const out: string[] = [];
-    for (const m of xml.matchAll(/<item[\s>][\s\S]*?<title[^>]*>([\s\S]*?)<\/title>/g)) {
-      const t = decode(m[1] ?? '').replace(/\s+-\s+[^-]{2,60}$/, '');
-      if (t.length > 12 && t.length < 220) out.push(t);
+    // some Polish feeds are still in ISO-8859-2 (Wyborcza's is), so read them as they say they are
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    const head = new TextDecoder('latin1').decode(bytes.slice(0, 200));
+    const charset = (head.match(/encoding=["']([\w-]+)["']/i) ?? (res.headers.get('content-type') ?? '').match(/charset=([\w-]+)/i) ?? [])[1] ?? 'utf-8';
+    let xml: string;
+    try {
+      xml = new TextDecoder(charset).decode(bytes);
+    } catch {
+      xml = new TextDecoder('utf-8').decode(bytes);
+    }
+    const out: Headline[] = [];
+    for (const m of xml.matchAll(/<item[\s>]([\s\S]*?)<\/item>/g)) {
+      const item = m[1] ?? '';
+      const t = decode((item.match(/<title[^>]*>([\s\S]*?)<\/title>/) ?? [])[1] ?? '').replace(/\s+-\s+[^-]{2,60}$/, '');
+      if (t.length <= 12 || t.length >= 220) continue;
+      // descriptions come as escaped html (&lt;p&gt;…), so decode twice to get the plain words
+      let d = decode(decode((item.match(/<description[^>]*>([\s\S]*?)<\/description>/) ?? [])[1] ?? ''))
+        .replace(/\s+/g, ' ')
+        .trim();
+      // Google News only repeats the title and the source; a description that says nothing new is left out
+      if (d.length < 40 || d.startsWith(t.slice(0, 30))) d = '';
+      if (d.length > 320) d = `${d.slice(0, 320).replace(/\s+\S*$/, '')}…`;
+      out.push(d ? { t, d } : { t });
       if (out.length >= 12) break;
     }
     if (out.length === 0) report.push(`${new URL(url).host}: no headlines`);
@@ -131,18 +154,29 @@ async function headlines(url: string, report: string[]): Promise<string[]> {
   }
 }
 
-const SYSTEM = `Piszesz rubrykę "Ze świata" w Kurierze Bratkowskim: porannej gazecie wymyślonego, przytulnego miasteczka Bratkowo, które czyta jedna osoba: młoda kobieta ze Szczecina, która kocha bratki, psy, rzeczy przytulne i trochę wiedźmowe.
+const SYSTEM = `Piszesz rubrykę „Ze świata” w Kurierze Bratkowskim, porannej gazecie wymyślonego, przytulnego miasteczka Bratkowo. Czyta ją jedna osoba: młoda kobieta ze Szczecina, która kocha bratki, psy, rzeczy przytulne i trochę wiedźmowe. Cała reszta gazety jest o miasteczku; ta jedna rubryka jest o prawdziwym świecie. Po lekturze czytelniczka ma wiedzieć, co się dziś naprawdę dzieje, i mieć ochotę komuś o tym opowiedzieć.
 
-Dostajesz prawdziwe nagłówki z dzisiejszych wiadomości. Wybierz z nich 2 albo 3 LEKKIE, ciekawe lub zabawne sprawy (ciekawostki, kultura, sport, przyroda, pogoda, święta, wydarzenia lokalne). Jeśli jest coś miłego ze Szczecina, jedna pozycja ma być ze Szczecina (place: "szczecin"); reszta z Polski (place: "polska") albo ze świata (place: "swiat").
+CO WYBRAĆ
+Dostajesz prawdziwe dzisiejsze wiadomości: nagłówek, czasem z krótkim opisem. Wybierz 2 albo 3.
+- Jeśli jest coś godnego uwagi ze Szczecina, jedna pozycja jest ze Szczecina (place: "szczecin"). Reszta z Polski ("polska") albo ze świata ("swiat").
+- Wybieraj sprawy, o których da się powiedzieć coś konkretnego i ciekawego: kultura, nauka, przyroda, zwierzęta, sport, pogoda i pora roku, święta i tradycje, wydarzenia w mieście, odkrycia, ciekawostki.
+- Pomijaj sprawy puste („trwają rozmowy”, „sprawdzono ceny”, „eksperci komentują”), reklamy, celebrytów, politykę i wszystko, co nie mówi, co się właściwie stało.
+- Nigdy nie pisz o śmierci, wypadkach, przemocy, wojnie, zamachach, katastrofach, chorobach, przestępstwach, polityce partyjnej ani o niczym, co mogłoby zasmucić czy zaniepokoić. Jeśli lekkich wiadomości jest mało, weź zwykłe (pogoda, sezon, sport) i opowiedz je pogodnie.
+- Nie wracaj do spraw z ostatnich dni (lista niżej), chyba że wydarzyło się coś nowego.
 
-Nigdy nie pisz o: śmierci, wypadkach, przemocy, wojnie, zamachach, polityce partyjnej, katastrofach, chorobach, przestępstwach, ani niczym, co mogłoby zasmucić czy zaniepokoić. Jeśli lekkich nagłówków jest mało, wybierz zwykłe rzeczy (pogoda, sezon, sport) i opowiedz je pogodnie.
+JAK NAPISAĆ POZYCJĘ
+- Tytuł: 4–10 słów, konkretny, mówi, co się stało. Może być ciepły albo lekko uśmiechnięty, ale nigdy kosztem prawdy. Nie pisz tytułów agencyjnych („Mgła i nowy prom w Szczecinie”); lepiej „Nowy prom przypłynął do Szczecina we mgle”.
+- Treść: 2–4 zdania. Co się stało, gdzie, kiedy i dlaczego to ciekawe. Opieraj się wyłącznie na nagłówku i opisie; nie dopisuj liczb, nazwisk, dat ani szczegółów, których tam nie ma. Wolno dodać powszechnie znane tło (np. czym są rogale świętomarcińskie i skąd się wzięły). Jeśli faktów jest mało, napisz krócej, ale prawdziwie.
+- Ton: jak dobry, życzliwy dziennikarz małej gazety. Spokojnie, jasno, z ciepłem; bez sensacji, bez emotek, bez wykrzykników.
+- Nie wplataj mieszkańców Bratkowa ani zmyślonych postaci: o miasteczku jest reszta gazety. Ta rubryka mówi tylko o prawdziwym świecie.
+- Długość treści: 200–440 znaków. Polszczyzna poprawna i naturalna.
 
-Każda pozycja: najpierw jedno zdanie o tym, co się naprawdę wydarzyło (bez zmyślania faktów, liczb ani nazwisk, których nie ma w nagłówku), potem jak zareagowało Bratkowo. Gazetę prowadzi Redaktor Bogdan Borsuk (poważny borsuk w okularach, niedawno przyjechał z dużego miasta, mówi „uprzejmie informuję”); obok wychodzi konkurencyjny Brzęczyk pszczoły Trzmieliny. Mieszkańcy Bratkowa: Pan Jeżyk (jeż, prowadzi stragan z nasionami, lubi drzemki i herbatę), Pani Ćma (ćma, nocny targ, kocha światło), Pani Jadzia (robi na drutach swetry dla wszystkiego), Atrament (czarny kot, radny, śpi), Rechotka (żaba w żółtych kaloszach), Pan listonosz (dumny z wąsów), Wiedźmusia (uczennica czarownicy, kapelusz o rozmiar za duży), Duszek (grzeczny duch ze strychu), Jingleton (puchaty trzmiel, kocha stokrotki), kret Zenon, sowa (stróż nocny), wiewiórka Halinka (gubi orzechy), Milton (jajko, które się nie wykluwa; mówi bardzo mało). Nie wymyślaj nowych postaci.
+WERSJA ANGIELSKA
+Do każdej pozycji podaj też angielską (en): to samo, naturalnie, nie słowo w słowo. Nazwy miejsc, ludzi i rzeczy zostaw takie, jakie są (Szczecin, Wały Chrobrego, rogale świętomarcińskie z krótkim wyjaśnieniem).
 
-Styl: ciepły, dowcipny, krótki, jak w prawdziwej małomiasteczkowej gazecie. Bez emotek, bez wykrzykników co zdanie. Tytuł 4-10 słów. Treść 2-3 zdania, 160-380 znaków. Polski poprawny i naturalny. Podaj też wersję angielską (en) tego samego, naturalną, nie dosłowną. W wersji angielskiej imion nie tłumacz: zostają Bogdan Borsuk (Editor Borsuk), Pan Jeżyk, Pani Ćma, Pani Jadzia, Atrament, Rechotka, Wiedźmusia, Duszek, Jingleton, Zenon, Halinka, Milton, Trzmielina, Brzęczyk, Kurier Bratkowski, Bratkowo.
-
-Przykład dobrego stylu (pl): tytuł "Poznań piecze rogale. Jeden zaginął w drodze", treść "Na świętego Marcina w Poznaniu znowu pieką rogale z białym makiem. Pan Jeżyk zamówił jednego „dla gości”. Goście rogala nie widzieli. Pan Jeżyk ma okruszki na kolcach i odmawia komentarza."
-Przykład (pl): tytuł "Flagi na Wałach Chrobrego. W Bratkowie na słoneczniku", treść "Szczecin świętuje nad Odrą, z flagami i paradą. Bratkowo nie zostało w tyle: flagę zawieszono na najwyższym słoneczniku w okolicy. Słonecznik jest dumny, choć od rana trochę się pochyla."
+PRZYKŁADY STYLU (tylko dla tonu, nie przepisuj ich faktów)
+1. Tytuł: „Poznań piecze rogale na świętego Marcina”. Treść: „11 listopada Poznań obchodzi imieniny swojej najsłynniejszej ulicy, a cukiernie pieką rogale świętomarcińskie: z białym makiem, bakaliami i lukrem. Rogal ma chronioną nazwę, więc prawdziwy powstaje tylko w Wielkopolsce. Kto będzie tego dnia w Poznaniu, ten ustoi swoje w kolejce, ale podobno warto.”
+2. Tytuł: „Pierwszy śnieg spadł w Tatrach”. Treść: „W Tatrach spadł pierwszy w tym sezonie śnieg, a na szlakach zrobiło się biało i ślisko. Synoptycy mówią, że nad morzem i na nizinach na razie skończy się na chłodnym deszczu i porannej mgle.”
 
 Odpowiedz wyłącznie JSON-em zgodnym ze schematem.`;
 
@@ -172,6 +206,17 @@ const SCHEMA = {
   },
   required: ['items'],
 };
+
+/** The last three days' columns, so today's doesn't tell the same stories again. */
+async function recentColumns(db: ReturnType<typeof createClient>, day: string): Promise<string> {
+  const { data } = await db.from('paper_world').select('day, items').lt('day', day).not('items', 'is', null).order('day', { ascending: false }).limit(3);
+  const rows = ((data ?? []) as Array<{ day: string; items: unknown }>).map((r) => ({ day: r.day, items: checkWorld(r.items) ?? [] })).filter((r) => r.items.length);
+  if (!rows.length) return 'Ostatnie dni: to pierwsza rubryka, wcześniej nic nie było.';
+  const lines = rows.map((r) => `- ${r.day}: ${r.items.map((i) => `„${i.title.pl}”`).join(', ')}`);
+  return `Ostatnie dni w tej rubryce (nie powtarzaj tych spraw):
+${lines.join('
+')}`;
+}
 
 async function askGemini(key: string, lines: string): Promise<{ raw: string; model: string } | { error: string }> {
   const preferred = Deno.env.get('GEMINI_MODEL');
@@ -210,13 +255,14 @@ async function tryModel(key: string, model: string, lines: string, ms: number): 
         contents: [
           {
             role: 'user',
-            parts: [{ text: `Dzisiejsze nagłówki:\n${lines}` }],
+            parts: [{ text: lines }],
           },
         ],
         generationConfig: {
           responseMimeType: 'application/json',
           responseSchema: SCHEMA,
-          temperature: 0.9,
+          // on the cool side: facts, not inventions
+          temperature: 0.7,
         },
       }),
     });
@@ -283,10 +329,11 @@ Deno.serve(async (req) => {
 
   const key = Deno.env.get('GEMINI_API_KEY');
   const report: string[] = [];
-  const lists = await Promise.all(FEEDS.map(async (f) => (await headlines(f.url, report)).map((t) => ({ place: f.place, t }))));
+  const lists = await Promise.all(FEEDS.map(async (f) => (await headlines(f.url, report)).map((h) => ({ place: f.place, ...h }))));
   const seen = new Set<string>();
   const all = lists.flat().filter((h) => (seen.has(h.t) ? false : (seen.add(h.t), true)));
-  const lines = all.map((h) => `[${h.place}] ${h.t}`).join('\n');
+  const news = all.map((h) => `[${h.place}] ${h.t}${h.d ? `\n    ${h.d}` : ''}`).join('\n');
+  const lines = `Dzisiejsze wiadomości:\n${news}\n\n${await recentColumns(db, day)}`;
 
   let items: unknown = null;
   let raw: string | null = null;

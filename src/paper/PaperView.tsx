@@ -118,7 +118,7 @@ function KurierFront({ issue, onTurn }: { issue: Issue; onTurn: () => void }) {
       <section className="kurier-world" aria-label={t(L, 'From the world', 'Ze świata')}>
         <div className="paper-section-head">
           <h3>{t(L, 'From the world', 'Ze świata')}</h3>
-          <span>{k.world.fresh ? t(L, 'written this morning from the news', 'pisane dziś rano z wiadomości') : t(L, 'from the editors’ drawer', 'z zapasu redakcji')}</span>
+          {k.world.fresh && <span>{t(L, 'written this morning from the news', 'pisane dziś rano z wiadomości')}</span>}
         </div>
         {k.world.items.map((w, i) => (
           <div key={i} className="kurier-world-item">
@@ -127,7 +127,22 @@ function KurierFront({ issue, onTurn }: { issue: Issue; onTurn: () => void }) {
             <p>{w.body}</p>
           </div>
         ))}
+        {k.world.none && <p className="kurier-world-none">{k.world.none}</p>}
       </section>
+      {k.town.length > 0 && (
+        <section className="kurier-town" aria-label={t(L, 'From Bratkowo', 'Z Bratkowa')}>
+          <div className="paper-section-head">
+            <h3>{t(L, 'From Bratkowo', 'Z Bratkowa')}</h3>
+            <span>{t(L, 'in brief', 'w skrócie')}</span>
+          </div>
+          {k.town.map((x, i) => (
+            <div key={i} className="kurier-town-item">
+              <h4>{x.title}</h4>
+              <p>{x.body}</p>
+            </div>
+          ))}
+        </section>
+      )}
       <section className="kurier-garden" aria-label={t(L, 'Yesterday in your garden', 'Wczoraj w Twoim ogrodzie')}>
         <h3>{t(L, 'Yesterday in your garden', 'Wczoraj w Twoim ogrodzie')}</h3>
         <ul>

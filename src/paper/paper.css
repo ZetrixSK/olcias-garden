@@ -369,6 +369,35 @@ html.still .papers {
   flex-direction: column;
   gap: 10px;
 }
+.kurier-world-none {
+  font-size: 14px;
+  font-style: italic;
+  line-height: 1.45;
+  color: #5a4a50;
+}
+/* the town in brief: smaller than the news, set off by a thin rule above and below */
+.kurier-town {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px solid #231a1f;
+  border-bottom: 1px solid #231a1f;
+}
+.kurier-town .paper-section-head h3 {
+  font-size: 18px;
+}
+.kurier-town-item h4 {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.2;
+}
+.kurier-town-item p {
+  font-size: 13.5px;
+  line-height: 1.4;
+  margin-top: 2px;
+}
 .kurier-world-item {
   display: flex;
   flex-direction: column;

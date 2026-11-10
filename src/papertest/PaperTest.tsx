@@ -101,7 +101,7 @@ export function TestPrewritten() {
           <option value="new">new garden</option>
         </select>
         <select value={world} onChange={(e) => setWorld(e.target.value as typeof world)}>
-          <option value="standin">world: stand-in</option>
+          <option value="standin">world: no news</option>
           <option value="sample">world: sample</option>
         </select>
         <input placeholder="his note (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
@@ -226,7 +226,7 @@ function Schedule({ from, garden, lang }: { from: Date; garden: GardenState; lan
   );
 }
 
-type RunResult = { day: string; items: unknown; headlines: Array<{ place: string; t: string }>; raw: string | null; model: string | null; error: string | null; attempts: number };
+type RunResult = { day: string; items: unknown; headlines: Array<{ place: string; t: string; d?: string }>; raw: string | null; model: string | null; error: string | null; attempts: number };
 
 function AdminSignIn() {
   const [email, setEmail] = useState('');
@@ -266,7 +266,8 @@ function GeminiRunner({ session }: { session: Session }) {
   const [result, setResult] = useState<RunResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lang, setLang] = useState<Lang>('pl');
-  const [preview, setPreview] = useState(false);
+  // which page to show: today's column as Gemini wrote it, or the paper on a morning with no news
+  const [preview, setPreview] = useState<false | 'news' | 'none'>(false);
   const { rows, reload } = useWorldRows();
   const items = result ? checkWorld(result.items) : null;
   const garden = useMemo(() => gardenFor('busy', new Date(), '', dayKeyOf(new Date(Date.now() - 10 * 86_400_000))), []);
@@ -296,7 +297,7 @@ function GeminiRunner({ session }: { session: Session }) {
     if (andPost && checkWorld(got.items)) await post(got.day);
     else reload();
   };
-  if (preview && items) {
+  if (preview === 'none' || (preview === 'news' && items)) {
     return (
       <div className="papertest">
         <div className="papertest-bar">
@@ -307,7 +308,7 @@ function GeminiRunner({ session }: { session: Session }) {
           </select>
         </div>
         <div className="papertest-paper">
-          <PaperView garden={garden} now={Date.now()} lang={lang} me="she" weather={{ sky: 'cloudy', night: false }} onClose={() => setPreview(false)} world={items} />
+          <PaperView garden={garden} now={Date.now()} lang={lang} me="she" weather={{ sky: 'cloudy', night: false }} onClose={() => setPreview(false)} world={preview === 'news' ? items : null} />
         </div>
       </div>
     );
@@ -325,6 +326,9 @@ function GeminiRunner({ session }: { session: Session }) {
         </button>
         <button onClick={() => void run(false)} disabled={busy}>
           Write only (don’t post)
+        </button>
+        <button onClick={() => setPreview('none')} disabled={busy}>
+          See it with no news
         </button>
       </div>
       {error && <p className="error">{error}</p>}
@@ -353,7 +357,7 @@ function GeminiRunner({ session }: { session: Session }) {
                 </div>
               ))}
               <div className="papertest-actions">
-                <button onClick={() => setPreview(true)}>See it in the paper</button>
+                <button onClick={() => setPreview('news')}>See it in the paper</button>
                 {posted !== result.day && <button onClick={() => void post(result.day)}>Post this one</button>}
               </div>
             </>
@@ -364,6 +368,7 @@ function GeminiRunner({ session }: { session: Session }) {
               {result.headlines.map((h, i) => (
                 <li key={i}>
                   [{h.place}] {h.t}
+                  {h.d && <div className="en">{h.d}</div>}
                 </li>
               ))}
             </ul>
