@@ -4,6 +4,23 @@ What changed in each version, for the developer. Olcia reads her own, shorter ve
 under "What's new" (`src/changelog.ts`). Keep the version in `package.json` and the top entry of
 `src/changelog.ts` the same; a test checks it.
 
+## 1.1.0 · 2026-11-10
+
+The morning papers.
+
+- Two daily papers, from 10 November 2026 (the same issues for everyone, picked by date):
+  Kurier Bratkowski (serious, two pages; founded by Redaktor Bogdan Borsuk) and Brzęczyk (the
+  bees' tabloid, editor Trzmielina). Out at 5:00; on the floor and under "Gazety" in the menu.
+  Polish first, with a PL/EN switch; an archive of the past week.
+- Pre-written stories, serials, gossip, letters, horoscopes and still pictures for each story.
+  The papers are strangers for two days, then rivals; they share a story 3–4 times a week.
+- "Ze świata": real news (Szczecin first), written each dawn by Gemini in the `paper-world`
+  edge function, checked by `world.ts`, read by phones through `paper_world()`. A plain note on
+  days without it. "Z Bratkowa": the town in brief, pre-written, by season.
+- "Wczoraj w Twoim ogrodzie": what happened in her garden yesterday, from a small event log in the
+  save (`paper`). The admin can tape a note into a day's Kurier (`papernote`).
+- Test pages /test-prewritten and /test-gemini (kept out of the offline cache).
+
 ## 1.0.0 · 2026-11-03
 
 The first version.
