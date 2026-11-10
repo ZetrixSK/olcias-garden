@@ -257,7 +257,7 @@ function KurierBack({ issue, onBack, archive }: { issue: Issue; onBack: () => vo
       </div>
       <section className="kurier-letter">
         <h4>{t(L, 'Letters to the editor', 'Listy do redakcji')}</h4>
-        <p className="paper-letter-text">{k.letter.text}</p>
+        <p className={k.letter.invite ? 'paper-letter-text invite' : 'paper-letter-text'}>{k.letter.text}</p>
         <p className="paper-letter-sign">{k.letter.sign}</p>
         {k.letter.reply && (
           <p className="paper-letter-text">

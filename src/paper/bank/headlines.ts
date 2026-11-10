@@ -518,7 +518,7 @@ export const HEADLINES: Headline[] = [
     body: [
       l('W wyborach na burmistrza Bratkowa nie zgłosił się żaden kandydat. Ktoś na żart wpisał na listę kamień spod ratusza. Kamień dostał wszystkie głosy.', 'Not one candidate stood for mayor of Bratkowo. As a joke, someone put the stone from outside the town hall on the ballot. The stone got every vote.'),
       l('Pierwszy tydzień urzędowania minął spokojnie. Kamień nie podniósł podatków, nie przeciął żadnej wstęgi i nie wygłosił ani jednego przemówienia. Mieszkańcy są zadowoleni.', 'The first week in office passed quietly. The stone raised no taxes, cut no ribbons and gave not one speech. The townsfolk are pleased.'),
-      l('Jedyną krytykę zgłosił Atrament, który twierdzi, że kamień zajmuje mu nasłonecznione miejsce. Sprawa trafi pod obrady rady. Atrament w niej zasiada.', 'The only criticism came from Atrament, who says the stone is in his sunny spot. The matter goes before the council. Atrament sits on it.'),
+      l('Jedyną krytykę zgłosił Atrament, który twierdzi, że kamień zajmuje mu nasłonecznione miejsce. Atrament zapowiada, że będzie w tej sprawie interweniował. Jeszcze nie wiadomo jak.', 'The only criticism came from Atrament, who says the stone is in his sunny spot. Atrament says he will take the matter further. Nobody yet knows how.'),
     ],
     art: 'atrament',
     caption: l('Atrament i burmistrz. Burmistrz po prawej, ten szary.', 'Atrament and the mayor. The mayor is the grey one on the right.'),

@@ -120,6 +120,15 @@ export const INTRO: Headline[] = [
 /** On the very first morning there's no yesterday yet. */
 export const FIRST_GARDEN_LINE = l('Od jutra piszemy tu, co wydarzyło się wczoraj w Twoim ogrodzie. Redakcja już nie może się doczekać.', 'From tomorrow, this is where we write what happened in your garden the day before. The editors can’t wait.');
 
+/**
+ * "Listy do redakcji" before the first letters come (they arrive on the third day, in its story):
+ * the editors' invitation, then the empty letterbox.
+ */
+export const LETTERBOX = [
+  l('Skrzynka na listy stoi przy drzwiach redakcji i na razie jest pusta. Piszcie do nas o wszystkim: o ogrodzie, o sąsiadach, o pogodzie. Odpowiadamy na każdy list.', 'The letterbox stands by the newsroom door and is empty for now. Write to us about anything: the garden, the neighbours, the weather. We answer every letter.'),
+  l('Skrzynka wciąż pusta, ale Redaktor Borsuk zagląda do niej co godzinę. Pan listonosz mówi, że listy są już w drodze.', 'The letterbox is still empty, but Editor Borsuk checks it every hour. The postman says the letters are on their way.'),
+];
+
 /** Until this many days in, the two papers don't yet know about each other. */
 export const STRANGERS_DAYS = 2;
 

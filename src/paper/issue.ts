@@ -12,7 +12,7 @@ import { dayKeyOf, noteFor, yesterdayWindow, type PaperEvent } from './log';
 import type { ArtKey, BeeLead, Headline, Piece, Vox, When } from './types';
 import type { Actor, Shot } from './PaperArt';
 import { PHOTOS, SHOTS } from './bank/shots';
-import { FIRST_GARDEN_LINE, INTRO, mentionsBees, mentionsKurier, STRANGERS_DAYS } from './bank/intro';
+import { FIRST_GARDEN_LINE, INTRO, LETTERBOX, mentionsBees, mentionsKurier, STRANGERS_DAYS } from './bank/intro';
 import type { WorldItem, WorldPlace } from './world';
 import { HEADLINES } from './bank/headlines';
 import { SERIALS } from './bank/serials';
@@ -152,7 +152,8 @@ export type Issue = {
     calendar: Array<{ label: string; text: string }>;
     horoscope: string;
     ads: Array<{ kind: string; text: string; sign: string }>;
-    letter: { text: string; sign: string; reply: string | null };
+    /** `invite`: no letters have come yet, so the editors' own words instead of a reader's. */
+    letter: { text: string; sign: string; reply: string | null; invite: boolean };
     note: string | null;
   };
   bee: {
@@ -190,6 +191,24 @@ const sharedDay = (day: Date, lead: Headline) => !!lead.bee && day.getDay() !== 
 /** A front page never comes back within this many days. */
 const FRESH_DAYS = 7;
 
+/**
+ * The town's lore: things one front page makes true (the stone becomes mayor, Atrament joins the
+ * council). Anything else that leans on them waits until that story has been printed, so nothing
+ * calls the stone "the mayor" before the election. Read from the Polish, which every piece has.
+ */
+const LORE: ReadonlyArray<{ id: string; words: RegExp }> = [
+  { id: 'mayor-stone', words: /burmistrz/i },
+  { id: 'cat-council', words: /kot\w*\s+(jest\s+)?w\s+radzie|nowego radnego|praca radnego|radny atrament/i },
+];
+
+/** The lore a piece leans on: the ids of the stories that must come first. */
+const leansOn = (...texts: Array<L | undefined>): string[] => LORE.filter((x) => texts.some((t) => t && x.words.test(t.pl))).map((x) => x.id);
+
+const headlineTexts = (h: Headline): Array<L | undefined> => [h.title, h.sub, ...h.body, h.caption, h.jab, h.vox?.q, ...(h.vox?.a.flatMap((a) => [a.who, a.say]) ?? []), ...(h.bee ? [h.bee.title, ...h.bee.body, h.bee.caption, h.bee.retort] : [])];
+
+/** The front page that comes first after the founding days: the election, so the town has its mayor early. */
+const FIRST_STORY = 'mayor-stone';
+
 /** One reader's run of papers, from the first one they had; remembered as it's worked out. */
 type Run = { since: Date; kurier: Map<number, Headline>; bee: Map<number, { lead: BeeLead; shared: boolean; id: string; key: string }>; town: Map<number, Piece[]> };
 const RUNS = new Map<string, Run>();
@@ -222,7 +241,8 @@ function memoRun<T>(memo: Map<number, T>, d: number, choose: (k: number) => T): 
 function townOn(r: Run, d: number): Piece[] {
   return memoRun(r.town, d, (k) => {
     // before the papers know of each other, nothing here names the bees
-    const list = suited(TOWN, ctxFor(dateIn(r, k), 'clear')).filter((x) => k >= STRANGERS_DAYS || !mentionsBees(x.title, x.body));
+    const known = new Set(Array.from({ length: k + 1 }, (_, j) => kurierLead(r, j).id));
+    const list = suited(TOWN, ctxFor(dateIn(r, k), 'clear')).filter((x) => (k >= STRANGERS_DAYS || !mentionsBees(x.title, x.body)) && leansOn(x.title, x.body).every((id) => known.has(id)));
     const recent = new Set(Array.from({ length: FRESH_DAYS - 1 }, (_, j) => r.town.get(k - 1 - j) ?? []).flat());
     const out: Piece[] = [];
     for (let t = 0; t < list.length && out.length < 2; t++) {
@@ -240,7 +260,10 @@ function townOn(r: Run, d: number): Piece[] {
 function kurierLead(r: Run, d: number): Headline {
   return memoRun(r.kurier, d, (k) => {
     if (k < INTRO.length) return INTRO[k]!;
-    const list = suited(HEADLINES, ctxFor(dateIn(r, k), 'clear'));
+    if (k === INTRO.length) return HEADLINES.find((h) => h.id === FIRST_STORY) ?? HEADLINES[0]!;
+    // the lore printed so far: a story leaning on one that hasn't run yet waits its turn
+    const known = new Set(Array.from({ length: k }, (_, j) => r.kurier.get(j)?.id));
+    const list = suited(HEADLINES, ctxFor(dateIn(r, k), 'clear')).filter((h) => leansOn(...headlineTexts(h)).every((id) => id === h.id || known.has(id)));
     const recent = new Set(Array.from({ length: FRESH_DAYS }, (_, j) => r.kurier.get(k - 1 - j)?.id));
     const n = k - INTRO.length;
     for (let t = 0; t < list.length; t++) {
@@ -258,7 +281,8 @@ function beeLead(r: Run, d: number): { lead: BeeLead; shared: boolean; key: stri
     if (k < INTRO.length) return { lead: kl.bee!, shared: false, id: kl.id, key: `ib:${k}` };
     const day = dateIn(r, k);
     if (sharedDay(day, kl)) return { lead: kl.bee!, shared: true, id: kl.id, key: `hb:${kl.id}` };
-    const list = suited(BEE_STORIES, ctxFor(day, 'clear'));
+    const known = new Set(Array.from({ length: k + 1 }, (_, j) => kurierLead(r, j).id));
+    const list = suited(BEE_STORIES, ctxFor(day, 'clear')).filter((b) => leansOn(b.title, ...b.body, b.caption, b.retort).every((id) => known.has(id)));
     const recent = new Set(Array.from({ length: 10 }, (_, j) => r.bee.get(k - 1 - j)?.id));
     for (let t = 0; t < list.length; t++) {
       const b = cycled(list, k + t, 'bee')!;
@@ -547,14 +571,18 @@ export function buildIssue(input: IssueInput): Issue {
 
   // for the first two days the papers don't yet know about each other: nothing in either names the other
   const rivals = d >= STRANGERS_DAYS;
-  const forKurier = <T,>(list: readonly T[], texts: (x: T) => Array<L | undefined>) => (rivals ? list : list.filter((x) => !mentionsBees(...texts(x))));
-  const forBees = <T,>(list: readonly T[], texts: (x: T) => Array<L | undefined>) => (rivals ? list : list.filter((x) => !mentionsKurier(...texts(x))));
+  // and nothing leans on lore that hasn't been printed yet (the mayor before the election)
+  const known = new Set(Array.from({ length: d + 1 }, (_, j) => kurierLead(run, j).id));
+  const inLore = <T,>(list: readonly T[], texts: (x: T) => Array<L | undefined>) => list.filter((x) => leansOn(...texts(x)).every((id) => known.has(id)));
+  const forKurier = <T,>(list: readonly T[], texts: (x: T) => Array<L | undefined>) => inLore(rivals ? list : list.filter((x) => !mentionsBees(...texts(x))), texts);
+  const forBees = <T,>(list: readonly T[], texts: (x: T) => Array<L | undefined>) => inLore(rivals ? list : list.filter((x) => !mentionsKurier(...texts(x))), texts);
 
   const note = noteFor(garden.paper, key)?.text ?? null;
-  const vox: Vox = lead.vox ?? cycled(VOX, d, 'vox')!;
+  const vox: Vox = lead.vox ?? cycled(inLore(VOX, (v) => [v.q, ...v.a.flatMap((a) => [a.who, a.say])]), d, 'vox')!;
   const letter = cycled(forKurier(LETTERS, (x) => [x.text, x.reply]), d, 'letter')!;
   const adCount = note ? 2 : 3;
-  const ads = Array.from({ length: adCount }, (_, i) => cycled(ADS, d * 3 + i, 'ads')!);
+  const adList = inLore(ADS, (a) => [a.kind, a.text, { pl: a.sign, en: a.sign }]);
+  const ads = Array.from({ length: adCount }, (_, i) => cycled(adList, d * 3 + i, 'ads')!);
 
   const worldItems = input.world;
   // the real news when it came; when not, a plain word that it didn't, never a made-up story
@@ -576,7 +604,7 @@ export function buildIssue(input: IssueInput): Issue {
   ].slice(0, 4);
 
   const retortFrom = yBee?.lead.retort;
-  const photo = cycled(PHOTOS, d, 'photo')!;
+  const photo = cycled(inLore(PHOTOS, (x) => [x.caption]), d, 'photo')!;
 
   return {
     key,
@@ -608,9 +636,11 @@ export function buildIssue(input: IssueInput): Issue {
       vox: { q: s(vox.q), a: vox.a.map((a) => ({ who: s(a.who), say: s(a.say) })) },
       soon: comingSoon(day, d, c, lang, me),
       calendar: calendarLines(day, input.lang, lang),
-      horoscope: s(cycled(HOROSCOPES, d, 'horo')!),
+      horoscope: s(cycled(inLore(HOROSCOPES, (x) => [x]), d, 'horo')!),
       ads: ads.map((a) => ({ kind: s(a.kind), text: s(a.text), sign: a.sign })),
-      letter: { text: s(letter.text), sign: s(letter.sign), reply: note ? null : s(letter.reply) },
+      letter: d < LETTERBOX.length
+        ? { text: s(LETTERBOX[d]!), sign: lang === 'pl' ? 'Redakcja' : 'The editors', reply: null, invite: true }
+        : { text: s(letter.text), sign: s(letter.sign), reply: note ? null : s(letter.reply), invite: false },
       note,
     },
     bee: {
@@ -618,7 +648,7 @@ export function buildIssue(input: IssueInput): Issue {
       shared: bee.shared,
       lead: storyOf({ ...bee.lead, kicker: d === 0 ? { pl: 'PIERWSZY NUMER!', en: 'FIRST ISSUE!' } : d === STRANGERS_DAYS ? { pl: 'SZOK!', en: 'SHOCK!' } : bee.shared ? { pl: 'SZOK! TYLKO U NAS!', en: 'SHOCK! ONLY HERE!' } : { pl: 'Z OSTATNIEJ CHWILI!', en: 'BREAKING!' } }, bee.key, lang, me),
       photo: { shot: photo.shot, caption: s(photo.caption) },
-      jab: rivals ? s(lead.jab ?? cycled(BEE_JABS, d, 'jab')!) : null,
+      jab: rivals ? s(lead.jab ?? cycled(inLore(BEE_JABS, (x) => [x]), d, 'jab')!) : null,
       rivals,
       buzz,
       flower: flowerOfWeek(garden, day, input.now, lang, me),

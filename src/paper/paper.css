@@ -836,3 +836,8 @@ html.still .papers {
   font: 800 13px 'Archivo', system-ui, sans-serif;
   text-transform: uppercase;
 }
+
+/* before the first letters come: the editors' invitation, set apart from a reader's letter */
+.paper-letter-text.invite {
+  font-style: italic;
+}

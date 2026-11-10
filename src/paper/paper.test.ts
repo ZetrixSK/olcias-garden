@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { easter, holidaysOn, nameDayCount, nameDays, nextShower, showerTonight } from './calendar';
 import { dayKeyOf, logEvent, NO_PAPER, paperDate, parsePaper, withNote, yesterdayWindow } from './log';
-import { buildIssue, cycled, gardenLines, gendered, leadsFor, type Issue } from './issue';
+import { buildIssue, cycled, gardenLines, gendered, leadsFor, PAPERS_BEGAN, type Issue } from './issue';
 import { checkWorld } from './world';
 import { testGarden } from '../garden/testGarden';
 import { parseSave, starterGarden } from '../garden/state';
@@ -156,6 +156,22 @@ describe('building an issue', () => {
     expect(none.items).toHaveLength(0);
     expect(none.none).toBeTruthy();
   });
+  it('holds the election on the first day after the founding ones', () => {
+    expect(leadsFor(noon(2026, 10, 14), PAPERS_BEGAN).kurier).toBe('mayor-stone');
+  });
+  it('never leans on a story before it has been printed: no mayor before the election, no councillor Atrament before he joins', () => {
+    const lore: Array<{ id: string; words: RegExp }> = [
+      { id: 'mayor-stone', words: /burmistrz/i },
+      { id: 'cat-council', words: /radny atrament|kot\w*\s+(jest\s+)?w\s+radzie|nowego radnego/i },
+    ];
+    const printed = new Set<string>();
+    for (let i = 0; i < 400; i++) {
+      const day = noon(2026, 10, 10 + i);
+      printed.add(leadsFor(day, PAPERS_BEGAN).kurier);
+      const text = strings(buildIssue(input(day))).join(' ');
+      for (const x of lore) if (!printed.has(x.id)) expect(text, `${x.id} on day ${i}`).not.toMatch(x.words);
+    }
+  });
   it('prints two different town items every day, without repeating any within a week', () => {
     const recent: string[][] = [];
     for (let i = 0; i < 366; i++) {
@@ -171,6 +187,10 @@ describe('building an issue', () => {
     expect(first.number).toBe(1);
     expect(first.kurier.lead.title).toContain('Bratkowo');
     expect(first.kurier.garden).toHaveLength(1);
+    // no letters yet: the editors invite them, and the first ones come on the third day
+    expect(first.kurier.letter.invite).toBe(true);
+    expect(buildIssue(input(noon(2026, 10, 11))).kurier.letter.invite).toBe(true);
+    expect(buildIssue(input(noon(2026, 10, 12))).kurier.letter.invite).toBe(false);
     expect(first.bee.lead.kicker).toBe('PIERWSZY NUMER!');
     expect(first.kurier.retort).toBeNull();
     const third = buildIssue(input(noon(2026, 10, 12)));
